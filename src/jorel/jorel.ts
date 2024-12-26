@@ -2,9 +2,11 @@ import {JorElProviderManager} from "./providers";
 import {JorElModelManager} from "./models";
 import {OpenAIConfig, OpenAIProvider} from "../open-ai";
 import {generateMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage} from "../shared";
+import {OllamaConfig, OllamaProvider} from "../ollama";
 
 interface InitialConfig {
   openAI?: OpenAIConfig;
+  ollama?: OllamaConfig;
   systemMessage?: string;
   temperature?: number;
 }
@@ -42,8 +44,9 @@ export class JorEl {
    * @param config.systemMessage System message to include in all requests (optional)
    * @param config.temperature Default temperature for all requests (optional)
    */
-  constructor(config: InitialConfig) {
+  constructor(config: InitialConfig = {}) {
     if (config.openAI) this.providers.registerOpenAi(config.openAI);
+    if (config.ollama) this.providers.registerOllama(config.ollama);
     this.systemMessage = config.systemMessage || "";
     if (config.temperature !== undefined) this.defaultConfig.temperature = config.temperature;
   }
@@ -58,6 +61,9 @@ export class JorEl {
         this.models.register({model, provider: "openai"});
       }
     },
+    registerOllama: (config: OllamaConfig) => {
+      this.providerManager.registerProvider("ollama", new OllamaProvider(config));
+    }
   };
 
   /** Public methods for managing models */

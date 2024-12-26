@@ -1,6 +1,6 @@
 {
   "name": "jorel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A lightweight, unified wrapper for leading LLMs like OpenAI, Anthropic, Google and Ollama.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,10 @@
     "ollama",
     "anthropic",
     "sdk",
-    "google"
+    "google",
+    "gemini",
+    "groq",
+    "grok"
   ],
   "author": "Christian Heine",
   "repository": {
@@ -39,8 +42,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.33.1",
     "axios": "^1.7.9",
-    "openai": "^4.77.0",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "ollama": "^0.5.11",
+    "openai": "^4.77.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

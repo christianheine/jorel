@@ -14,6 +14,17 @@ Install JorEl via npm:
 npm install jorel
 ```
 
+## Quick start
+```typescript
+import {JorEl} from "jorel";
+
+const jorel = new JorEl({openAI: {apiKey: "your-openai-api-key"}});
+
+const response = await jorel.ask("What is the capital of Australia?");
+
+console.log(response); // "Sydney"
+```
+
 ## Core Tenets
 1. **Lightweight**: Avoid unnecessary complexity; focus on wrapping LLM APIs efficiently.
 2. **Unified Input/Output**: Provide unified message formats for both inputs and outputs.
@@ -31,29 +42,65 @@ const jorel = new JorEl({
     apiKey: "your-openai-api-key",
     defaultTemperature: 0.7,
   },
+  ollama: {
+    defaultTemperature: 0.2,
+  },
   systemMessage: "You are a helpful assistant.",
 });
 ```
 
+Instantiating providers during initialization is optional. You can register providers and models later as needed.
+```typescript
+import { JorEl } from "jorel";
+
+const jorEl = new JorEl();
+
+jorEl.providers.registerOllama({defaultTemperature: 0.2})
+
+jorEl.systemMessage = 'You are a helpful llama.';
+```
+
 ### Using Providers
 
-#### List Registered Providers
-```typescript
-console.log(jorel.providers.list()); // ["openai"]
-```
-
-#### Register a Custom Provider
-```typescript
-jorel.providers.registerCustom("myProvider", myCustomProviderInstance);
-```
-
 #### Register OpenAI
+Requires OpenAI API key.
+
 ```typescript
 jorel.providers.registerOpenAi({
   apiKey: "your-openai-api-key",
+  defaultTemperature: 0.2,
+});
+```
+
+#### Register Ollama
+Requires Ollama to be installed and running.
+
+```typescript
+jorel.providers.registerOllama({
   defaultTemperature: 0.7,
 });
 ```
+
+#### Register a Custom Provider
+
+```typescript
+import {LlmCoreProvider} from "./llm-core-provider";
+
+class CustomProvider implements LlmCoreProvider { 
+  // generateResponse
+  // generateResponseStream
+}
+
+const customProviderInstance = new CustomProvider(); 
+
+jorel.providers.registerCustom("custom", customProviderInstance);
+```
+
+#### List Registered Providers
+```typescript
+console.log(jorel.providers.list()); // ["openai", "ollama", "custom"]
+```
+
 
 ### Using Models
 
@@ -65,15 +112,15 @@ console.log(jorel.models.list());
 #### Register a Model
 ```typescript
 jorel.models.register({
-  model: "my-custom-model",
-  provider: "myProvider",
+  model: "custom-model",
+  provider: "custom",
   setAsDefault: true,
 });
 ```
 
 #### Unregister a Model
 ```typescript
-jorel.models.unregister("my-custom-model");
+jorel.models.unregister("custom-model");
 ```
 
 #### Set Default Model
@@ -119,10 +166,13 @@ console.log(response.content);
 
 ## Roadmap
 - [ ] Add support for more providers 
-  - [ ] Ollama
+  - [X] Ollama
   - [ ] Anthropic
   - [ ] Google
+  - [ ] Groq
+  - [ ] Grok
 - [ ] Implement vision support (images in prompts)
+- [ ] Add support for tool use
 - [ ] Increase test coverage
 
 ## Contributing
