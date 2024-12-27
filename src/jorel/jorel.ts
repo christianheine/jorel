@@ -1,12 +1,16 @@
 import {JorElProviderManager} from "./providers";
 import {JorElModelManager} from "./models";
-import {OpenAIConfig, OpenAIProvider} from "../open-ai";
+import {defaultOpenAiModels, OpenAIConfig, OpenAIProvider} from "../open-ai";
 import {generateMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage} from "../shared";
 import {OllamaConfig, OllamaProvider} from "../ollama";
+import {AnthropicConfig, AnthropicProvider, defaultAnthropicBedrockModels, defaultAnthropicModels} from "../anthropic";
+import {defaultGroqModels, GroqConfig, GroqProvider} from "../groq";
 
 interface InitialConfig {
   openAI?: OpenAIConfig;
   ollama?: OllamaConfig;
+  anthropic?: AnthropicConfig;
+  groq?: GroqConfig;
   systemMessage?: string;
   temperature?: number;
 }
@@ -19,11 +23,6 @@ interface JorElAskGenerationConfig extends JorElCoreGenerationConfig {
   model?: string;
   systemMessage?: string;
 }
-
-const defaultOpenAiModels: string[] = [
-  "gpt-4o-mini",
-  "gpt-4o",
-];
 
 /**
  * Jor-El: Singular interface for managing multiple LLM providers and models
@@ -41,12 +40,16 @@ export class JorEl {
    * Create a new Jor-El instance
    * @param config
    * @param config.openAI OpenAI configuration (optional)
+   * @param config.ollama Ollama configuration (optional)
+   * @param config.anthropic Anthropic configuration (optional)
    * @param config.systemMessage System message to include in all requests (optional)
    * @param config.temperature Default temperature for all requests (optional)
    */
   constructor(config: InitialConfig = {}) {
     if (config.openAI) this.providers.registerOpenAi(config.openAI);
     if (config.ollama) this.providers.registerOllama(config.ollama);
+    if (config.anthropic) this.providers.registerAnthropic(config.anthropic);
+    if (config.groq) this.providers.registerGroq(config.groq);
     this.systemMessage = config.systemMessage || "";
     if (config.temperature !== undefined) this.defaultConfig.temperature = config.temperature;
   }
@@ -61,8 +64,21 @@ export class JorEl {
         this.models.register({model, provider: "openai"});
       }
     },
+    registerAnthropic: (config: AnthropicConfig) => {
+      this.providerManager.registerProvider("anthropic", new AnthropicProvider(config));
+      const defaultModels = config.bedrock ? defaultAnthropicBedrockModels : defaultAnthropicModels;
+      for (const model of defaultModels) {
+        this.models.register({model, provider: "anthropic"});
+      }
+    },
     registerOllama: (config: OllamaConfig) => {
       this.providerManager.registerProvider("ollama", new OllamaProvider(config));
+    },
+    registerGroq: (config: GroqConfig) => {
+      this.providerManager.registerProvider("groq", new GroqProvider(config));
+      for (const model of defaultGroqModels) {
+        this.models.register({model, provider: "groq"});
+      }
     }
   };
 

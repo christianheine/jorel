@@ -54,4 +54,9 @@ export class OllamaProvider implements LlmCoreProvider {
 
     return {type: "response", content};
   }
+
+  async getAvailableModels(): Promise<string[]> {
+    const {models} = await ollama.ps();
+    return models.map(model => model.name);
+  }
 }

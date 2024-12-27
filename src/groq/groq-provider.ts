@@ -1,20 +1,20 @@
-import {OpenAI} from "openai";
+import Groq from "groq-sdk";
 import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../shared";
 
-export interface OpenAIConfig {
+export interface GroqConfig {
   apiKey?: string;
   apiUrl?: string;
   defaultTemperature?: number;
 }
 
-/** Provides access to OpenAI and other compatible services */
-export class OpenAIProvider implements LlmCoreProvider {
-  private client: OpenAI;
+/** Provides access to Groq and other compatible services */
+export class GroqProvider implements LlmCoreProvider {
+  private client: Groq;
   public defaultTemperature;
 
-  constructor({apiKey, apiUrl, defaultTemperature}: OpenAIConfig = {}) {
-    this.client = new OpenAI({
-      apiKey: apiKey ?? process.env.OPENAI_API_KEY,
+  constructor({apiKey, apiUrl, defaultTemperature}: GroqConfig = {}) {
+    this.client = new Groq({
+      apiKey: apiKey ?? process.env.Groq_API_KEY,
       baseURL: apiUrl
     });
     this.defaultTemperature = defaultTemperature ?? 0;

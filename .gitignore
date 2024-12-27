@@ -65,3 +65,6 @@ build/Release
 
 # Mac
 .DS_Store
+
+# GCP
+.secrets/

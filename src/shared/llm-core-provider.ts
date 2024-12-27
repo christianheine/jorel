@@ -1,5 +1,6 @@
 export interface LlmGenerationConfig {
   temperature?: number;
+  maxTokens?: number;
   json?: boolean;
 }
 
@@ -38,4 +39,6 @@ export interface LlmCoreProvider {
   generateResponse(model: string, messages: LlmMessage[], config?: LlmGenerationConfig): Promise<LlmResponse>;
 
   generateResponseStream(model: string, messages: LlmMessage[], config?: LlmGenerationConfig): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown>;
+
+  getAvailableModels(): Promise<string[]>;
 }
