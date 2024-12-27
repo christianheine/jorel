@@ -1,6 +1,6 @@
 # JorEl
 
-JorEl is a lightweight, elegant wrapper for interacting with multiple large language models (LLMs) such as OpenAI, Anthropic, Google, Ollama, and more. Designed with simplicity and usability in mind,
+JorEl is a lightweight, elegant wrapper for interacting with multiple large language models (LLMs) such as OpenAI, Anthropic, Groq, Google, Ollama, and more. Designed with simplicity and usability in mind,
 it provides a unified message format for interacting with different models while remaining lightweight compared to solutions like LangChain.
 
 ## Features
@@ -74,7 +74,7 @@ Requires OpenAI API key.
 ```typescript
 jorel.providers.registerOpenAi({
   apiKey: "your-openai-api-key",
-  defaultTemperature: 0.2,
+  defaultTemperature: 0.7,
 });
 ```
 
@@ -94,6 +94,7 @@ Requires Anthropic API key.
 
 ```typescript
 jorel.providers.registerAnthropic({
+  apiKey: "your-anthropic-api-key",
   defaultTemperature: 0.7,
 });
 ```
@@ -105,6 +106,7 @@ Requires Groq API key.
 ```typescript
 jorel.providers.registerGroq({
   apiKey: "your-groq-api-key",
+  defaultTemperature: 0.7,
 });
 ```
 
@@ -116,6 +118,7 @@ import {LlmCoreProvider} from "./llm-core-provider";
 class CustomProvider implements LlmCoreProvider {
   // generateResponse
   // generateResponseStream
+  // getAvailableModels
 }
 
 const customProviderInstance = new CustomProvider();
@@ -164,7 +167,18 @@ jorel.models.setDefault("gpt-4o");
 #### Generate a Simple Response
 
 ```typescript
-const response = await jorel.ask("What is the capital of France?");
+const response = await jorel.ask("What is the capital of France?"); // Will use the default model and system message
+console.log(response); // "The capital of France is Paris."
+```
+
+#### Generate a Simple Response with custom model and system message
+
+```typescript
+const response = await jorel.ask("What is the capital of France?", {
+  model: "gpt-4",
+  systemMessage: "Reply in as few words as possible.",
+  temperature: 0,
+}); // Will use the default model and system message
 console.log(response); // "Paris"
 ```
 
@@ -181,7 +195,7 @@ for await (const chunk of jorel.stream("Tell me a story about a brave knight."))
 ```typescript
 jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snakeCase for attributes!";
 const jsonResponse = await jorEl.json("Format this: Name = John, Age = 30, City = Sydney");
-console.log(jsonResponse); // Returns { name: "John", age: 30, city: "Sydney" }
+console.log(jsonResponse); // Returns { name: "John", age: 30, city: "Sydney" }, and will throw on invalid JSON
 ```
 
 ### Advanced Usage
@@ -203,6 +217,7 @@ console.log(response.content);
 ## Roadmap
 
 - [ ] Add support for more providers
+    - [X] OpenAi (added in v0.1.0)
     - [X] Ollama (added in v0.2.0)
     - [X] Anthropic (added in v0.3.0)
     - [X] Groq
