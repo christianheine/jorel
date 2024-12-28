@@ -1,16 +1,15 @@
 import {JorElProviderManager} from "./providers";
 import {JorElModelManager} from "./models";
-import {defaultOpenAiModels, OpenAIConfig, OpenAIProvider} from "../open-ai";
+import {AnthropicConfig, AnthropicProvider, defaultAnthropicBedrockModels, defaultAnthropicModels, defaultGrokModels, defaultGroqModels, defaultOpenAiModels, defaultVertexAiModels, GoogleVertexAiConfig, GoogleVertexAiProvider, GroqConfig, GroqProvider, OllamaConfig, OllamaProvider, OpenAIConfig, OpenAIProvider} from "../providers";
 import {generateMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage} from "../shared";
-import {OllamaConfig, OllamaProvider} from "../ollama";
-import {AnthropicConfig, AnthropicProvider, defaultAnthropicBedrockModels, defaultAnthropicModels} from "../anthropic";
-import {defaultGroqModels, GroqConfig, GroqProvider} from "../groq";
 
 interface InitialConfig {
-  openAI?: OpenAIConfig;
-  ollama?: OllamaConfig;
   anthropic?: AnthropicConfig;
+  grok?: OpenAIConfig;
   groq?: GroqConfig;
+  ollama?: OllamaConfig;
+  openAI?: OpenAIConfig;
+  vertexAi?: GoogleVertexAiConfig;
   systemMessage?: string;
   temperature?: number;
 }
@@ -28,60 +27,10 @@ interface JorElAskGenerationConfig extends JorElCoreGenerationConfig {
  * Jor-El: Singular interface for managing multiple LLM providers and models
  */
 export class JorEl {
-  private providerManager = new JorElProviderManager();
-  private modelManager = new JorElModelManager();
-
-  private defaultConfig: LlmGenerationConfig = {};
-
   /** System message use for all requests by default (unless specified per request) */
   public systemMessage;
-
-  /**
-   * Create a new Jor-El instance
-   * @param config
-   * @param config.openAI OpenAI configuration (optional)
-   * @param config.ollama Ollama configuration (optional)
-   * @param config.anthropic Anthropic configuration (optional)
-   * @param config.systemMessage System message to include in all requests (optional)
-   * @param config.temperature Default temperature for all requests (optional)
-   */
-  constructor(config: InitialConfig = {}) {
-    if (config.openAI) this.providers.registerOpenAi(config.openAI);
-    if (config.ollama) this.providers.registerOllama(config.ollama);
-    if (config.anthropic) this.providers.registerAnthropic(config.anthropic);
-    if (config.groq) this.providers.registerGroq(config.groq);
-    this.systemMessage = config.systemMessage || "";
-    if (config.temperature !== undefined) this.defaultConfig.temperature = config.temperature;
-  }
-
-  /** Public methods for managing providers */
-  public providers = {
-    list: () => this.providerManager.listProviders(),
-    registerCustom: (provider: string, coreProvider: LlmCoreProvider) => this.providerManager.registerProvider(provider, coreProvider),
-    registerOpenAi: (config: OpenAIConfig) => {
-      this.providerManager.registerProvider("openai", new OpenAIProvider(config));
-      for (const model of defaultOpenAiModels) {
-        this.models.register({model, provider: "openai"});
-      }
-    },
-    registerAnthropic: (config: AnthropicConfig) => {
-      this.providerManager.registerProvider("anthropic", new AnthropicProvider(config));
-      const defaultModels = config.bedrock ? defaultAnthropicBedrockModels : defaultAnthropicModels;
-      for (const model of defaultModels) {
-        this.models.register({model, provider: "anthropic"});
-      }
-    },
-    registerOllama: (config: OllamaConfig) => {
-      this.providerManager.registerProvider("ollama", new OllamaProvider(config));
-    },
-    registerGroq: (config: GroqConfig) => {
-      this.providerManager.registerProvider("groq", new GroqProvider(config));
-      for (const model of defaultGroqModels) {
-        this.models.register({model, provider: "groq"});
-      }
-    }
-  };
-
+  private providerManager = new JorElProviderManager();
+  private modelManager = new JorElModelManager();
   /** Public methods for managing models */
   public models = {
     list: () => this.modelManager.listModels(),
@@ -93,6 +42,73 @@ export class JorEl {
     getDefault: () => this.modelManager.getDefaultModel(),
     setDefault: (model: string) => this.modelManager.registerModel({model, provider: "", setAsDefault: true}),
   };
+  /** Public methods for managing providers */
+  public providers = {
+    list: () => this.providerManager.listProviders(),
+    registerCustom: (provider: string, coreProvider: LlmCoreProvider) => this.providerManager.registerProvider(provider, coreProvider),
+
+    registerAnthropic: (config: AnthropicConfig) => {
+      this.providerManager.registerProvider("anthropic", new AnthropicProvider(config));
+      const defaultModels = config.bedrock ? defaultAnthropicBedrockModels : defaultAnthropicModels;
+      for (const model of defaultModels) {
+        this.models.register({model, provider: "anthropic"});
+      }
+    },
+    registerGrok: (config: OpenAIConfig) => {
+      this.providerManager.registerProvider("grok", new OpenAIProvider({
+        apiUrl: "https://api.x.ai/v1",
+        ...config
+      }));
+      for (const model of defaultGrokModels) {
+        this.models.register({model, provider: "grok"});
+      }
+    },
+    registerGroq: (config: GroqConfig) => {
+      this.providerManager.registerProvider("groq", new GroqProvider(config));
+      for (const model of defaultGroqModels) {
+        this.models.register({model, provider: "groq"});
+      }
+    },
+    registerOllama: (config: OllamaConfig) => {
+      this.providerManager.registerProvider("ollama", new OllamaProvider(config));
+    },
+    registerOpenAi: (config: OpenAIConfig) => {
+      this.providerManager.registerProvider("openai", new OpenAIProvider(config));
+      for (const model of defaultOpenAiModels) {
+        this.models.register({model, provider: "openai"});
+      }
+    },
+    registerGoogleVertexAi: (config: GoogleVertexAiConfig) => {
+      this.providerManager.registerProvider("google-vertex-ai", new GoogleVertexAiProvider(config));
+      for (const model of defaultVertexAiModels) {
+        this.models.register({model, provider: "google-vertex-ai"});
+      }
+    },
+  };
+  private defaultConfig: LlmGenerationConfig = {};
+
+  /**
+   * Create a new Jor-El instance
+   * @param config
+   * @param config.anthropic Anthropic configuration (optional)
+   * @param config.grok Grok configuration (optional)
+   * @param config.groq Groq configuration (optional)
+   * @param config.vertexAi Google Vertex AI configuration (optional)
+   * @param config.ollama Ollama configuration (optional)
+   * @param config.openAI OpenAI configuration (optional)
+   * @param config.systemMessage System message to include in all requests (optional)
+   * @param config.temperature Default temperature for all requests (optional)
+   */
+  constructor(config: InitialConfig = {}) {
+    if (config.anthropic) this.providers.registerAnthropic(config.anthropic);
+    if (config.grok) this.providers.registerGrok(config.grok);
+    if (config.groq) this.providers.registerGroq(config.groq);
+    if (config.vertexAi) this.providers.registerGoogleVertexAi(config.vertexAi);
+    if (config.ollama) this.providers.registerOllama(config.ollama);
+    if (config.openAI) this.providers.registerOpenAi(config.openAI);
+    this.systemMessage = config.systemMessage || "You are a helpful assistant.";
+    if (config.temperature !== undefined) this.defaultConfig.temperature = config.temperature;
+  }
 
   /**
    * Generate a response for a given set of messages
@@ -156,7 +172,7 @@ export class JorEl {
    * @param task
    * @param config
    * @returns The JSON response
-   * @throws If the response is not valid JSON
+   * @throws Error - If the response is not valid JSON
    */
   async json(task: string, config: JorElAskGenerationConfig = {}) {
     const {response} = await this.generate(generateMessage(task, config.systemMessage || this.systemMessage), config, true);

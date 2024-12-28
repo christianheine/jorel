@@ -1,6 +1,6 @@
 import ollama from "ollama";
 
-import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../shared";
+import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
 
 export interface OllamaConfig {
   apiKey?: string;
@@ -45,7 +45,7 @@ export class OllamaProvider implements LlmCoreProvider {
 
     let content = "";
     for await (const chunk of stream) {
-      const contentChunk = chunk.message.content
+      const contentChunk = chunk.message.content;
       if (contentChunk) {
         content += contentChunk;
         yield {type: "chunk", content: contentChunk};

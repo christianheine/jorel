@@ -1,5 +1,5 @@
 import Groq from "groq-sdk";
-import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../shared";
+import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
 
 export interface GroqConfig {
   apiKey?: string;
@@ -9,8 +9,8 @@ export interface GroqConfig {
 
 /** Provides access to Groq and other compatible services */
 export class GroqProvider implements LlmCoreProvider {
-  private client: Groq;
   public defaultTemperature;
+  private client: Groq;
 
   constructor({apiKey, apiUrl, defaultTemperature}: GroqConfig = {}) {
     this.client = new Groq({
@@ -55,7 +55,7 @@ export class GroqProvider implements LlmCoreProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const models = await this.client.models.list()
+    const models = await this.client.models.list();
     return models.data.map(model => model.id);
   }
 }

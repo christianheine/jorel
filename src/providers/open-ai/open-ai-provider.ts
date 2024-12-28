@@ -1,5 +1,5 @@
 import {OpenAI} from "openai";
-import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../shared";
+import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
 
 export interface OpenAIConfig {
   apiKey?: string;
@@ -9,8 +9,8 @@ export interface OpenAIConfig {
 
 /** Provides access to OpenAI and other compatible services */
 export class OpenAIProvider implements LlmCoreProvider {
-  private client: OpenAI;
   public defaultTemperature;
+  private client: OpenAI;
 
   constructor({apiKey, apiUrl, defaultTemperature}: OpenAIConfig = {}) {
     this.client = new OpenAI({
@@ -55,7 +55,7 @@ export class OpenAIProvider implements LlmCoreProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const models = await this.client.models.list()
+    const models = await this.client.models.list();
     return models.data.map(model => model.id);
   }
 }

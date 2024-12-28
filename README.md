@@ -1,6 +1,7 @@
 # JorEl
 
-JorEl is a lightweight, elegant wrapper for interacting with multiple large language models (LLMs) such as OpenAI, Anthropic, Groq, Google, Ollama, and more. Designed with simplicity and usability in mind,
+JorEl is a lightweight, elegant wrapper for interacting with multiple large language models (LLMs) such as OpenAI, Anthropic, Groq, Google, Ollama, and more. Designed with simplicity and usability in
+mind,
 it provides a unified message format for interacting with different models while remaining lightweight compared to solutions like LangChain.
 
 ## Features
@@ -45,10 +46,12 @@ console.log(response); // "Sydney"
 import {JorEl} from "jorel";
 
 const jorel = new JorEl({
-  openAI: {apiKey: "your-openai-api-key"},
-  ollama: {},
   anthropic: {apiKey: "your-anthropic-api-key"},
+  grok: {apiKey: "your-grok-api-key"},
   groq: {apiKey: "your-groq-api-key"},
+  ollama: {},
+  openAI: {apiKey: "your-openai-api-key"},
+  vertexAi: {project: "your-project-id", location: "your-location", keyFilename: "path-to-your-service-account-file"},
   systemMessage: "You are a helpful assistant.",
 });
 ```
@@ -67,35 +70,25 @@ jorEl.systemMessage = 'You are a helpful llama.';
 
 ### Using Providers
 
-#### Register OpenAI
-
-Requires OpenAI API key.
-
-```typescript
-jorel.providers.registerOpenAi({
-  apiKey: "your-openai-api-key",
-  defaultTemperature: 0.7,
-});
-```
-
-#### Register Ollama
-
-Requires Ollama to be installed and running.
-
-```typescript
-jorel.providers.registerOllama({
-  defaultTemperature: 0.7,
-});
-```
-
 #### Register Anthropic
 
 Requires Anthropic API key.
 
 ```typescript
 jorel.providers.registerAnthropic({
-  apiKey: "your-anthropic-api-key",
-  defaultTemperature: 0.7,
+  apiKey: "your-anthropic-api-key", // Can also be set as an environment variable ANTHROPIC_API_KEY
+  defaultTemperature: 0.7, // optional
+});
+```
+
+#### Register Grok
+
+Requires Grok API key.
+
+```typescript
+jorel.providers.registerGrok({
+  apiKey: "your-grok-api-key", // Can also be set as an environment variable GROK_API_KEY
+  defaultTemperature: 0.7, // optional
 });
 ```
 
@@ -105,15 +98,51 @@ Requires Groq API key.
 
 ```typescript
 jorel.providers.registerGroq({
-  apiKey: "your-groq-api-key",
-  defaultTemperature: 0.7,
+  apiKey: "your-groq-api-key", // Can also be set as an environment variable GROQ_API_KEY
+  defaultTemperature: 0.7, // optional
+});
+```
+
+#### Register Ollama
+
+Requires Ollama to be installed and running.
+
+```typescript
+jorel.providers.registerOllama({
+  defaultTemperature: 0.7, // optional
+});
+```
+
+#### Register OpenAI
+
+Requires OpenAI API key.
+
+```typescript
+jorel.providers.registerOpenAi({
+  apiKey: "your-openai-api-key", // Can also be set as an environment variable OPENAI_API_KEY
+  defaultTemperature: 0.7, // optional
+});
+```
+
+#### Register Vertex AI (Google)
+
+Requires Google Vertex AI service account file.
+
+```typescript
+jorel.providers.registerGoogleVertexAI({
+  project: "your-project-id", // Can also be set as an environment variable GCP_PROJECT
+  location: "your-location", // Can also be set as an environment variable CGP_LOCATION
+  keyFilename: "path-to-your-service-account-file", // Can also be set as an environment variable GOOGLE_APPLICATION_CREDENTIALS
+  defaultTemperature: 0.7, // optional
+  safetySettings: [{category: 'safety-category', threshold: "safety-threshold"}], // optional
 });
 ```
 
 #### Register a Custom Provider
 
-```typescript
-import {LlmCoreProvider} from "./llm-core-provider";
+```
+typescript
+import {Ll;mCoreProvider} from "./llm-core-provider";
 
 class CustomProvider implements LlmCoreProvider {
   // generateResponse
@@ -216,15 +245,16 @@ console.log(response.content);
 
 ## Roadmap
 
-- [ ] Add support for more providers
+- [X] Add support for more providers
     - [X] OpenAi (added in v0.1.0)
     - [X] Ollama (added in v0.2.0)
     - [X] Anthropic (added in v0.3.0)
-    - [X] Groq
-    - [ ] Google Vertex AI
-    - [ ] Grok
+    - [X] Groq (added in v0.3.0)
+    - [X] Google Vertex AI (added in v0.4.0)
+    - [X] Grok (added in v0.4.0)
 - [ ] Implement vision support (images in prompts)
 - [ ] Add support for tool use
+- [ ] Return metadata with responses
 - [ ] Increase test coverage
 
 ## Contributing

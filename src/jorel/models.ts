@@ -11,7 +11,7 @@ export class JorElModelManager {
    * @param provider The provider name
    * @param setAsDefault Whether to set this model as the default
    * @returns The model entry
-   * @throws If the provider does not exist
+   * @throws Error - If the provider does not exist
    */
   registerModel({model, provider, setAsDefault}: { model: string; provider: string; setAsDefault?: boolean }) {
     this.models.push({model, provider});
@@ -33,7 +33,7 @@ export class JorElModelManager {
    * Get a model entry
    * @param model The model name
    * @returns The model entry
-   * @throws If the model does not exist
+   * @throws Error - If the model does not exist
    */
   getModel(model: string): { model: string; provider: string } {
     const modelEntry = this.models.find((m) => m.model === model);
@@ -52,7 +52,7 @@ export class JorElModelManager {
   /**
    * Set the default model
    * @param model The model name
-   * @throws If the model does not exist
+   * @throws Error - If the model does not exist
    */
   setDefaultModel(model: string) {
     this.getModel(model); // Ensure model exists

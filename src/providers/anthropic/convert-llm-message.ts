@@ -1,4 +1,4 @@
-import {LlmMessage} from "../shared";
+import {LlmMessage} from "../../shared";
 import Anthropic from "@anthropic-ai/sdk";
 
 export const convertLlmMessagesToAnthropicMessages = (messages: LlmMessage[]): {

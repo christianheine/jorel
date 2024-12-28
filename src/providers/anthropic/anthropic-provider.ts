@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {AnthropicBedrock} from "@anthropic-ai/bedrock-sdk";
 
-import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../shared";
+import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
 import {convertLlmMessagesToAnthropicMessages} from "./convert-llm-message";
 
 export interface AnthropicConfig {
@@ -16,9 +16,8 @@ export interface AnthropicConfig {
 
 /** Provides access to OpenAI and other compatible services */
 export class AnthropicProvider implements LlmCoreProvider {
-  private readonly client: AnthropicBedrock | Anthropic;
-
   public defaultTemperature;
+  private readonly client: AnthropicBedrock | Anthropic;
 
   constructor({apiKey, bedrock, defaultTemperature}: AnthropicConfig = {}) {
     if (bedrock) {
