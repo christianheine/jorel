@@ -140,9 +140,8 @@ jorel.providers.registerGoogleVertexAI({
 
 #### Register a Custom Provider
 
-```
-typescript
-import {Ll;mCoreProvider} from "./llm-core-provider";
+```typescript
+import {LlmCoreProvider} from "./llm-core-provider";
 
 class CustomProvider implements LlmCoreProvider {
   // generateResponse
@@ -234,7 +233,7 @@ console.log(jsonResponse); // Returns { name: "John", age: 30, city: "Sydney" },
 You can access providers directly for more control, or if you just want to benefit from the unified message format.
 
 ```typescript
-import {OpenAIProvider} from "jorel/providers";
+import {OpenAIProvider} from "jorel";
 
 const openAiProvider = new OpenAIProvider({apiKey: "your-api-key"});
 const response = await openAiProvider.generateResponse("gpt-4", [
@@ -242,6 +241,18 @@ const response = await openAiProvider.generateResponse("gpt-4", [
 ]);
 console.log(response.content);
 ```
+
+##### Available providers
+
+- AnthropicProvider
+- OpenAIProvider (also used for Grok)
+- GroqProvider
+- OllamaProvider
+- GoogleVertexAiProvider
+
+## Examples
+
+There are several examples in the `examples` directory that demonstrate how to use JorEl with different providers.
 
 ## Roadmap
 
