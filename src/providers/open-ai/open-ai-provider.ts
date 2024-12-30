@@ -1,5 +1,6 @@
 import {OpenAI} from "openai";
 import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
+import {convertLlmMessagesToOpenAiMessages} from "./convert-llm-message";
 
 export interface OpenAIConfig {
   apiKey?: string;
@@ -23,7 +24,7 @@ export class OpenAIProvider implements LlmCoreProvider {
   async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
     const response = await this.client.chat.completions.create({
       model,
-      messages,
+      messages: await convertLlmMessagesToOpenAiMessages(messages),
       temperature: config.temperature || this.defaultTemperature,
       response_format: config.json ? {type: "json_object"} : {type: "text"}
     });
@@ -34,7 +35,7 @@ export class OpenAIProvider implements LlmCoreProvider {
   async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
     const response = await this.client.chat.completions.create({
       model,
-      messages,
+      messages: await convertLlmMessagesToOpenAiMessages(messages),
       temperature: config.temperature || this.defaultTemperature,
       response_format: config.json ? {type: "json_object"} : {type: "text"},
       stream: true

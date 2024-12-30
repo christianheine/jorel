@@ -1,4 +1,4 @@
-import {Content, GenerateContentResponse, HarmBlockThreshold, HarmCategory, StreamGenerateContentResult, VertexAI} from "@google-cloud/vertexai";
+import {ClientError, Content, GenerateContentResponse, GoogleApiError, HarmBlockThreshold, HarmCategory, StreamGenerateContentResult, VertexAI} from "@google-cloud/vertexai";
 import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
 import {convertLlmMessagesToVertexAiMessages} from "./convert-llm-message";
 
@@ -52,7 +52,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
   }
 
   async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse> {
-    const {chatMessages, systemMessage} = convertLlmMessagesToVertexAiMessages(messages);
+    const {chatMessages, systemMessage} = await convertLlmMessagesToVertexAiMessages(messages);
 
     const generativeModel = this.client.getGenerativeModel({
       model,
@@ -61,21 +61,33 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     const temperature = config.temperature || 0;
     const maxTokens = config.maxTokens || undefined;
 
-    const response: GenerateContentResponse = (
-      await generativeModel.generateContent({
-        contents: chatMessages,
-        systemInstruction: systemMessage,
-        generationConfig: {
-          temperature,
-          maxOutputTokens: maxTokens,
-          responseMimeType: config.json ? "application/json" : "text/plain",
-          // topP: config.topP || 1,
-          // topK: config.topLogProbs,
-          // stopSequences: config.stopSequences,
-        },
-        safetySettings: this.safetySettings
-      })
-    ).response;
+    let response: GenerateContentResponse;
+
+    try {
+      response = (
+        await generativeModel.generateContent({
+          contents: chatMessages,
+          systemInstruction: systemMessage,
+          generationConfig: {
+            temperature,
+            maxOutputTokens: maxTokens,
+            responseMimeType: config.json ? "application/json" : "text/plain",
+            // topP: config.topP || 1,
+            // topK: config.topLogProbs,
+            // stopSequences: config.stopSequences,
+          },
+          safetySettings: this.safetySettings
+        })
+      ).response;
+    } catch (error: unknown) {
+      if (error instanceof ClientError) {
+        throw new Error(`[GoogleVertexAiProvider] Error generating content: ${error.message}`);
+      }
+      if (error instanceof GoogleApiError) {
+        throw new Error(`[GoogleVertexAiProvider] Error generating content: ${error.message}, code: ${error.code}, status: ${error.status}, details: ${error.errorDetails}`);
+      }
+      throw error;
+    }
 
     const responseContent: Content = response.candidates && response.candidates.length > 0 ? response.candidates[0].content : {role: "model", parts: [{text: ""}]};
 
@@ -87,7 +99,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
   async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
     // const start = Date.now();
 
-    const {chatMessages, systemMessage} = convertLlmMessagesToVertexAiMessages(messages);
+    const {chatMessages, systemMessage} = await convertLlmMessagesToVertexAiMessages(messages);
 
     const generativeModel = this.client.getGenerativeModel({
       model,

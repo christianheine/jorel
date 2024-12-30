@@ -48,7 +48,7 @@ export class AnthropicProvider implements LlmCoreProvider {
   }
 
   async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
-    const {chatMessages, systemMessage} = convertLlmMessagesToAnthropicMessages(messages);
+    const {chatMessages, systemMessage} = await convertLlmMessagesToAnthropicMessages(messages);
     const response = await this.client.messages.create({
       model,
       messages: chatMessages,
@@ -64,7 +64,7 @@ export class AnthropicProvider implements LlmCoreProvider {
   }
 
   async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
-    const {chatMessages, systemMessage} = convertLlmMessagesToAnthropicMessages(messages);
+    const {chatMessages, systemMessage} = await convertLlmMessagesToAnthropicMessages(messages);
     const responseStream = await this.client.messages.create({
       model,
       messages: chatMessages,

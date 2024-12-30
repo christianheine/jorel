@@ -1,6 +1,7 @@
 import ollama from "ollama";
 
 import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
+import {convertLlmMessagesToOllamaMessages} from "./convert-llm-message";
 
 export interface OllamaConfig {
   apiKey?: string;
@@ -19,7 +20,7 @@ export class OllamaProvider implements LlmCoreProvider {
   async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
     const response = await ollama.chat({
       model,
-      messages,
+      messages: await convertLlmMessagesToOllamaMessages(messages),
       format: config.json ? "json" : undefined,
       options: {
         temperature: config.temperature || this.defaultTemperature,
@@ -35,7 +36,7 @@ export class OllamaProvider implements LlmCoreProvider {
   ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
     const stream = await ollama.chat({
       model,
-      messages,
+      messages: await convertLlmMessagesToOllamaMessages(messages),
       stream: true,
       format: config.json ? "json" : undefined,
       options: {

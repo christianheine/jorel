@@ -5,4 +5,5 @@ export const defaultGroqModels: string[] = [
   "llama3-70b-8192",
   "gemma2-9b-it",
   "mixtral-8x7b-32768",
+  "llama-3.2-11b-vision-preview",
 ];

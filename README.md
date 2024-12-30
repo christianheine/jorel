@@ -1,8 +1,7 @@
 # JorEl
 
 JorEl is a lightweight, elegant wrapper for interacting with multiple large language models (LLMs) such as OpenAI, Anthropic, Groq, Google, Ollama, and more. Designed with simplicity and usability in
-mind,
-it provides a unified message format for interacting with different models while remaining lightweight compared to solutions like LangChain.
+mind, it provides a unified message format for interacting with different models while remaining lightweight compared to solutions like LangChain.
 
 ## Features
 
@@ -21,14 +20,35 @@ npm install jorel
 
 ## Quick start
 
+### Text-only usage
+
 ```typescript
 import {JorEl} from "jorel";
 
+// Create a new JorEl instance with your chosen provider's credentials
 const jorel = new JorEl({openAI: {apiKey: "your-openai-api-key"}});
 
+// Generate a response for a text prompt
 const response = await jorel.ask("What is the capital of Australia?");
 
 console.log(response); // "Sydney"
+```
+
+### Prompts with images
+
+```typescript
+import {JorEl, ImageContent} from "jorel";
+
+// Create a new JorEl instance with your chosen provider's credentials
+const jorel = new JorEl({openAI: {apiKey: "your-openai-api-key"}});
+
+// Load an image (from a file, buffer, url, data url, or base64 string)
+const image = ImageContent.fromFile("path-to-your-image.jpg");
+
+// Generate a response for a vision prompt
+const response = await jorel.ask(["Describe this image", image]);
+
+console.log(response); // "description of the image"
 ```
 
 ## Core Tenets
@@ -40,7 +60,7 @@ console.log(response); // "Sydney"
 
 ## Usage
 
-### Basic Setup
+### Basic setup
 
 ```typescript
 import {JorEl} from "jorel";
@@ -68,7 +88,7 @@ jorEl.providers.registerOllama({defaultTemperature: 0.2})
 jorEl.systemMessage = 'You are a helpful llama.';
 ```
 
-### Using Providers
+### Using providers
 
 #### Register Anthropic
 
@@ -138,10 +158,10 @@ jorel.providers.registerGoogleVertexAI({
 });
 ```
 
-#### Register a Custom Provider
+#### Register a custom provider
 
 ```typescript
-import {LlmCoreProvider} from "./llm-core-provider";
+import {LlmCoreProvider} from "jorel";
 
 class CustomProvider implements LlmCoreProvider {
   // generateResponse
@@ -154,21 +174,21 @@ const customProviderInstance = new CustomProvider();
 jorel.providers.registerCustom("custom", customProviderInstance);
 ```
 
-#### List Registered Providers
+#### List registered providers
 
 ```typescript
 console.log(jorel.providers.list()); // ["openai", "ollama", "custom"]
 ```
 
-### Using Models
+### Using models
 
-#### List Registered Models
+#### List registered models
 
 ```typescript
 console.log(jorel.models.list());
 ```
 
-#### Register a Model
+#### Register a model
 
 ```typescript
 jorel.models.register({
@@ -178,39 +198,49 @@ jorel.models.register({
 });
 ```
 
-#### Unregister a Model
+#### Unregister a model
 
 ```typescript
 jorel.models.unregister("custom-model");
 ```
 
-#### Set Default Model
+#### Set default model
 
 ```typescript
 jorel.models.setDefault("gpt-4o");
 ```
 
-### Generate Responses
+### Generate responses
 
-#### Generate a Simple Response
+#### Generate a simple response
 
 ```typescript
 const response = await jorel.ask("What is the capital of France?"); // Will use the default model and system message
 console.log(response); // "The capital of France is Paris."
 ```
 
-#### Generate a Simple Response with custom model and system message
+#### Generate a simple response with custom model and system message
 
 ```typescript
 const response = await jorel.ask("What is the capital of France?", {
   model: "gpt-4",
   systemMessage: "Reply in as few words as possible.",
   temperature: 0,
-}); // Will use the default model and system message
+});
 console.log(response); // "Paris"
 ```
 
-#### Generate a Response Stream
+#### Generate a response with an image
+
+```typescript
+const response = await jorel.ask(["Describe this image", image], {
+  systemMessage: "You are an expert in image classification.",
+  temperature: 0,
+}); 
+console.log(response); // "Paris"
+```
+
+#### Generate a response stream
 
 ```typescript
 for await (const chunk of jorel.stream("Tell me a story about a brave knight.")) {
@@ -218,7 +248,7 @@ for await (const chunk of jorel.stream("Tell me a story about a brave knight."))
 }
 ```
 
-#### Generate JSON Output
+#### Generate JSON output
 
 ```typescript
 jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snakeCase for attributes!";
@@ -226,9 +256,9 @@ const jsonResponse = await jorEl.json("Format this: Name = John, Age = 30, City 
 console.log(jsonResponse); // Returns { name: "John", age: 30, city: "Sydney" }, and will throw on invalid JSON
 ```
 
-### Advanced Usage
+### Alternative usage
 
-#### Directly Use Providers
+#### Directly using providers
 
 You can access providers directly for more control, or if you just want to benefit from the unified message format.
 
@@ -263,7 +293,7 @@ There are several examples in the `examples` directory that demonstrate how to u
     - [X] Groq (added in v0.3.0)
     - [X] Google Vertex AI (added in v0.4.0)
     - [X] Grok (added in v0.4.0)
-- [ ] Implement vision support (images in prompts)
+- [X] Implement vision support (images in prompts) (added in v0.5.0)
 - [ ] Add support for tool use
 - [ ] Return metadata with responses
 - [ ] Increase test coverage

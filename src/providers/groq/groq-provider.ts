@@ -1,5 +1,6 @@
 import Groq from "groq-sdk";
 import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
+import {convertLlmMessagesToGroqMessages} from "./convert-llm-message";
 
 export interface GroqConfig {
   apiKey?: string;
@@ -23,7 +24,7 @@ export class GroqProvider implements LlmCoreProvider {
   async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
     const response = await this.client.chat.completions.create({
       model,
-      messages,
+      messages: await convertLlmMessagesToGroqMessages(messages),
       temperature: config.temperature || this.defaultTemperature,
       response_format: config.json ? {type: "json_object"} : {type: "text"}
     });
@@ -34,7 +35,7 @@ export class GroqProvider implements LlmCoreProvider {
   async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
     const response = await this.client.chat.completions.create({
       model,
-      messages,
+      messages: await convertLlmMessagesToGroqMessages(messages),
       temperature: config.temperature || this.defaultTemperature,
       response_format: config.json ? {type: "json_object"} : {type: "text"},
       stream: true

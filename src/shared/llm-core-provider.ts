@@ -1,3 +1,5 @@
+import {ImageContent} from "../media";
+
 export interface LlmGenerationConfig {
   temperature?: number;
   maxTokens?: number;
@@ -9,9 +11,26 @@ export type LlmSystemMessage = {
   content: string;
 }
 
+export interface LLmMessageTextContent {
+  type: "text";
+  text: string;
+}
+
+export interface LLmMessageImageUrlContent {
+  type: "imageUrl";
+  mimeType?: string;
+  url: string;
+}
+
+export interface LLmMessageImageDataUrlContent {
+  type: "imageData";
+  mimeType?: string;
+  data: string;
+}
+
 export type LlmUserMessage = {
   role: "user";
-  content: string;
+  content: string | (string | LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent | ImageContent)[];
 }
 
 export type LlmAssistantMessage = {
