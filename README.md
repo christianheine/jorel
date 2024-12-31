@@ -3,6 +3,46 @@
 JorEl is a lightweight, elegant wrapper for interacting with multiple large language models (LLMs) such as OpenAI, Anthropic, Groq, Google, Ollama, and more. Designed with simplicity and usability in
 mind, it provides a unified message format for interacting with different models while remaining lightweight compared to solutions like LangChain.
 
+## Table of Contents
+
+- [JorEl](#jorel)
+    - [Features](#features)
+    - [Installation](#installation)
+    - [Quick start](#quick-start)
+        - [Text-only usage](#text-only-usage)
+        - [Prompts-with-images](#prompts-with-images)
+    - [Core Tenets](#core-tenets)
+    - [Usage](#usage)
+        - [Basic setup](#basic-setup)
+        - [Using providers](#using-providers)
+            - [Register Anthropic](#register-anthropic)
+            - [Register Grok](#register-grok)
+            - [Register Groq](#register-groq)
+            - [Register Ollama](#register-ollama)
+            - [Register OpenAI](#register-openai)
+            - [Register Vertex AI (Google)](#register-vertex-ai-google)
+            - [Register a custom provider](#register-a-custom-provider)
+            - [List registered providers](#list-registered-providers)
+        - [Using models](#using-models)
+            - [List registered models](#list-registered-models)
+            - [Register a model](#register-a-model)
+            - [Unregister a model](#unregister-a-model)
+            - [Set default model](#set-default-model)
+        - [Generate responses](#generate-responses)
+            - [Generate a simple response](#generate-a-simple-response)
+            - [Generate a simple response with custom model and system message](#generate-a-simple-response-with-custom-model-and-system-message)
+            - [Generate a response with an image](#generate-a-response-with-an-image)
+            - [Generate a response stream](#generate-a-response-stream)
+            - [Generate JSON output](#generate-json-output)
+        - [JorEl class api, and message types](#jorel-class-api-and-message-types)
+        - [Alternative usage](#alternative-usage)
+            - [Directly using providers](#directly-using-providers)
+    - [Examples](#examples)
+    - [Roadmap](#roadmap)
+    - [Contributing](#contributing)
+    - [License](#license)
+
+
 ## Features
 
 - **Unified Message Format**: Standardizes user, system, and assistant messages across LLMs.
@@ -237,7 +277,7 @@ const response = await jorel.ask(["Describe this image", image], {
   systemMessage: "You are an expert in image classification.",
   temperature: 0,
 }); 
-console.log(response); // "Paris"
+console.log(response);
 ```
 
 #### Generate a response stream
@@ -254,6 +294,78 @@ for await (const chunk of jorel.stream("Tell me a story about a brave knight."))
 jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snakeCase for attributes!";
 const jsonResponse = await jorEl.json("Format this: Name = John, Age = 30, City = Sydney");
 console.log(jsonResponse); // Returns { name: "John", age: 30, city: "Sydney" }, and will throw on invalid JSON
+```
+
+### JorEl class api, and message types
+
+```typescript
+class JorEl {
+  constructor(config?: InitialConfig);
+
+  // Properties
+  systemMessage: string;
+  models: {
+    list: () => ModelEntry[];
+    register: (params: { model: string; provider: string; setAsDefault?: boolean }) => void;
+    unregister: (model: string) => void;
+    getDefault: () => string;
+    setDefault: (model: string) => void;
+  };
+  providers: {
+    list: () => string[];
+    registerCustom: (provider: string, coreProvider: LlmCoreProvider) => void;
+    registerAnthropic: (config?: AnthropicConfig) => void;
+    registerGrok: (config?: OpenAIConfig) => void;
+    registerGroq: (config?: GroqConfig) => void;
+    registerOllama: (config?: OllamaConfig) => void;
+    registerOpenAi: (config?: OpenAIConfig) => void;
+    registerGoogleVertexAi: (config?: GoogleVertexAiConfig) => void;
+  };
+
+  // Methods
+  ask(task: JorElTaskInput, config?: JorElAskGenerationConfig): Promise<string>;
+  stream(task: JorElTaskInput, config?: JorElAskGenerationConfig): AsyncGenerator<string>;
+  json(task: JorElTaskInput, config?: JorElAskGenerationConfig): Promise<any>;
+  generate(messages: LlmMessage[], config?: JorElAskGenerationConfig, json?: boolean): Promise<{
+    response: string;
+    messages: LlmMessage[];
+  }>;
+  generateContentStream(messages: LlmMessage[], config?: JorElAskGenerationConfig): AsyncGenerator<...>;
+}
+
+type LlmMessage = LlmSystemMessage | LlmUserMessage | LlmAssistantMessage;
+
+type LlmSystemMessage = {
+  role: "system";
+  content: string;
+}
+
+type LlmUserMessage = {
+  role: "user";
+  content: string | (string | LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent | ImageContent)[];
+}
+
+interface LLmMessageTextContent {
+  type: "text";
+  text: string;
+}
+
+interface LLmMessageImageUrlContent {
+  type: "imageUrl";
+  mimeType?: string;
+  url: string;
+}
+
+interface LLmMessageImageDataUrlContent {
+  type: "imageData";
+  mimeType?: string;
+  data: string;
+}
+
+type LlmAssistantMessage = {
+  role: "assistant";
+  content: string;
+}
 ```
 
 ### Alternative usage
@@ -275,9 +387,10 @@ console.log(response.content);
 ##### Available providers
 
 - AnthropicProvider
-- OpenAIProvider (also used for Grok)
+- GrokProvider
 - GroqProvider
 - OllamaProvider
+- OpenAIProvider
 - GoogleVertexAiProvider
 
 ## Examples
