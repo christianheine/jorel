@@ -8,6 +8,8 @@ export interface GroqConfig {
   defaultTemperature?: number;
 }
 
+const _provider = "GroqProvider";
+
 /** Provides access to Groq and other compatible services */
 export class GroqProvider implements LlmCoreProvider {
   public defaultTemperature;
@@ -22,6 +24,8 @@ export class GroqProvider implements LlmCoreProvider {
   }
 
   async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
+    const start = Date.now();
+
     const response = await this.client.chat.completions.create({
       model,
       messages: await convertLlmMessagesToGroqMessages(messages),
@@ -29,16 +33,34 @@ export class GroqProvider implements LlmCoreProvider {
       response_format: config.json ? {type: "json_object"} : {type: "text"}
     });
 
-    return {content: response.choices[0].message.content || ""};
+    const durationMs = Date.now() - start;
+
+    const inputTokens = response.usage?.prompt_tokens;
+    const outputTokens = response.usage?.completion_tokens;
+
+    const content = response.choices[0].message.content || "";
+
+    return {
+      content,
+      meta: {
+        model,
+        _provider,
+        durationMs,
+        inputTokens,
+        outputTokens,
+      }
+    };
   }
 
   async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+    const start = Date.now();
+
     const response = await this.client.chat.completions.create({
       model,
       messages: await convertLlmMessagesToGroqMessages(messages),
       temperature: config.temperature || this.defaultTemperature,
       response_format: config.json ? {type: "json_object"} : {type: "text"},
-      stream: true
+      stream: true,
     });
 
     let content = "";
@@ -50,8 +72,21 @@ export class GroqProvider implements LlmCoreProvider {
       }
     }
 
+    const durationMs = Date.now() - start;
+
+    const inputTokens = undefined;
+    const outputTokens = undefined;
+
     return {
-      type: "response", content
+      type: "response",
+      content,
+      meta: {
+        model,
+        _provider,
+        durationMs,
+        inputTokens,
+        outputTokens,
+      }
     };
   }
 

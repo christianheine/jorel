@@ -144,7 +144,7 @@ export class ImageContent {
    * @param downloadUrls Whether to download the image and return a data URL
    * @returns The image as a message content
    */
-  async toMessageContent(): Promise<LLmMessageImageDataUrlContent | LLmMessageImageUrlContent>
+  async toMessageContent(downloadUrls?: false): Promise<LLmMessageImageDataUrlContent | LLmMessageImageUrlContent>
   async toMessageContent(downloadUrls: true): Promise<LLmMessageImageDataUrlContent>
   async toMessageContent(downloadUrls: boolean = false): Promise<LLmMessageImageUrlContent | LLmMessageImageDataUrlContent> {
     if (this._source.type === "url" && !downloadUrls) {

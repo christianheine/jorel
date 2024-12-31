@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1 (2024-12-31)
+
+- Add metadata to responses: duration, model, input & output tokens (where available)
+
 ## 0.5.0 (2024-12-30)
 
 - Add vision support for all current providers (OpenAI, Anthropic, Ollama, Groq, Grok, VertexAI)

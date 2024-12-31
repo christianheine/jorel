@@ -20,6 +20,8 @@ export interface GoogleVertexAiConfig {
   safetySettings?: { category: HarmCategory, threshold: HarmBlockThreshold }[];
 }
 
+const _provider = "GoogleVertexAiProvider";
+
 /** Provides access to GoogleVertexAi and other compatible services */
 export class GoogleVertexAiProvider implements LlmCoreProvider {
   public defaultTemperature;
@@ -52,6 +54,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
   }
 
   async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse> {
+    const start = Date.now();
     const {chatMessages, systemMessage} = await convertLlmMessagesToVertexAiMessages(messages);
 
     const generativeModel = this.client.getGenerativeModel({
@@ -89,15 +92,29 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       throw error;
     }
 
+    const inputTokens = response.usageMetadata?.promptTokenCount;
+    const outputTokens = response.usageMetadata?.candidatesTokenCount;
+
     const responseContent: Content = response.candidates && response.candidates.length > 0 ? response.candidates[0].content : {role: "model", parts: [{text: ""}]};
 
     const content = responseContent.parts.filter(p => !!p.text).map(p => p.text).join("");
 
-    return {content};
+    const durationMs = Date.now() - start;
+
+    return {
+      content,
+      meta: {
+        model,
+        _provider,
+        durationMs,
+        inputTokens,
+        outputTokens,
+      }
+    };
   }
 
   async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
-    // const start = Date.now();
+    const start = Date.now();
 
     const {chatMessages, systemMessage} = await convertLlmMessagesToVertexAiMessages(messages);
 
@@ -124,7 +141,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       })
     );
 
-    // const durationMs = Date.now() - start;
+    const durationMs = Date.now() - start;
 
     for await (const res of response.stream) {
       const content: Content = res.candidates && res.candidates.length > 0 ? res.candidates[0].content : {role: "model", parts: [{text: ""}]};
@@ -139,14 +156,21 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     const r = await response.response;
     const content: Content = r.candidates && r.candidates.length > 0 ? r.candidates[0].content : {role: "model", parts: [{text: ""}]};
 
-    // const inputTokens = r.usageMetadata?.promptTokenCount || 0;
-    // const outputTokens = r.usageMetadata?.candidatesTokenCount || 0;
+    const inputTokens = r.usageMetadata?.promptTokenCount;
+    const outputTokens = r.usageMetadata?.candidatesTokenCount;
 
     const contentText = content.parts.map(p => p.text).join("");
 
     return {
       type: "response",
-      content: contentText
+      content: contentText,
+      meta: {
+        model,
+        _provider,
+        durationMs,
+        inputTokens,
+        outputTokens,
+      }
     };
   }
 

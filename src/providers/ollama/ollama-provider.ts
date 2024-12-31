@@ -9,6 +9,8 @@ export interface OllamaConfig {
   defaultTemperature?: number;
 }
 
+const _provider = "OllamaProvider";
+
 /** Provides access to local Ollama server */
 export class OllamaProvider implements LlmCoreProvider {
   public defaultTemperature;
@@ -18,6 +20,8 @@ export class OllamaProvider implements LlmCoreProvider {
   }
 
   async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
+    const start = Date.now();
+
     const response = await ollama.chat({
       model,
       messages: await convertLlmMessagesToOllamaMessages(messages),
@@ -26,7 +30,24 @@ export class OllamaProvider implements LlmCoreProvider {
         temperature: config.temperature || this.defaultTemperature,
       }
     });
-    return {content: response.message.content};
+
+    const durationMs = Date.now() - start;
+
+    const inputTokens = response.prompt_eval_count; // Somewhat undocumented at the moment
+    const outputTokens = response.eval_count; // Somewhat undocumented at the moment
+
+    const content = response.message.content;
+
+    return {
+      content,
+      meta: {
+        model,
+        _provider,
+        durationMs,
+        inputTokens,
+        outputTokens,
+      }
+    };
   }
 
   async* generateResponseStream(
@@ -34,6 +55,8 @@ export class OllamaProvider implements LlmCoreProvider {
     messages: LlmMessage[],
     config: LlmGenerationConfig = {}
   ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+    const start = Date.now();
+
     const stream = await ollama.chat({
       model,
       messages: await convertLlmMessagesToOllamaMessages(messages),
@@ -53,7 +76,22 @@ export class OllamaProvider implements LlmCoreProvider {
       }
     }
 
-    return {type: "response", content};
+    const durationMs = Date.now() - start;
+
+    const inputTokens = undefined;
+    const outputTokens = undefined;
+
+    return {
+      type: "response",
+      content,
+      meta: {
+        model,
+        _provider,
+        durationMs,
+        inputTokens,
+        outputTokens,
+      }
+    };
   }
 
   async getAvailableModels(): Promise<string[]> {

@@ -40,8 +40,17 @@ export type LlmAssistantMessage = {
 
 export type LlmMessage = LlmSystemMessage | LlmUserMessage | LlmAssistantMessage;
 
+export interface LlmResponseMetaData {
+  model: string;
+  _provider: string;
+  durationMs: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
 export interface LlmResponse {
   content: string;
+  meta: LlmResponseMetaData;
 }
 
 export interface LlmStreamResponseChunk {
@@ -52,6 +61,7 @@ export interface LlmStreamResponseChunk {
 export interface LlmStreamResponse {
   type: "response";
   content: string;
+  meta: LlmResponseMetaData;
 }
 
 export interface LlmCoreProvider {

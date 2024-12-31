@@ -296,7 +296,7 @@ const jsonResponse = await jorEl.json("Format this: Name = John, Age = 30, City 
 console.log(jsonResponse); // Returns { name: "John", age: 30, city: "Sydney" }, and will throw on invalid JSON
 ```
 
-### JorEl class api, and message types
+### JorEl class api and message types
 
 ```typescript
 class JorEl {
@@ -332,17 +332,16 @@ class JorEl {
   }>;
   generateContentStream(messages: LlmMessage[], config?: JorElAskGenerationConfig): AsyncGenerator<...>;
 }
-
-type LlmMessage = LlmSystemMessage | LlmUserMessage | LlmAssistantMessage;
+ 
+interface LlmGenerationConfig {
+  temperature?: number;
+  maxTokens?: number;
+  json?: boolean;
+}
 
 type LlmSystemMessage = {
   role: "system";
   content: string;
-}
-
-type LlmUserMessage = {
-  role: "user";
-  content: string | (string | LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent | ImageContent)[];
 }
 
 interface LLmMessageTextContent {
@@ -362,9 +361,40 @@ interface LLmMessageImageDataUrlContent {
   data: string;
 }
 
+type LlmUserMessage = {
+  role: "user";
+  content: string | (string | LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent | ImageContent)[];
+}
+
 type LlmAssistantMessage = {
   role: "assistant";
   content: string;
+}
+
+type LlmMessage = LlmSystemMessage | LlmUserMessage | LlmAssistantMessage;
+
+interface LlmResponseMetaData {
+  model: string;
+  _provider: string;
+  durationMs: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+interface LlmResponse {
+  content: string;
+  meta: LlmResponseMetaData;
+}
+
+interface LlmStreamResponseChunk {
+  type: "chunk";
+  content: string;
+}
+
+interface LlmStreamResponse {
+  type: "response";
+  content: string;
+  meta: LlmResponseMetaData;
 }
 ```
 
@@ -407,7 +437,7 @@ There are several examples in the `examples` directory that demonstrate how to u
     - [X] Google Vertex AI (added in v0.4.0)
     - [X] Grok (added in v0.4.0)
 - [X] Implement vision support (images in prompts) (added in v0.5.0)
-- [ ] Return metadata with responses
+- [X] Return metadata with responses
 - [ ] Add support for tool use
 - [ ] Increase test coverage
 

@@ -1,6 +1,6 @@
 {
   "name": "jorel",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A lightweight, unified wrapper for leading LLMs like OpenAI, Anthropic, Google and Ollama.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

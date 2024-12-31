@@ -14,6 +14,8 @@ export interface AnthropicConfig {
   defaultTemperature?: number;
 }
 
+const _provider = "AnthropicProvider";
+
 /** Provides access to OpenAI and other compatible services */
 export class AnthropicProvider implements LlmCoreProvider {
   public defaultTemperature;
@@ -48,6 +50,7 @@ export class AnthropicProvider implements LlmCoreProvider {
   }
 
   async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
+    const start = Date.now();
     const {chatMessages, systemMessage} = await convertLlmMessagesToAnthropicMessages(messages);
     const response = await this.client.messages.create({
       model,
@@ -60,10 +63,27 @@ export class AnthropicProvider implements LlmCoreProvider {
       // tools: config.tools || undefined,
     });
 
-    return {content: response.content.map((c) => c.type === "text" ? c.text : "").join("")};
+    const durationMs = Date.now() - start;
+
+    const inputTokens = response.usage.input_tokens;
+    const outputTokens = response.usage.output_tokens;
+
+    const content = response.content.map((c) => c.type === "text" ? c.text : "").join("");
+
+    return {
+      content,
+      meta: {
+        model,
+        _provider,
+        durationMs,
+        inputTokens,
+        outputTokens,
+      }
+    };
   }
 
   async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+    const start = Date.now();
     const {chatMessages, systemMessage} = await convertLlmMessagesToAnthropicMessages(messages);
     const responseStream = await this.client.messages.create({
       model,
@@ -77,6 +97,9 @@ export class AnthropicProvider implements LlmCoreProvider {
       // tools: config.tools || undefined,
     });
 
+    let inputTokens = undefined;
+    let outputTokens = undefined;
+
     let content = "";
 
     for await (const chunk of responseStream) {
@@ -84,9 +107,28 @@ export class AnthropicProvider implements LlmCoreProvider {
         content += chunk.delta.text;
         yield {type: "chunk", content: chunk.delta.text};
       }
+      if (chunk.type === "message_start") {
+        inputTokens = (inputTokens || 0) + chunk.message.usage.input_tokens;
+        outputTokens = (outputTokens || 0) + chunk.message.usage.output_tokens;
+      }
+      if (chunk.type === "message_delta") {
+        outputTokens = (outputTokens || 0) + chunk.usage.output_tokens;
+      }
     }
 
-    return {type: "response", content};
+    const durationMs = Date.now() - start;
+
+
+    return {
+      type: "response", content,
+      meta: {
+        model,
+        _provider,
+        durationMs,
+        inputTokens,
+        outputTokens,
+      }
+    };
   }
 
   async getAvailableModels(): Promise<string[]> {
