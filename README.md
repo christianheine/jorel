@@ -45,10 +45,10 @@ mind, it provides a unified message format for interacting with different models
 
 ## Features
 
-- **Unified Message Format**: Standardizes user, system, and assistant messages across LLMs.
-- **Lightweight**: Minimal overhead with a focus on using official libraries wherever possible.
-- **Flexible Usage**: Use either as a unified wrapper for various providers or directly within programs for streamlined access.
-- **Clean API**: An elegant interface for managing providers, models, and generating responses.
+- Straightforward api to a range of leading language models (LLMs): OpenAI, Anthropic, Groq, Vertex AI, Ollama, Grok.
+- Unified message format for interacting with different models.
+- Full support for vision (images in prompts), with automatic handling of image data.
+- Access to unified providers directly for more control.
 
 ## Installation
 
@@ -93,10 +93,10 @@ console.log(response); // "description of the image"
 
 ## Core Tenets
 
-1. **Lightweight**: Avoid unnecessary complexity; focus on wrapping LLM APIs efficiently.
+1. **Clean API**: Provide a clean, but powerful, interface for interacting with multiple LLMs.
 2. **Unified Input/Output**: Provide unified message formats for both inputs and outputs.
-3. **Official Libraries First**: Prioritize official npm libraries (e.g., `openai`) for each provider.
-4. **Clean API**: Ensure intuitive and maintainable interfaces for developers.
+3. **Flexible**: Provide both high-level access via JorlEl and low-level access via underlying providers.
+4. **Maintainable**: Prioritize official npm libraries (e.g., `openai`) for each provider.
 
 ## Usage
 
@@ -407,8 +407,8 @@ There are several examples in the `examples` directory that demonstrate how to u
     - [X] Google Vertex AI (added in v0.4.0)
     - [X] Grok (added in v0.4.0)
 - [X] Implement vision support (images in prompts) (added in v0.5.0)
-- [ ] Add support for tool use
 - [ ] Return metadata with responses
+- [ ] Add support for tool use
 - [ ] Increase test coverage
 
 ## Contributing
