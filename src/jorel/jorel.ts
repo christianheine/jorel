@@ -1,9 +1,9 @@
 import {JorElProviderManager} from "./providers";
 import {JorElModelManager} from "./models";
 import {AnthropicConfig, AnthropicProvider, defaultAnthropicBedrockModels, defaultAnthropicModels, defaultGrokModels, defaultGroqModels, defaultOpenAiModels, defaultVertexAiModels, GoogleVertexAiConfig, GoogleVertexAiProvider, GrokProvider, GroqConfig, GroqProvider, OllamaConfig, OllamaProvider, OpenAIConfig, OpenAIProvider} from "../providers";
-import {_systemMessage, _userMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponseMetaData, LlmToolChoice} from "../shared";
+import {_systemMessage, _userMessage, LlmAssistantMessage, LlmAssistantMessageWithToolCalls, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponseMetaData, LlmToolChoice, MaybeUndefined} from "../shared";
 import {ImageContent} from "../media";
-import {LlmToolKit} from "../tools/llm-tool-kit";
+import {LlmToolKit} from "../tools";
 
 interface InitialConfig {
   anthropic?: AnthropicConfig;
@@ -28,9 +28,12 @@ interface JorElAskGenerationConfig extends JorElCoreGenerationConfig {
 interface JorElAskGenerationConfigWithTools extends JorElAskGenerationConfig {
   tools?: LlmToolKit;
   toolChoice?: LlmToolChoice;
+  maxAttempts?: number;
 }
 
 export type JorElTaskInput = string | (string | ImageContent)[]
+
+type JorElGenerationOutput = (LlmAssistantMessage | LlmAssistantMessageWithToolCalls) & { meta: LlmResponseMetaData & { provider: string } }
 
 /**
  * Jor-El: Singular interface for managing multiple LLM providers and models
@@ -126,7 +129,7 @@ export class JorEl {
    * @param config.tools Tools to use for this request (optional)
    * @param json
    */
-  async generate(messages: LlmMessage[], config: JorElAskGenerationConfigWithTools = {}, json?: boolean) {
+  async generate(messages: LlmMessage[], config: JorElAskGenerationConfigWithTools = {}, json?: boolean): Promise<JorElGenerationOutput> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
     const response = await provider.generateResponse(modelEntry.model, messages, {
@@ -138,6 +141,74 @@ export class JorEl {
       ...response,
       meta: {...response.meta, provider: modelEntry.provider},
     };
+  }
+
+  /**
+   * Internal method to generate a response and process tool calls until a final response is generated
+   * @param messages
+   * @param config
+   * @param json
+   * @private
+   */
+  private async generateAndProcessTools(
+    messages: (LlmMessage | LlmAssistantMessageWithToolCalls)[],
+    config: JorElAskGenerationConfigWithTools = {},
+    json = false
+  ): Promise<JorElGenerationOutput> {
+    const maxAttempts = config.maxAttempts || (config.tools ? 3 : 1);
+    let generation: MaybeUndefined<JorElGenerationOutput>;
+    for (let i = 0; i < maxAttempts; i++) {
+      generation = await this.generate(messages, config, json);
+      if (generation.role === "assistant" || !config.tools) {
+        break;
+      } else {
+        // Otherwise, process the tool calls, add the result to messages, and continue
+        generation = await config.tools.processCalls(config.tools.approveCalls(generation));
+        messages.push({
+          role: generation.role,
+          content: generation.content,
+          toolCalls: generation.toolCalls,
+        });
+      }
+    }
+
+    if (!generation || generation.role === "assistant_with_tools") {
+      throw new Error("Unable to generate a final response");
+    }
+
+    return generation;
+  }
+
+  /**
+   * Generate a response for a given task
+   * @param task
+   * @param config
+   * @param includeMeta
+   */
+  async ask(task: JorElTaskInput, config?: JorElAskGenerationConfigWithTools, includeMeta?: false): Promise<string>;
+  async ask(task: JorElTaskInput, config?: JorElAskGenerationConfigWithTools, includeMeta?: true): Promise<{ response: string; meta: LlmResponseMetaData }>;
+  async ask(task: JorElTaskInput, config: JorElAskGenerationConfigWithTools = {}, includeMeta = false): Promise<string | { response: string; meta: LlmResponseMetaData }> {
+    const generation = await this.generateAndProcessTools(this.generateMessages(task, config.systemMessage), config, false);
+    const response = generation.content || "";
+    const meta = generation.meta;
+    return includeMeta ? {response, meta} : response;
+  }
+
+  /**
+   * Generate a JSON response for a given task
+   * @param task
+   * @param config
+   * @param includeMeta
+   * @returns The JSON response
+   * @throws Error - If the response is not valid JSON
+   */
+  async json(task: JorElTaskInput, config?: JorElAskGenerationConfigWithTools, includeMeta?: false): Promise<object>;
+  async json(task: JorElTaskInput, config?: JorElAskGenerationConfigWithTools, includeMeta?: true): Promise<{ response: object; meta: LlmResponseMetaData }>;
+  async json(task: JorElTaskInput, config: JorElAskGenerationConfigWithTools = {}, includeMeta = false): Promise<object | { response: object; meta: LlmResponseMetaData }> {
+    const messages = this.generateMessages(task, config.systemMessage);
+    const generation = await this.generateAndProcessTools(messages, config, true);
+    const parsed = generation.content ? JSON.parse(generation.content) : {};
+    return includeMeta ? {response: parsed, meta: generation.meta} : parsed;
   }
 
   /**
@@ -156,50 +227,19 @@ export class JorEl {
   }
 
   /**
-   * Generate a response for a given task
-   * @param task
-   * @param config
-   * @param includeMeta
-   */
-  async ask(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: false): Promise<string>;
-  async ask(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: true): Promise<{ response: string; meta: LlmResponseMetaData }>;
-  async ask(task: JorElTaskInput, config: JorElAskGenerationConfig = {}, includeMeta = false): Promise<string | { response: string; meta: LlmResponseMetaData }> {
-    const generation = await this.generate(this.generateMessage(task, config.systemMessage), config);
-    const response = generation.content || "";
-    const meta = generation.meta;
-    return includeMeta ? {response, meta} : response;
-  }
-
-  /**
    * Generate a stream of response chunks for a given task
    * @param task
    * @param config
    */
   async* stream(task: JorElTaskInput, config: JorElAskGenerationConfig = {}) {
-    const stream = this.generateContentStream(this.generateMessage(task, config.systemMessage), config);
+    const messages = this.generateMessages(task, config.systemMessage);
+    const stream = this.generateContentStream(messages, config);
     for await (const chunk of stream) {
       yield chunk.content;
     }
   }
 
-  /**
-   * Generate a JSON response for a given task
-   * @param task
-   * @param config
-   * @param includeMeta
-   * @returns The JSON response
-   * @throws Error - If the response is not valid JSON
-   */
-  async json(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: false): Promise<object>;
-  async json(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: true): Promise<{ response: object; meta: LlmResponseMetaData }>;
-  async json(task: JorElTaskInput, config: JorElAskGenerationConfig = {}, includeMeta = false): Promise<object | { response: object; meta: LlmResponseMetaData }> {
-    const {content, meta} = await this.generate(this.generateMessage(task, config.systemMessage), config, true);
-    if (!content) return includeMeta ? {response: {}, meta} : {};
-    const parsed = content ? JSON.parse(content) : {};
-    return includeMeta ? {response: parsed, meta} : parsed;
-  }
-
-  private generateMessage(content: JorElTaskInput, systemMessage?: string) {
+  private generateMessages(content: JorElTaskInput, systemMessage?: string) {
     if (systemMessage || this.systemMessage) return [_systemMessage(systemMessage || this.systemMessage), _userMessage(content)];
     return [_userMessage(content)];
   };

@@ -1,13 +1,13 @@
-// Simulate a tool that fetches the weather for a city
+// Request weather data from the Weather API
+// Requires a Weather API key
 export const getWeather = async ({city}: { city: string }) => {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  const temperature = Math.floor(Math.random() * 20 + 10);
-  const conditionOptions = ["sunny", "cloudy", "rainy", "overcast"];
-  const conditions = conditionOptions[Math.floor(Math.random() * conditionOptions.length)];
-
-  if (city.toLowerCase() === "sydney" || city.toLowerCase() === "melbourne" || city.toLowerCase() === "paris") {
-    return {city, temperature, conditions};
-  }
-
-  throw new Error("City not found");
+  const apiKey = process.env.WEATHER_API_KEY;
+  console.log(`[getWeather] Fetching weather data for ${city}`);
+  const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${city}&aqi=no`);
+  const data = await response.json();
+  return {
+    city: data.location.name,
+    temperature: data.current.temp_c,
+    condition: data.current.condition.text,
+  };
 };

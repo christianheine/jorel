@@ -1,7 +1,10 @@
 # JorEl
 
-JorEl is a lightweight, elegant wrapper for interacting with multiple large language models (LLMs) such as OpenAI, Anthropic, Groq, Google, Ollama, and more. Designed with simplicity and usability in
-mind, it provides a unified message format for interacting with different models while remaining lightweight compared to solutions like LangChain.
+JorEl is a lightweight, unified wrapper for interacting with multiple large language models (LLMs) such as OpenAI, Anthropic, Groq, Google, Ollama, and more.
+
+It offers two main interfaces: a high-level interface for generating responses with a single line of code, and a low-level interface for more control over the generation process.
+
+Apart from the unified interface, JorEl also significantly simplifies working with both images and external tools.
 
 ## Table of Contents
 
@@ -41,7 +44,6 @@ mind, it provides a unified message format for interacting with different models
     - [Roadmap](#roadmap)
     - [Contributing](#contributing)
     - [License](#license)
-
 
 ## Features
 
@@ -276,7 +278,7 @@ console.log(response); // "Paris"
 const response = await jorel.ask(["Describe this image", image], {
   systemMessage: "You are an expert in image classification.",
   temperature: 0,
-}); 
+});
 console.log(response);
 ```
 
@@ -324,15 +326,21 @@ class JorEl {
 
   // Methods
   ask(task: JorElTaskInput, config?: JorElAskGenerationConfig): Promise<string>;
+
   stream(task: JorElTaskInput, config?: JorElAskGenerationConfig): AsyncGenerator<string>;
+
   json(task: JorElTaskInput, config?: JorElAskGenerationConfig): Promise<any>;
+
   generate(messages: LlmMessage[], config?: JorElAskGenerationConfig, json?: boolean): Promise<{
     response: string;
     messages: LlmMessage[];
   }>;
-  generateContentStream(messages: LlmMessage[], config?: JorElAskGenerationConfig): AsyncGenerator<...>;
+
+  generateContentStream(messages: LlmMessage[], config?: JorElAskGenerationConfig): AsyncGenerator<
+
+...>;
 }
- 
+
 interface LlmGenerationConfig {
   temperature?: number;
   maxTokens?: number;
@@ -400,11 +408,14 @@ interface LlmStreamResponse {
 
 ### Experimental Feature: Tool Use
 
-JorEl supports an experimental feature for incorporating toolkits to extend the capabilities of the language model. This allows the model to invoke external tools during interactions, enabling tasks such as fetching weather data, querying databases, or any other custom functionality.
+JorEl supports an experimental feature for incorporating toolkits to extend the capabilities of the language model. This allows the model to invoke external tools during interactions, enabling tasks
+such as fetching weather data, querying databases, or any other custom functionality.
 
 #### Setting up Tool Use
 
-To use tools, define a toolkit with the required tools and pass it to the `generate` method. A tool should include:
+To use tools, define a toolkit with the required tools and pass it to the `ask`, `json` or `generate` methods.
+
+A tool should include:
 
 - `name`: A unique name for the tool.
 - `description`: A description of what the tool does.
@@ -414,42 +425,41 @@ To use tools, define a toolkit with the required tools and pass it to the `gener
 Example:
 
 ```typescript
-import {JorEl, LlmToolKit, _userMessage, LlmMessage} from "jorel";
+const jorEl = new JorEl({
+  openAI: {apiKey: process.env.OPENAI_API_KEY},
+});
 
-const getWeather = async ({city}: {city: string}) => {
-  return {temperature: 25, conditions: "sunny"}; // Replace with actual API call or logic
-};
-
-const main = async () => {
-  const jorEl = new JorEl({openAI: {apiKey: "your-openai-api-key"}});
-
-  // Toolkits manage the tools, as well as their approvals (if required), and execution
-  const tools = new LlmToolKit([
-    {
-      name: "get_weather",
-      description: "Get the current temperature and conditions for a city",
-      executor: getWeather,
-      params: {
-        type: "object",
-        properties: {
-          city: {type: "string"},
-        },
-        required: ["city"],
+const tools = new LlmToolKit([
+  {
+    name: "get_stock_data",
+    description: "Get stock data for a given ticker symbol (previous day)",
+    executor: getStockValue, // Requires Polygon.io API key
+    params: {
+      type: "object",
+      properties: {
+        tickerSymbol: {type: "string"},
       },
-    },
-  ]);
+      required: ["tickerSymbol"],
+    }
+  },
+  {
+    name: "get_weather",
+    description: "Get the current temperature and conditions for a city",
+    executor: getWeather, // Requires a Weather API key
+    params: {
+      type: "object",
+      properties: {
+        city: {type: "string"},
+      },
+      required: ["city"],
+    }
+  }]);
 
-  const messages: LlmMessage[] = [_userMessage("What is the weather in Sydney?")];
-  const toolMessage: LlmMessage = await jorEl.generate(messages, {tools});
+const response = await jorEl.ask("What is the current stock price for Amazon, and the weather in Sydney?", {tools});
 
-  if (toolMessage.role === "assistant_with_tools") {
-    const processedMessage = await tools.processCalls(toolMessage);
-    const response = await jorEl.generate([...messages, processedMessage]);
-    console.log(response.content);
-  }
-};
-
-void main();
+console.log(response);
+// The current stock price for Amazon (AMZN) is $224.19.
+// In Sydney, the weather is partly cloudy with a temperature of 27.2°C.
 ```
 
 ### Alternative usage
@@ -479,7 +489,7 @@ console.log(response.content);
 
 ## Examples
 
-There are several examples in the `examples` directory that demonstrate how to use JorEl with different providers.
+There are many more examples in the `examples` directory that demonstrate how to use JorEl with various providers & scenarios (30+ examples and counting).
 
 ## Roadmap
 
@@ -491,8 +501,9 @@ There are several examples in the `examples` directory that demonstrate how to u
     - [X] Google Vertex AI (added in v0.4.0)
     - [X] Grok (added in v0.4.0)
 - [X] Implement vision support (images in prompts) (added in v0.5.0)
-- [X] Return metadata with responses
-- [X] Add support for tool use (experimental)
+- [X] Return metadata with responses (added in v0.5.1)
+- [X] Add support for tool use (experimental, added in v0.6.0)
+- [ ] Explore agentic capabilities
 - [ ] Increase test coverage
 
 ## Contributing

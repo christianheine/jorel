@@ -15,7 +15,7 @@ const main = async () => {
   const tools = new LlmToolKit([{
     name: "get_weather",
     description: "Get the current temperature and conditions for a city",
-    executor: getWeather,
+    executor: getWeather, // Requires a Weather API key
     params: {
       type: "object",
       properties: {
