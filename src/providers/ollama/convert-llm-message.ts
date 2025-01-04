@@ -1,5 +1,5 @@
 import {LlmMessage} from "../../shared";
-import {Message} from "ollama";
+import {Message, ToolCall} from "ollama";
 import {ImageContent} from "../../media";
 
 /** Convert unified LLM messages to Ollama messages (Message) */
@@ -11,6 +11,30 @@ export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[])
       convertedMessages.push(message);
     } else if (message.role === "assistant") {
       convertedMessages.push(message);
+    } else if (message.role === "assistant_with_tools") {
+      convertedMessages.push({
+        role: "assistant",
+        content: message.content || "",
+        tool_calls: message.toolCalls.map((toolCall): ToolCall => ({
+          function: {
+            name: toolCall.request.function.name,
+            arguments: toolCall.request.function.arguments,
+          }
+        }))
+      });
+      for (const toolCall of message.toolCalls) {
+        if (toolCall.executionState === "completed") {
+          convertedMessages.push({
+            role: "tool",
+            content: JSON.stringify(toolCall.result),
+          });
+        } else if (toolCall.executionState === "error") {
+          convertedMessages.push({
+            role: "tool",
+            content: toolCall.error.message,
+          });
+        }
+      }
     } else if (message.role === "user") {
       if (typeof message.content === "string") {
         convertedMessages.push({

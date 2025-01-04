@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0 (2025-01-04)
+
+- Add (experimental) support for tool use (non-streaming responses for all providers & JorEl's `generate` method)
+
 ## 0.5.1 (2024-12-31)
 
 - Add metadata to responses: duration, model, input & output tokens (where available)

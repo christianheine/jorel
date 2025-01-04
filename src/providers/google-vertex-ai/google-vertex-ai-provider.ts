@@ -1,6 +1,7 @@
-import {ClientError, Content, GenerateContentResponse, GoogleApiError, HarmBlockThreshold, HarmCategory, StreamGenerateContentResult, VertexAI} from "@google-cloud/vertexai";
-import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
+import {ClientError, Content, GenerateContentResponse, GoogleApiError, HarmBlockThreshold, HarmCategory, StreamGenerateContentResult, Tool, VertexAI} from "@google-cloud/vertexai";
+import {_assistantMessage, generateRandomId, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmResponseWithToolCalls, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
 import {convertLlmMessagesToVertexAiMessages} from "./convert-llm-message";
+import {FunctionDeclaration, FunctionDeclarationSchema} from "@google-cloud/vertexai/src/types/content";
 
 const defaultSafetySettings = [
   {category: HarmCategory.HARM_CATEGORY_UNSPECIFIED, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH},
@@ -53,8 +54,9 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     }
   }
 
-  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse> {
+  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse | LlmResponseWithToolCalls> {
     const start = Date.now();
+
     const {chatMessages, systemMessage} = await convertLlmMessagesToVertexAiMessages(messages);
 
     const generativeModel = this.client.getGenerativeModel({
@@ -71,13 +73,18 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         await generativeModel.generateContent({
           contents: chatMessages,
           systemInstruction: systemMessage,
+          tools: config.tools?.llmFunctions.map<Tool>(f => {
+            const functionDeclarations: FunctionDeclaration[] = [{
+              name: f.function.name,
+              description: f.function.description,
+              parameters: f.function.parameters as unknown as FunctionDeclarationSchema,
+            }];
+            return ({functionDeclarations});
+          }),
           generationConfig: {
             temperature,
             maxOutputTokens: maxTokens,
             responseMimeType: config.json ? "application/json" : "text/plain",
-            // topP: config.topP || 1,
-            // topK: config.topLogProbs,
-            // stopSequences: config.stopSequences,
           },
           safetySettings: this.safetySettings
         })
@@ -97,12 +104,29 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
 
     const responseContent: Content = response.candidates && response.candidates.length > 0 ? response.candidates[0].content : {role: "model", parts: [{text: ""}]};
 
-    const content = responseContent.parts.filter(p => !!p.text).map(p => p.text).join("");
+    const content = responseContent.parts.filter(p => !!p.text).map(p => p.text).join("").trim();
+
+    const toolCalls: MaybeUndefined<LlmToolCall[]> = responseContent.parts.filter(p => p.functionCall).map(p => {
+      const functionCall = p.functionCall!;
+      return {
+        request: {
+          id: generateRandomId(),
+          function: {
+            name: functionCall.name,
+            arguments: functionCall.args,
+          },
+        },
+        approvalState: "noApprovalRequired",
+        executionState: "pending",
+        result: null,
+        error: null,
+      };
+    });
 
     const durationMs = Date.now() - start;
 
     return {
-      content,
+      ..._assistantMessage(content, toolCalls),
       meta: {
         model,
         _provider,
@@ -113,7 +137,8 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     };
   }
 
-  async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+  async* generateResponseStream(model: string, messages: LlmMessage[], config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {}
+  ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
     const start = Date.now();
 
     const {chatMessages, systemMessage} = await convertLlmMessagesToVertexAiMessages(messages);
@@ -133,9 +158,6 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
           temperature,
           maxOutputTokens: maxTokens,
           responseMimeType: config.json ? "application/json" : "text/plain",
-          // topP: config.topP || 1,
-          // topK: config.topLogProbs,
-          // stopSequences: config.stopSequences,
         },
         safetySettings: this.safetySettings
       })

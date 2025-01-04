@@ -3,7 +3,7 @@ import {fetchFileAsBuffer} from "../../media/utils";
 import {ImageContent} from "../../media";
 import {fromBuffer} from "file-type";
 
-jest.mock('fs', () => ({
+jest.mock("fs", () => ({
   promises: {
     readFile: jest.fn(),
   },

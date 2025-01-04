@@ -32,6 +32,46 @@ export const convertLlmMessagesToAnthropicMessages = async (messages: LlmMessage
   for (const message of chatMessages) {
     if (message.role === "assistant") {
       convertedChatMessages.push(message);
+    } else if (message.role === "assistant_with_tools") {
+      const content: Anthropic.ContentBlockParam[] = [];
+
+      if (message.content) {
+        content.push({
+          type: "text",
+          text: message.content
+        });
+      }
+
+      if (message.toolCalls) {
+        for (const toolCall of message.toolCalls) {
+          content.push({
+            type: "tool_use",
+            id: toolCall.request.id,
+            name: toolCall.request.function.name,
+            input: toolCall.request.function.arguments,
+          });
+        }
+      }
+
+      convertedChatMessages.push({
+        role: "assistant",
+        content
+      });
+
+      if (message.toolCalls) {
+        for (const toolCall of message.toolCalls.filter(tc => tc.executionState === "completed" || tc.executionState === "error")) {
+          convertedChatMessages.push({
+            role: "user",
+            content: [
+              {
+                type: "tool_result",
+                tool_use_id: toolCall.request.id,
+                content: toolCall.executionState === "error" ? `Error: ${toolCall.error.message}` : JSON.stringify(toolCall.result),
+              }
+            ]
+          });
+        }
+      }
     } else if (message.role === "user") {
       if (typeof message.content === "string") {
         convertedChatMessages.push({

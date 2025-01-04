@@ -13,10 +13,10 @@ const main = async () => {
 
   // Register Ollama model
   jorEl.models.register({
-    model: 'llama3.2',
-    provider: 'ollama',
+    model: "llama3.2",
+    provider: "ollama",
     setAsDefault: true,
-  })
+  });
 
   // Will return a stream of strings
   const stream = jorEl.stream("Generate a merry Christmas song. 5 lines max.");

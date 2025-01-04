@@ -1,6 +1,6 @@
-import ollama from "ollama";
+import ollama, {Tool} from "ollama";
 
-import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
+import {_assistantMessage, generateRandomId, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmResponseWithToolCalls, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
 import {convertLlmMessagesToOllamaMessages} from "./convert-llm-message";
 
 export interface OllamaConfig {
@@ -19,13 +19,26 @@ export class OllamaProvider implements LlmCoreProvider {
     this.defaultTemperature = defaultTemperature ?? 0;
   }
 
-  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
+  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse | LlmResponseWithToolCalls> {
     const start = Date.now();
 
     const response = await ollama.chat({
       model,
       messages: await convertLlmMessagesToOllamaMessages(messages),
       format: config.json ? "json" : undefined,
+      tools: config.tools?.llmFunctions.map((f): Tool => ({
+        type: "function",
+        function: {
+          name: f.function.name,
+          description: f.function.description,
+          parameters: {
+            type: f.function.parameters?.type ?? "object",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            properties: f.function.parameters?.properties ?? {} as Record<string, any>,
+            required: f.function.parameters?.required ?? [],
+          }
+        },
+      })),
       options: {
         temperature: config.temperature || this.defaultTemperature,
       }
@@ -36,10 +49,27 @@ export class OllamaProvider implements LlmCoreProvider {
     const inputTokens = response.prompt_eval_count; // Somewhat undocumented at the moment
     const outputTokens = response.eval_count; // Somewhat undocumented at the moment
 
-    const content = response.message.content;
+    const message = response.message;
+
+    const toolCalls: MaybeUndefined<LlmToolCall[]> = message.tool_calls?.map(call =>
+      (
+        {
+          request: {
+            id: generateRandomId(),
+            function: {
+              name: call.function.name,
+              arguments: call.function.arguments,
+            }
+          },
+          approvalState: config.tools?.getTool(call.function.name)?.requiresConfirmation ? "requiresApproval" : "noApprovalRequired",
+          executionState: "pending",
+          result: null,
+          error: null
+        }
+      ));
 
     return {
-      content,
+      ..._assistantMessage(message.content, toolCalls),
       meta: {
         model,
         _provider,
@@ -53,7 +83,7 @@ export class OllamaProvider implements LlmCoreProvider {
   async* generateResponseStream(
     model: string,
     messages: LlmMessage[],
-    config: LlmGenerationConfig = {}
+    config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {}
   ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
     const start = Date.now();
 

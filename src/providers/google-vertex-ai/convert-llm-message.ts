@@ -76,6 +76,30 @@ export const convertLlmMessagesToVertexAiMessages = async (
           role: "assistant",
           parts: textContentToParts(m.content)
         });
+      } else if (m.role === "assistant_with_tools") {
+        chatMessages.push({
+          role: "model",
+          parts: [
+            ...m.content ? textContentToParts(m.content) : [],
+            ...m.toolCalls.map(toolCall => ({
+              functionCall: {
+                name: toolCall.request.function.name,
+                args: toolCall.request.function.arguments,
+              }
+            }))
+          ],
+        });
+        chatMessages.push({
+          role: "user",
+          parts: m.toolCalls.filter(
+            toolCall => toolCall.executionState === "completed" || toolCall.executionState === "error"
+          ).map(toolCall => ({
+            functionResponse: {
+              name: toolCall.request.function.name,
+              response: toolCall.executionState === "completed" ? toolCall.result : {error: toolCall.error.message}
+            }
+          }))
+        });
       } else if (m.role === "user") {
         if (typeof m.content === "string") {
           chatMessages.push({

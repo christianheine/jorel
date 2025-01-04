@@ -1,5 +1,5 @@
 import Groq from "groq-sdk";
-import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
+import {_assistantMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmResponseWithToolCalls, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
 import {convertLlmMessagesToGroqMessages} from "./convert-llm-message";
 
 export interface GroqConfig {
@@ -23,14 +23,19 @@ export class GroqProvider implements LlmCoreProvider {
     this.defaultTemperature = defaultTemperature ?? 0;
   }
 
-  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
+  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse | LlmResponseWithToolCalls> {
     const start = Date.now();
 
     const response = await this.client.chat.completions.create({
       model,
       messages: await convertLlmMessagesToGroqMessages(messages),
       temperature: config.temperature || this.defaultTemperature,
-      response_format: config.json ? {type: "json_object"} : {type: "text"}
+      max_tokens: config.maxTokens || undefined,
+      response_format: config.json ? {type: "json_object"} : {type: "text"},
+      tools: config.tools?.llmFunctions,
+      parallel_tool_calls: config.tools ? config.tools.allowParallelCalls : undefined,
+      tool_choice: config.toolChoice === "auto" ? "auto" : config.toolChoice === "required" ? "required" : config.toolChoice === "none" ? "none" :
+        config.toolChoice ? {type: "function", function: {name: config.toolChoice}} : undefined,
     });
 
     const durationMs = Date.now() - start;
@@ -38,10 +43,27 @@ export class GroqProvider implements LlmCoreProvider {
     const inputTokens = response.usage?.prompt_tokens;
     const outputTokens = response.usage?.completion_tokens;
 
-    const content = response.choices[0].message.content || "";
+    const message = response.choices[0].message;
+
+    const toolCalls: MaybeUndefined<LlmToolCall[]> = message.tool_calls?.map(call =>
+      (
+        {
+          request: {
+            id: call.id,
+            function: {
+              name: call.function.name,
+              arguments: JSON.parse(call.function.arguments),
+            }
+          },
+          approvalState: config.tools?.getTool(call.function.name)?.requiresConfirmation ? "requiresApproval" : "noApprovalRequired",
+          executionState: "pending",
+          result: null,
+          error: null
+        }
+      ));
 
     return {
-      content,
+      ..._assistantMessage(message.content, toolCalls),
       meta: {
         model,
         _provider,
@@ -52,7 +74,7 @@ export class GroqProvider implements LlmCoreProvider {
     };
   }
 
-  async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+  async* generateResponseStream(model: string, messages: LlmMessage[], config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
     const start = Date.now();
 
     const response = await this.client.chat.completions.create({
@@ -60,6 +82,7 @@ export class GroqProvider implements LlmCoreProvider {
       messages: await convertLlmMessagesToGroqMessages(messages),
       temperature: config.temperature || this.defaultTemperature,
       response_format: config.json ? {type: "json_object"} : {type: "text"},
+      max_tokens: config.maxTokens || undefined,
       stream: true,
     });
 

@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {AnthropicBedrock} from "@anthropic-ai/bedrock-sdk";
 
-import {LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmStreamResponse, LlmStreamResponseChunk} from "../../shared";
+import {_assistantMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmResponseWithToolCalls, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
 import {convertLlmMessagesToAnthropicMessages} from "./convert-llm-message";
 
 export interface AnthropicConfig {
@@ -49,18 +49,38 @@ export class AnthropicProvider implements LlmCoreProvider {
     this.defaultTemperature = defaultTemperature ?? 0;
   }
 
-  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}) {
+  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse | LlmResponseWithToolCalls> {
     const start = Date.now();
+
     const {chatMessages, systemMessage} = await convertLlmMessagesToAnthropicMessages(messages);
+
     const response = await this.client.messages.create({
       model,
       messages: chatMessages,
       temperature: config.temperature || this.defaultTemperature,
       max_tokens: config.maxTokens || 4096,
       system: systemMessage,
-      // stop_sequences: config.stopSequences || [],
-      // tool_choice: config.toolChoice || undefined,
-      // tools: config.tools || undefined,
+      tool_choice:
+        config.toolChoice === "none" ? undefined :
+          config.toolChoice === "any" ? {
+            type: "auto",
+            disable_parallel_tool_use: config.tools?.allowParallelCalls
+          } : config.toolChoice === "required" ? {
+            type: "auto",
+            disable_parallel_tool_use: config.tools?.allowParallelCalls
+          } : config.toolChoice ? {
+            type: "tool",
+            name: config.toolChoice,
+            disable_parallel_tool_use: config.tools?.allowParallelCalls
+          } : undefined,
+      tools: config.toolChoice === "none" ? undefined : config.tools?.llmFunctions.map<Anthropic.Messages.Tool>((tool) => ({
+        name: tool.function.name,
+        input_schema: {
+          ...tool.function.parameters?.properties,
+          type: "object",
+        },
+        description: tool.function.description
+      })),
     });
 
     const durationMs = Date.now() - start;
@@ -68,10 +88,24 @@ export class AnthropicProvider implements LlmCoreProvider {
     const inputTokens = response.usage.input_tokens;
     const outputTokens = response.usage.output_tokens;
 
-    const content = response.content.map((c) => c.type === "text" ? c.text : "").join("");
+    const content = response.content.map((c) => c.type === "text" ? c.text : "").join("").trim();
+
+    const toolCalls: MaybeUndefined<LlmToolCall[]> = response.content.filter((c) => c.type === "tool_use").map((c) => ({
+      request: {
+        id: c.id,
+        function: {
+          name: c.name,
+          arguments: c.input && typeof c.input === "object" ? c.input : {},
+        }
+      },
+      approvalState: config.tools?.getTool(c.name)?.requiresConfirmation ? "requiresApproval" : "noApprovalRequired",
+      executionState: "pending",
+      result: null,
+      error: null
+    }));
 
     return {
-      content,
+      ..._assistantMessage(content, toolCalls),
       meta: {
         model,
         _provider,
@@ -82,9 +116,11 @@ export class AnthropicProvider implements LlmCoreProvider {
     };
   }
 
-  async* generateResponseStream(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+  async* generateResponseStream(model: string, messages: LlmMessage[], config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {}): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
     const start = Date.now();
+
     const {chatMessages, systemMessage} = await convertLlmMessagesToAnthropicMessages(messages);
+
     const responseStream = await this.client.messages.create({
       model,
       messages: chatMessages,
@@ -92,9 +128,6 @@ export class AnthropicProvider implements LlmCoreProvider {
       max_tokens: config.maxTokens || 4096,
       system: systemMessage,
       stream: true,
-      // stop_sequences: config.stopSequences || [],
-      // tool_choice: config.toolChoice || undefined,
-      // tools: config.tools || undefined,
     });
 
     let inputTokens = undefined;

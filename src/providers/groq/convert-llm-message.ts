@@ -11,6 +11,34 @@ export const convertLlmMessagesToGroqMessages = async (messages: LlmMessage[], d
       convertedMessages.push(message);
     } else if (message.role === "assistant") {
       convertedMessages.push(message);
+    } else if (message.role === "assistant_with_tools") {
+      convertedMessages.push({
+        role: "assistant",
+        content: message.content,
+        tool_calls: message.toolCalls.map(toolCall => ({
+          id: toolCall.request.id,
+          type: "function",
+          function: {
+            name: toolCall.request.function.name,
+            arguments: JSON.stringify(toolCall.request.function.arguments)
+          }
+        }))
+      });
+      for (const toolCall of message.toolCalls) {
+        if (toolCall.executionState === "completed") {
+          convertedMessages.push({
+            role: "tool",
+            content: JSON.stringify(toolCall.result),
+            tool_call_id: toolCall.request.id
+          });
+        } else if (toolCall.executionState === "error") {
+          convertedMessages.push({
+            role: "tool",
+            content: toolCall.error.message,
+            tool_call_id: toolCall.request.id
+          });
+        }
+      }
     } else if (message.role === "user") {
       if (typeof message.content === "string") {
         convertedMessages.push({

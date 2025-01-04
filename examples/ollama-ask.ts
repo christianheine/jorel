@@ -9,16 +9,16 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl();
 
-  jorEl.providers.registerOllama({defaultTemperature: 0.2})
+  jorEl.providers.registerOllama({defaultTemperature: 0.2});
 
-  jorEl.systemMessage = 'You are a helpful llama.';
+  jorEl.systemMessage = "You are a helpful llama.";
 
   // Register Ollama model
   jorEl.models.register({
-    model: 'llama3.2',
-    provider: 'ollama',
+    model: "llama3.2",
+    provider: "ollama",
     setAsDefault: true,
-  })
+  });
 
   // Will return a string
   const response = await jorEl.ask("What is the capital of France?");

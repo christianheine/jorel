@@ -398,6 +398,60 @@ interface LlmStreamResponse {
 }
 ```
 
+### Experimental Feature: Tool Use
+
+JorEl supports an experimental feature for incorporating toolkits to extend the capabilities of the language model. This allows the model to invoke external tools during interactions, enabling tasks such as fetching weather data, querying databases, or any other custom functionality.
+
+#### Setting up Tool Use
+
+To use tools, define a toolkit with the required tools and pass it to the `generate` method. A tool should include:
+
+- `name`: A unique name for the tool.
+- `description`: A description of what the tool does.
+- `executor`: A function that executes the tool's logic.
+- `params`: A JSON schema defining the parameters the tool accepts.
+
+Example:
+
+```typescript
+import {JorEl, LlmToolKit, _userMessage, LlmMessage} from "jorel";
+
+const getWeather = async ({city}: {city: string}) => {
+  return {temperature: 25, conditions: "sunny"}; // Replace with actual API call or logic
+};
+
+const main = async () => {
+  const jorEl = new JorEl({openAI: {apiKey: "your-openai-api-key"}});
+
+  // Toolkits manage the tools, as well as their approvals (if required), and execution
+  const tools = new LlmToolKit([
+    {
+      name: "get_weather",
+      description: "Get the current temperature and conditions for a city",
+      executor: getWeather,
+      params: {
+        type: "object",
+        properties: {
+          city: {type: "string"},
+        },
+        required: ["city"],
+      },
+    },
+  ]);
+
+  const messages: LlmMessage[] = [_userMessage("What is the weather in Sydney?")];
+  const toolMessage: LlmMessage = await jorEl.generate(messages, {tools});
+
+  if (toolMessage.role === "assistant_with_tools") {
+    const processedMessage = await tools.processCalls(toolMessage);
+    const response = await jorEl.generate([...messages, processedMessage]);
+    console.log(response.content);
+  }
+};
+
+void main();
+```
+
 ### Alternative usage
 
 #### Directly using providers
@@ -438,7 +492,7 @@ There are several examples in the `examples` directory that demonstrate how to u
     - [X] Grok (added in v0.4.0)
 - [X] Implement vision support (images in prompts) (added in v0.5.0)
 - [X] Return metadata with responses
-- [ ] Add support for tool use
+- [X] Add support for tool use (experimental)
 - [ ] Increase test coverage
 
 ## Contributing

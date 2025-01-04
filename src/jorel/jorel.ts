@@ -1,8 +1,9 @@
 import {JorElProviderManager} from "./providers";
 import {JorElModelManager} from "./models";
 import {AnthropicConfig, AnthropicProvider, defaultAnthropicBedrockModels, defaultAnthropicModels, defaultGrokModels, defaultGroqModels, defaultOpenAiModels, defaultVertexAiModels, GoogleVertexAiConfig, GoogleVertexAiProvider, GrokProvider, GroqConfig, GroqProvider, OllamaConfig, OllamaProvider, OpenAIConfig, OpenAIProvider} from "../providers";
-import {generateMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponseMetaData} from "../shared";
+import {_systemMessage, _userMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponseMetaData, LlmToolChoice} from "../shared";
 import {ImageContent} from "../media";
+import {LlmToolKit} from "../tools/llm-tool-kit";
 
 interface InitialConfig {
   anthropic?: AnthropicConfig;
@@ -22,6 +23,11 @@ interface JorElCoreGenerationConfig {
 interface JorElAskGenerationConfig extends JorElCoreGenerationConfig {
   model?: string;
   systemMessage?: string;
+}
+
+interface JorElAskGenerationConfigWithTools extends JorElAskGenerationConfig {
+  tools?: LlmToolKit;
+  toolChoice?: LlmToolChoice;
 }
 
 export type JorElTaskInput = string | (string | ImageContent)[]
@@ -114,9 +120,13 @@ export class JorEl {
    * Generate a response for a given set of messages
    * @param messages
    * @param config
+   * @param config.model Model to use for this generation (optional)
+   * @param config.systemMessage System message to include in this request (optional)
+   * @param config.temperature Temperature for this request (optional)
+   * @param config.tools Tools to use for this request (optional)
    * @param json
    */
-  async generate(messages: LlmMessage[], config: JorElAskGenerationConfig = {}, json?: boolean) {
+  async generate(messages: LlmMessage[], config: JorElAskGenerationConfigWithTools = {}, json?: boolean) {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
     const response = await provider.generateResponse(modelEntry.model, messages, {
@@ -125,8 +135,7 @@ export class JorEl {
       json
     });
     return {
-      response: response.content,
-      messages: [...messages, {role: "assistant", content: response.content}],
+      ...response,
       meta: {...response.meta, provider: modelEntry.provider},
     };
   }
@@ -155,7 +164,9 @@ export class JorEl {
   async ask(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: false): Promise<string>;
   async ask(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: true): Promise<{ response: string; meta: LlmResponseMetaData }>;
   async ask(task: JorElTaskInput, config: JorElAskGenerationConfig = {}, includeMeta = false): Promise<string | { response: string; meta: LlmResponseMetaData }> {
-    const {response, meta} = await this.generate(generateMessage(task, config.systemMessage || this.systemMessage), config);
+    const generation = await this.generate(this.generateMessage(task, config.systemMessage), config);
+    const response = generation.content || "";
+    const meta = generation.meta;
     return includeMeta ? {response, meta} : response;
   }
 
@@ -165,7 +176,7 @@ export class JorEl {
    * @param config
    */
   async* stream(task: JorElTaskInput, config: JorElAskGenerationConfig = {}) {
-    const stream = this.generateContentStream(generateMessage(task, config.systemMessage || this.systemMessage), config);
+    const stream = this.generateContentStream(this.generateMessage(task, config.systemMessage), config);
     for await (const chunk of stream) {
       yield chunk.content;
     }
@@ -179,11 +190,17 @@ export class JorEl {
    * @returns The JSON response
    * @throws Error - If the response is not valid JSON
    */
-  async json(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: false): Promise<string>;
-  async json(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: true): Promise<{ response: string; meta: LlmResponseMetaData }>;
-  async json(task: JorElTaskInput, config: JorElAskGenerationConfig = {}, includeMeta = false): Promise<string | { response: string; meta: LlmResponseMetaData }> {
-    const {response, meta} = await this.generate(generateMessage(task, config.systemMessage || this.systemMessage), config, true);
-    const parsed = JSON.parse(response);
+  async json(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: false): Promise<object>;
+  async json(task: JorElTaskInput, config?: JorElAskGenerationConfig, includeMeta?: true): Promise<{ response: object; meta: LlmResponseMetaData }>;
+  async json(task: JorElTaskInput, config: JorElAskGenerationConfig = {}, includeMeta = false): Promise<object | { response: object; meta: LlmResponseMetaData }> {
+    const {content, meta} = await this.generate(this.generateMessage(task, config.systemMessage), config, true);
+    if (!content) return includeMeta ? {response: {}, meta} : {};
+    const parsed = content ? JSON.parse(content) : {};
     return includeMeta ? {response: parsed, meta} : parsed;
   }
+
+  private generateMessage(content: JorElTaskInput, systemMessage?: string) {
+    if (systemMessage || this.systemMessage) return [_systemMessage(systemMessage || this.systemMessage), _userMessage(content)];
+    return [_userMessage(content)];
+  };
 }

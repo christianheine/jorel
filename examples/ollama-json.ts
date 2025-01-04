@@ -13,10 +13,10 @@ const main = async () => {
 
   // Register Ollama model
   jorEl.models.register({
-    model: 'llama3.2',
-    provider: 'ollama',
+    model: "llama3.2",
+    provider: "ollama",
     setAsDefault: true,
-  })
+  });
 
   // Optional: Set system message
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snakeCase for attributes!";
