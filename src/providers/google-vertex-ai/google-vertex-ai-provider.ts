@@ -1,4 +1,4 @@
-import {ClientError, Content, GenerateContentResponse, GoogleApiError, HarmBlockThreshold, HarmCategory, StreamGenerateContentResult, Tool, VertexAI} from "@google-cloud/vertexai";
+import {ClientError, Content, CountTokensResponse, GenerateContentResponse, GoogleApiError, HarmBlockThreshold, HarmCategory, StreamGenerateContentResult, Tool, VertexAI} from "@google-cloud/vertexai";
 import {_assistantMessage, generateRandomId, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmResponseWithToolCalls, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
 import {convertLlmMessagesToVertexAiMessages} from "./convert-llm-message";
 import {FunctionDeclaration, FunctionDeclarationSchema} from "@google-cloud/vertexai/src/types/content";
@@ -198,5 +198,35 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
 
   async getAvailableModels(): Promise<string[]> {
     return [];
+  }
+
+  async countTokens(
+    model: string,
+    contents: Content[],
+  ): Promise<{
+    model: string;
+    inputTokens: number;
+    characterCount: number;
+  }> {
+    const generativeModel = this.client.getGenerativeModel({
+      model: model,
+      safetySettings: this.safetySettings,
+    });
+
+    const response: CountTokensResponse = await generativeModel.countTokens({
+      contents,
+    });
+
+    const inputTokens = response.totalTokens;
+
+    const characterCount = contents.reduce((acc, content) => {
+      return acc + content.parts.reduce((acc, part) => acc + ("text" in part ? part?.text?.length || 0 : 0), 0);
+    }, 0);
+
+    return {
+      model,
+      inputTokens,
+      characterCount,
+    };
   }
 }
