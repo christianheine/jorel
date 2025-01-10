@@ -1,6 +1,6 @@
 import ollama, {Tool} from "ollama";
 
-import {_assistantMessage, generateRandomId, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmResponseWithToolCalls, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
+import {generateAssistantMessage, generateRandomId, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
 import {convertLlmMessagesToOllamaMessages} from "./convert-llm-message";
 
 export interface OllamaConfig {
@@ -19,7 +19,7 @@ export class OllamaProvider implements LlmCoreProvider {
     this.defaultTemperature = defaultTemperature ?? 0;
   }
 
-  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse | LlmResponseWithToolCalls> {
+  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse > {
     const start = Date.now();
 
     const response = await ollama.chat({
@@ -69,7 +69,7 @@ export class OllamaProvider implements LlmCoreProvider {
       ));
 
     return {
-      ..._assistantMessage(message.content, toolCalls),
+      ...generateAssistantMessage(message.content, toolCalls),
       meta: {
         model,
         _provider,
@@ -113,6 +113,7 @@ export class OllamaProvider implements LlmCoreProvider {
 
     return {
       type: "response",
+      role: "assistant",
       content,
       meta: {
         model,

@@ -1,5 +1,5 @@
 import Groq from "groq-sdk";
-import {_assistantMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmResponseWithToolCalls, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
+import {firstEntry, generateAssistantMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
 import {convertLlmMessagesToGroqMessages} from "./convert-llm-message";
 
 export interface GroqConfig {
@@ -23,7 +23,7 @@ export class GroqProvider implements LlmCoreProvider {
     this.defaultTemperature = defaultTemperature ?? 0;
   }
 
-  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse | LlmResponseWithToolCalls> {
+  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse > {
     const start = Date.now();
 
     const response = await this.client.chat.completions.create({
@@ -63,7 +63,7 @@ export class GroqProvider implements LlmCoreProvider {
       ));
 
     return {
-      ..._assistantMessage(message.content, toolCalls),
+      ...generateAssistantMessage(message.content, toolCalls),
       meta: {
         model,
         _provider,
@@ -88,7 +88,7 @@ export class GroqProvider implements LlmCoreProvider {
 
     let content = "";
     for await (const chunk of response) {
-      const contentChunk = chunk.choices[0].delta.content || "";
+      const contentChunk = firstEntry(chunk.choices)?.delta?.content;
       if (contentChunk) {
         content += contentChunk;
         yield {type: "chunk", content: contentChunk};
@@ -102,6 +102,7 @@ export class GroqProvider implements LlmCoreProvider {
 
     return {
       type: "response",
+      role: "assistant",
       content,
       meta: {
         model,

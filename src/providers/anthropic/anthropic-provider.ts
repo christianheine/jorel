@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {AnthropicBedrock} from "@anthropic-ai/bedrock-sdk";
 
-import {_assistantMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmResponseWithToolCalls, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
+import {generateAssistantMessage, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
 import {convertLlmMessagesToAnthropicMessages} from "./convert-llm-message";
 
 export interface AnthropicConfig {
@@ -49,7 +49,7 @@ export class AnthropicProvider implements LlmCoreProvider {
     this.defaultTemperature = defaultTemperature ?? 0;
   }
 
-  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse | LlmResponseWithToolCalls> {
+  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse> {
     const start = Date.now();
 
     const {chatMessages, systemMessage} = await convertLlmMessagesToAnthropicMessages(messages);
@@ -105,7 +105,7 @@ export class AnthropicProvider implements LlmCoreProvider {
     }));
 
     return {
-      ..._assistantMessage(content, toolCalls),
+      ...generateAssistantMessage(content, toolCalls),
       meta: {
         model,
         _provider,
@@ -153,7 +153,9 @@ export class AnthropicProvider implements LlmCoreProvider {
 
 
     return {
-      type: "response", content,
+      type: "response",
+      content,
+      role: "assistant",
       meta: {
         model,
         _provider,

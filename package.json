@@ -1,6 +1,6 @@
 {
   "name": "jorel",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "A lightweight, unified wrapper for leading LLMs like OpenAI, Anthropic, Google and Ollama.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,6 +10,7 @@
   "keywords": [
     "ai",
     "llm",
+    "tool-use",
     "language-model",
     "wrapper",
     "sdk",
@@ -53,7 +54,8 @@
     "file-type": "16.5.4",
     "groq-sdk": "^0.9.1",
     "ollama": "^0.5.11",
-    "openai": "^4.77.0"
+    "openai": "^4.77.0",
+    "uuid": "^11.0.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

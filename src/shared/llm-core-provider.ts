@@ -34,9 +34,11 @@ export interface LLmMessageImageDataUrlContent {
   data: string;
 }
 
+export type LlmUserMessageContent = string | (string | LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent | ImageContent)[]
+
 export type LlmUserMessage = {
   role: "user";
-  content: string | (string | LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent | ImageContent)[];
+  content: LlmUserMessageContent;
 }
 
 export type LlmFunctionParameter = "string" | "number" | "integer" | "boolean" | "array" | "object";
@@ -111,17 +113,19 @@ export type LlmToolCall = LlmToolCall__Pending | LlmToolCall__Completed | LlmToo
 export type LlmAssistantMessage = {
   role: "assistant";
   content: string;
+  meta?: LlmAssistantMessageMeta;
 }
 
 export type LlmAssistantMessageWithToolCalls = {
   role: "assistant_with_tools";
   content: Nullable<string>
   toolCalls: LlmToolCall[];
+  meta?: LlmAssistantMessageMeta;
 }
 
 export type LlmMessage = LlmSystemMessage | LlmUserMessage | LlmAssistantMessage | LlmAssistantMessageWithToolCalls
 
-export interface LlmResponseMetaData {
+export interface LlmAssistantMessageMeta {
   model: string;
   _provider: string;
   durationMs: number;
@@ -129,18 +133,7 @@ export interface LlmResponseMetaData {
   outputTokens?: number;
 }
 
-export interface LlmResponse {
-  role: "assistant";
-  content: string;
-  meta: LlmResponseMetaData;
-}
-
-export interface LlmResponseWithToolCalls {
-  role: "assistant_with_tools";
-  content: Nullable<string>;
-  toolCalls: LlmToolCall[];
-  meta: LlmResponseMetaData;
-}
+export type LlmResponse = (LlmAssistantMessage | LlmAssistantMessageWithToolCalls) & { meta: LlmAssistantMessageMeta }
 
 export interface LlmStreamResponseChunk {
   type: "chunk";
@@ -149,12 +142,13 @@ export interface LlmStreamResponseChunk {
 
 export interface LlmStreamResponse {
   type: "response";
+  role: "assistant";
   content: string;
-  meta: LlmResponseMetaData;
+  meta: LlmAssistantMessageMeta;
 }
 
 export interface LlmCoreProvider {
-  generateResponse(model: string, messages: LlmMessage[], config?: LlmGenerationConfig): Promise<LlmResponse | LlmResponseWithToolCalls>;
+  generateResponse(model: string, messages: LlmMessage[], config?: LlmGenerationConfig): Promise<LlmResponse>;
 
   generateResponseStream(model: string, messages: LlmMessage[], config?: LlmGenerationConfig): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown>;
 

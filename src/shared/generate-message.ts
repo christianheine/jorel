@@ -1,11 +1,25 @@
 import {LlmAssistantMessage, LlmAssistantMessageWithToolCalls, LlmSystemMessage, LlmToolCall, LlmUserMessage} from "./llm-core-provider";
 import {JorElTaskInput} from "../jorel";
 import {Nullable} from "./type-utils";
+import {LlmDocumentCollection} from "./documents";
 
-export const _userMessage = (content: JorElTaskInput): LlmUserMessage => ({role: "user", content});
-export const _systemMessage = (content: string): LlmSystemMessage => ({role: "system", content});
+export const generateUserMessage = (content: JorElTaskInput): LlmUserMessage => ({role: "user", content});
 
-export const _assistantMessage = (
+export const generateSystemMessage = (systemMessage: string, documentSystemMessage?: string, documents?: LlmDocumentCollection): LlmSystemMessage => {
+  if (documents && documents.length > 0) {
+    if (!documentSystemMessage) throw new Error("Document system message must be provided when documents are provided.");
+    if (!documentSystemMessage.includes("{{documents}}")) {
+      throw new Error("System message must include '{{documents}}' placeholder when documents are provided.");
+    }
+    return ({
+      role: "system",
+      content: systemMessage + "\n" + documentSystemMessage.replace("{{documents}}", documents.toSystemMessage())
+    });
+  }
+  return ({role: "system", content: systemMessage});
+};
+
+export const generateAssistantMessage = (
   content: Nullable<string>,
   toolCalls?: LlmToolCall[]
 ): LlmAssistantMessage | LlmAssistantMessageWithToolCalls => {

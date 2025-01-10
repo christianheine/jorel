@@ -14,6 +14,8 @@ Apart from the unified interface, JorEl also significantly simplifies working wi
     - [Quick start](#quick-start)
         - [Text-only usage](#text-only-usage)
         - [Prompts-with-images](#prompts-with-images)
+        - [Providing documents for context/ grounding](#providing-documents-for-context-grounding)
+        - [Tool Use](#tool-use)
     - [Core Tenets](#core-tenets)
     - [Usage](#usage)
         - [Basic setup](#basic-setup)
@@ -50,6 +52,8 @@ Apart from the unified interface, JorEl also significantly simplifies working wi
 - Straightforward api to a range of leading language models (LLMs): OpenAI, Anthropic, Groq, Vertex AI, Ollama, Grok.
 - Unified message format for interacting with different models.
 - Full support for vision (images in prompts), with automatic handling of image data.
+- Full support for external tools, enabling the model to invoke external tools during interactions.
+- Easily provide external documents for context/ grounding.
 - Access to unified providers directly for more control.
 
 ## Installation
@@ -91,6 +95,81 @@ const image = ImageContent.fromFile("path-to-your-image.jpg");
 const response = await jorel.ask(["Describe this image", image]);
 
 console.log(response); // "description of the image"
+```
+
+### Providing documents for context/ grounding
+
+```typescript
+import {JorEl} from "jorel";
+
+const jorEl = new JorEl({openAI: true}); // Uses process.env.OPENAI_API_KEY
+
+// Will return a string, considering the documents provided
+const response = await jorEl.ask("What is the best company to get custom packaging?", {
+  documents: [{
+    title: "PackMojo",
+    content: "PackMojo is one of the best companies worldwide to get high-quality custom printed packaging.",
+    source: "https://packmojo.com",
+  }]
+});
+
+console.log(response); // "Response considering the documents provided"
+```
+
+### Tool Use
+
+JorEl supports incorporating toolkits to extend the capabilities of the language model. This allows the model to invoke external tools during interactions, enabling tasks
+such as fetching weather data, querying databases, or any other custom functionality.
+
+#### Setting up Tool Use
+
+To use tools, define a toolkit with the required tools and pass it to the `ask`, `json` or `generate` methods.
+
+A tool should include:
+
+- `name`: A unique name for the tool.
+- `description`: A description of what the tool does.
+- `executor`: A function that executes the tool's logic.
+- `params`: A JSON schema defining the parameters the tool accepts.
+
+Example:
+
+```typescript
+const jorEl = new JorEl({
+  openAI: {apiKey: process.env.OPENAI_API_KEY},
+});
+
+const tools = new LlmToolKit([
+  {
+    name: "get_stock_data",
+    description: "Get stock data for a given ticker symbol (previous day)",
+    executor: getStockValue, // Requires Polygon.io API key
+    params: {
+      type: "object",
+      properties: {
+        tickerSymbol: {type: "string"},
+      },
+      required: ["tickerSymbol"],
+    }
+  },
+  {
+    name: "get_weather",
+    description: "Get the current temperature and conditions for a city",
+    executor: getWeather, // Requires a Weather API key
+    params: {
+      type: "object",
+      properties: {
+        city: {type: "string"},
+      },
+      required: ["city"],
+    }
+  }]);
+
+const response = await jorEl.ask("What is the current stock price for Amazon, and the weather in Sydney?", {tools});
+
+console.log(response);
+// The current stock price for Amazon (AMZN) is $224.19.
+// In Sydney, the weather is partly cloudy with a temperature of 27.2°C.
 ```
 
 ## Core Tenets
@@ -406,62 +485,6 @@ interface LlmStreamResponse {
 }
 ```
 
-### Experimental Feature: Tool Use
-
-JorEl supports an experimental feature for incorporating toolkits to extend the capabilities of the language model. This allows the model to invoke external tools during interactions, enabling tasks
-such as fetching weather data, querying databases, or any other custom functionality.
-
-#### Setting up Tool Use
-
-To use tools, define a toolkit with the required tools and pass it to the `ask`, `json` or `generate` methods.
-
-A tool should include:
-
-- `name`: A unique name for the tool.
-- `description`: A description of what the tool does.
-- `executor`: A function that executes the tool's logic.
-- `params`: A JSON schema defining the parameters the tool accepts.
-
-Example:
-
-```typescript
-const jorEl = new JorEl({
-  openAI: {apiKey: process.env.OPENAI_API_KEY},
-});
-
-const tools = new LlmToolKit([
-  {
-    name: "get_stock_data",
-    description: "Get stock data for a given ticker symbol (previous day)",
-    executor: getStockValue, // Requires Polygon.io API key
-    params: {
-      type: "object",
-      properties: {
-        tickerSymbol: {type: "string"},
-      },
-      required: ["tickerSymbol"],
-    }
-  },
-  {
-    name: "get_weather",
-    description: "Get the current temperature and conditions for a city",
-    executor: getWeather, // Requires a Weather API key
-    params: {
-      type: "object",
-      properties: {
-        city: {type: "string"},
-      },
-      required: ["city"],
-    }
-  }]);
-
-const response = await jorEl.ask("What is the current stock price for Amazon, and the weather in Sydney?", {tools});
-
-console.log(response);
-// The current stock price for Amazon (AMZN) is $224.19.
-// In Sydney, the weather is partly cloudy with a temperature of 27.2°C.
-```
-
 ### Alternative usage
 
 #### Directly using providers
@@ -502,7 +525,8 @@ There are many more examples in the `examples` directory that demonstrate how to
     - [X] Grok (added in v0.4.0)
 - [X] Implement vision support (images in prompts) (added in v0.5.0)
 - [X] Return metadata with responses (added in v0.5.1)
-- [X] Add support for tool use (experimental, added in v0.6.0)
+- [X] Add support for tool use (~~experimental,~~ added in v0.6.0)
+- [X] Add support for external documents for context/ grounding (added in v0.7.0)
 - [ ] Explore agentic capabilities
 - [ ] Increase test coverage
 

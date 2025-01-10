@@ -2,16 +2,14 @@
 
 import {config} from "dotenv";
 import * as readline from "readline";
-import {_userMessage, JorEl, LlmMessage, LlmToolKit} from "../src";
+import {generateUserMessage, JorEl, LlmMessage, LlmToolKit} from "../src";
 import {getWeather} from "./utilities/get-weather";
 
 config();
 
 const main = async () => {
   // Create a JorEl instance
-  const jorEl = new JorEl({
-    openAI: {apiKey: process.env.OPENAI_API_KEY},
-  });
+  const jorEl = new JorEl({openAI: true}); // Uses process.env.OPENAI_API_KEY
 
   // Create a toolkit with our getWeather tool
   const tools = new LlmToolKit([
@@ -46,7 +44,7 @@ const main = async () => {
         return;
       }
 
-      messages.push(_userMessage(userInput));
+      messages.push(generateUserMessage(userInput));
 
       try {
         let message: LlmMessage;

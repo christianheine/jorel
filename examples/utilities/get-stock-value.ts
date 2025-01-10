@@ -11,6 +11,9 @@ export const getStockValue = async (params: { tickerSymbol: string }) => {
   const date = getPreviousDate();
   console.log(`[getStockValue] Fetching stock data for ${params.tickerSymbol} on ${date}`);
   const response = await fetch(`https://api.polygon.io/v1/open-close/${params.tickerSymbol.toUpperCase()}/${date}?adjusted=true&apiKey=${apiKey}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch stock data: ${response.statusText}, ${await response.text()}`);
+  }
   const data = await response.json();
   return {
     from: data.from,

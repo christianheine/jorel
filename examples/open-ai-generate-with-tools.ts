@@ -1,21 +1,19 @@
 #!/usr/bin/env ts-node
 
 import {config} from "dotenv";
-import {_userMessage, JorEl, LlmMessage, LlmToolKit} from "../src";
+import {generateUserMessage, JorEl, LlmMessage, LlmToolKit} from "../src";
 import {getWeather} from "./utilities/get-weather";
 
 config();
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    openAI: {apiKey: process.env.OPENAI_API_KEY},
-  });
+  const jorEl = new JorEl({openAI: true}); // Uses process.env.OPENAI_API_KEY
 
   const tools = new LlmToolKit([{
     name: "get_weather",
     description: "Get the current temperature and conditions for a city",
-    executor: getWeather, // Requires a Weather API key
+    executor: getWeather, // Requires a weatherapi.com API key
     params: {
       type: "object",
       properties: {
@@ -25,7 +23,7 @@ const main = async () => {
     }
   }]);
 
-  const messages: LlmMessage[] = [_userMessage("What is the weather in Sydney?")];
+  const messages: LlmMessage[] = [generateUserMessage("What is the weather in Sydney?")];
 
   const toolMessage: LlmMessage = await jorEl.generate(messages, {tools});
 

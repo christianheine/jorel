@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+- Add support for passing documents to JorEls, `ask`, `stream` and `json` methods'
+- Further simplify provider instantiation, by allowing to pass a {[provider]:true} to the JorEl constructor
+- Fix issue when streaming responses
+
 ## 0.6.0 (2025-01-04)
 
 - Add (experimental) support for tool use (non-streaming responses for all providers & JorEl's `generate` method)

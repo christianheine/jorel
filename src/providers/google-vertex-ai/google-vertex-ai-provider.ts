@@ -1,5 +1,5 @@
 import {ClientError, Content, CountTokensResponse, GenerateContentResponse, GoogleApiError, HarmBlockThreshold, HarmCategory, StreamGenerateContentResult, Tool, VertexAI} from "@google-cloud/vertexai";
-import {_assistantMessage, generateRandomId, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmResponseWithToolCalls, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
+import {generateAssistantMessage, generateRandomId, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
 import {convertLlmMessagesToVertexAiMessages} from "./convert-llm-message";
 import {FunctionDeclaration, FunctionDeclarationSchema} from "@google-cloud/vertexai/src/types/content";
 
@@ -54,7 +54,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     }
   }
 
-  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse | LlmResponseWithToolCalls> {
+  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse> {
     const start = Date.now();
 
     const {chatMessages, systemMessage} = await convertLlmMessagesToVertexAiMessages(messages);
@@ -126,7 +126,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     const durationMs = Date.now() - start;
 
     return {
-      ..._assistantMessage(content, toolCalls),
+      ...generateAssistantMessage(content, toolCalls),
       meta: {
         model,
         _provider,
@@ -185,6 +185,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
 
     return {
       type: "response",
+      role: "assistant",
       content: contentText,
       meta: {
         model,

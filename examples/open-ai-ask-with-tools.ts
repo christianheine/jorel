@@ -8,9 +8,7 @@ import {getWeather} from "./utilities/get-weather";
 config();
 
 const main = async () => {
-  const jorEl = new JorEl({
-    openAI: {apiKey: process.env.OPENAI_API_KEY},
-  });
+  const jorEl = new JorEl({openAI: true}); // Uses process.env.OPENAI_API_KEY
 
   const tools = new LlmToolKit([
     {
@@ -37,7 +35,7 @@ const main = async () => {
         required: ["city"],
       }
     }]);
-
+  
   const response = await jorEl.ask("What is the current stock price for Amazon, and the weather in Sydney?", {tools});
 
   console.log(response);
