@@ -55,7 +55,9 @@
     "groq-sdk": "^0.9.1",
     "ollama": "^0.5.11",
     "openai": "^4.77.0",
-    "uuid": "^11.0.4"
+    "uuid": "^11.0.4",
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "^3.24.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

@@ -1,11 +1,27 @@
-import {LlmFunction, LlmFunctionParameters, LlmToolExecutionInputs, LlmToolExecutionOutputs, LlmToolExecutor, MaybeUndefined} from "../shared";
+import {
+  LlmFunction,
+  LlmFunctionParameters,
+  LlmToolExecutionInputs,
+  LlmToolExecutionOutputs,
+  LlmToolExecutor,
+  MaybeUndefined,
+} from "../shared";
+import { ZodObject } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+
+export type LLmToolContextSegment = Record<string, object | string | number | boolean | null>;
+
+export interface LLmToolContext {
+  context: LLmToolContextSegment;
+  secureContext: LLmToolContextSegment;
+}
 
 export interface LlmToolConfiguration {
   name: string;
   description: string;
   requiresConfirmation?: boolean;
   executor?: LlmToolExecutor;
-  params?: Partial<LlmFunctionParameters>;
+  params?: Partial<LlmFunctionParameters> | ZodObject<any>;
 }
 
 export class LlmTool {
@@ -21,18 +37,25 @@ export class LlmTool {
     this.name = config.name;
     this.description = config.description;
     this.executor = config.executor;
-    this.params = config.params ? this.validateParams(config.params) : undefined;
+    this.params = !config.params
+      ? undefined
+      : config.params instanceof ZodObject
+        ? zodToJsonSchema(config.params, { target: "openAi" })
+        : this.validateParams(config.params);
   }
 
   /**
    * Execute the tool
    * @param args Deserialized arguments
+   * @param env
+   * @param env.context Contextual data (included in logs)
+   * @param env.secureContext Secure contextual data (excluded from logs)
    */
-  async execute(args: LlmToolExecutionInputs): Promise<LlmToolExecutionOutputs> {
+  async execute(args: LlmToolExecutionInputs, env: Partial<LLmToolContext> = {}): Promise<LlmToolExecutionOutputs> {
     if (!this.executor) {
       throw new Error(`Executor not defined for tool: ${this.name}`);
     }
-    return this.executor(args);
+    return this.executor(args, env.context || {}, env.secureContext || {});
   }
 
   /**
@@ -55,14 +78,7 @@ export class LlmTool {
    * @private
    */
   private validateParams(params: Partial<LlmFunctionParameters>): LlmFunctionParameters {
-    const {
-      type,
-      properties,
-      items,
-      required,
-      additionalProperties,
-      ...rest
-    } = params ?? {};
+    const { type, properties, items, required, additionalProperties, ...rest } = params ?? {};
     return {
       type: type ? type : items ? "array" : properties ? "object" : "string",
       required: required ?? [],
