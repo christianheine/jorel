@@ -1,6 +1,6 @@
-import {generateUniqueId} from "./unique-ids";
+import { generateUniqueId } from "./unique-ids";
 
-export type CreateLlmDocument = Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument>
+export type CreateLlmDocument = Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument>;
 
 export class LlmDocument {
   id: string;
@@ -9,7 +9,7 @@ export class LlmDocument {
   content: string;
   source?: string;
 
-  constructor({id, type, title, content, source}: CreateLlmDocument) {
+  constructor({ id, type, title, content, source }: CreateLlmDocument) {
     this.id = id || generateUniqueId();
     this.type = type || "text";
     this.title = title;
@@ -18,7 +18,7 @@ export class LlmDocument {
   }
 
   static text(id: string, body: Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument>): LlmDocument {
-    return new LlmDocument({id, type: "text", ...body});
+    return new LlmDocument({ id, type: "text", ...body });
   }
 
   toJSON() {
@@ -32,23 +32,29 @@ export class LlmDocument {
   }
 }
 
-const xmlDocumentToTextTemplate = "<Document></Document><DocumentId>{{id}}</DocumentId>\n<DocumentType>{{type}}</DocumentType>\n<Title>{{title}}</Title>\n<Content>{{content}}</Content>\n<Source>{{source}}</Source></Document>";
+const xmlDocumentToTextTemplate =
+  "<Document></Document><DocumentId>{{id}}</DocumentId>\n<DocumentType>{{type}}</DocumentType>\n<Title>{{title}}</Title>\n<Content>{{content}}</Content>\n<Source>{{source}}</Source></Document>";
 
-type DocumentToTextTemplate = "xml" | "json" | {
-  template: string;
-  separator: string;
-};
+type DocumentToTextTemplate =
+  | "xml"
+  | "json"
+  | {
+      template: string;
+      separator: string;
+    };
 
 interface LlmDocumentCollectionConfig {
   _documentToText?: DocumentToTextTemplate;
 }
 
 export class LlmDocumentCollection {
-  private _documents: Map<string, LlmDocument>;
   public documentToTextTemplate: DocumentToTextTemplate;
+  private _documents: Map<string, LlmDocument>;
 
   constructor(documents: (LlmDocument | CreateLlmDocument)[] = [], config: LlmDocumentCollectionConfig = {}) {
-    const _documents = documents.map((document) => document instanceof LlmDocument ? document : new LlmDocument(document));
+    const _documents = documents.map((document) =>
+      document instanceof LlmDocument ? document : new LlmDocument(document),
+    );
     this._documents = new Map(_documents.map((document) => [document.id, document]));
     this.documentToTextTemplate = config._documentToText || "xml";
   }
@@ -59,6 +65,12 @@ export class LlmDocumentCollection {
 
   get all() {
     return Array.from(this._documents.values());
+  }
+
+  static fromJSON(documents: (LlmDocument | CreateLlmDocument)[] = []) {
+    return new LlmDocumentCollection(
+      documents.map((document) => new LlmDocument(document instanceof LlmDocument ? document.toJSON() : document)),
+    );
   }
 
   add(document: LlmDocument) {
@@ -77,18 +89,16 @@ export class LlmDocumentCollection {
     return this.all.map((document) => document.toJSON());
   }
 
-  static fromJSON(documents: (LlmDocument | CreateLlmDocument)[] = []) {
-    return new LlmDocumentCollection(documents.map((document) => new LlmDocument(document instanceof LlmDocument ? document.toJSON() : document)));
-  }
-
   toSystemMessage(): string {
     if (this.documentToTextTemplate === "json") return JSON.stringify(this.toJSON());
 
-    const template = this.documentToTextTemplate === "xml" ? xmlDocumentToTextTemplate : this.documentToTextTemplate.template;
+    const template =
+      this.documentToTextTemplate === "xml" ? xmlDocumentToTextTemplate : this.documentToTextTemplate.template;
 
     const rendered = this.all.map((document) => {
       if (!template.includes("{{id}}")) throw new Error("Document template must include '{{id}}' placeholder.");
-      if (!template.includes("{{content}}")) throw new Error("Document template must include '{{content}}' placeholder.");
+      if (!template.includes("{{content}}"))
+        throw new Error("Document template must include '{{content}}' placeholder.");
       return template
         .replace("{{id}}", document.id)
         .replace("{{type}}", document.type)

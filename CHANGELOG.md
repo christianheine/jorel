@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+
+- Add native support for passing Zod objects as tool params
+- Restructured examples into major categories (standard-use, provider-apis, agents)
+- Prepare tool-use for agentic use cases
+
 ## 0.7.0
 
 - Add support for passing documents to JorEls, `ask`, `stream` and `json` methods'

@@ -1,3 +1,4 @@
+export * from "../agents";
 export * from "./jorel";
 export * from "./media";
 export * from "./providers";

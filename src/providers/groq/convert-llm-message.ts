@@ -1,9 +1,12 @@
-import {LlmMessage} from "../../shared";
-import {ChatCompletionContentPart, ChatCompletionMessageParam} from "groq-sdk/resources/chat";
-import {ImageContent} from "../../media";
+import { LlmMessage } from "../../shared";
+import { ChatCompletionContentPart, ChatCompletionMessageParam } from "groq-sdk/resources/chat";
+import { ImageContent } from "../../media";
 
 /** Convert unified LLM messages to Groq messages (ChatCompletionMessageParam) */
-export const convertLlmMessagesToGroqMessages = async (messages: LlmMessage[], detail?: "low" | "high"): Promise<ChatCompletionMessageParam[]> => {
+export const convertLlmMessagesToGroqMessages = async (
+  messages: LlmMessage[],
+  detail?: "low" | "high",
+): Promise<ChatCompletionMessageParam[]> => {
   const convertedMessages: ChatCompletionMessageParam[] = [];
 
   for (const message of messages) {
@@ -15,27 +18,27 @@ export const convertLlmMessagesToGroqMessages = async (messages: LlmMessage[], d
       convertedMessages.push({
         role: "assistant",
         content: message.content,
-        tool_calls: message.toolCalls.map(toolCall => ({
+        tool_calls: message.toolCalls.map((toolCall) => ({
           id: toolCall.request.id,
           type: "function",
           function: {
             name: toolCall.request.function.name,
-            arguments: JSON.stringify(toolCall.request.function.arguments)
-          }
-        }))
+            arguments: JSON.stringify(toolCall.request.function.arguments),
+          },
+        })),
       });
       for (const toolCall of message.toolCalls) {
         if (toolCall.executionState === "completed") {
           convertedMessages.push({
             role: "tool",
             content: JSON.stringify(toolCall.result),
-            tool_call_id: toolCall.request.id
+            tool_call_id: toolCall.request.id,
           });
         } else if (toolCall.executionState === "error") {
           convertedMessages.push({
             role: "tool",
             content: toolCall.error.message,
-            tool_call_id: toolCall.request.id
+            tool_call_id: toolCall.request.id,
           });
         }
       }
@@ -43,7 +46,7 @@ export const convertLlmMessagesToGroqMessages = async (messages: LlmMessage[], d
       if (typeof message.content === "string") {
         convertedMessages.push({
           role: message.role,
-          content: message.content
+          content: message.content,
         });
       } else if (Array.isArray(message.content)) {
         const content: ChatCompletionContentPart[] = [];
@@ -53,28 +56,28 @@ export const convertLlmMessagesToGroqMessages = async (messages: LlmMessage[], d
           if (typeof _content === "string") {
             content.push({
               type: "text",
-              text: _content
+              text: _content,
             });
           } else if (_content.type === "text") {
             content.push({
               type: "text",
-              text: _content.text
+              text: _content.text,
             });
           } else if (_content.type === "imageUrl") {
             content.push({
               type: "image_url",
               image_url: {
                 url: _content.url,
-                detail
-              }
+                detail,
+              },
             });
           } else if (_content.type === "imageData") {
             content.push({
               type: "image_url",
               image_url: {
                 url: _content.data,
-                detail
-              }
+                detail,
+              },
             });
           } else {
             throw new Error(`Unsupported content type`);
@@ -83,7 +86,7 @@ export const convertLlmMessagesToGroqMessages = async (messages: LlmMessage[], d
 
         convertedMessages.push({
           role: message.role,
-          content
+          content,
         });
       }
     }

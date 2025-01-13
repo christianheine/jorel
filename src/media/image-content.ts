@@ -1,7 +1,7 @@
-import {promises} from "fs";
-import {fromBuffer} from "file-type";
-import {fetchFileAsBuffer} from "./utils";
-import {LLmMessageImageDataUrlContent, LLmMessageImageUrlContent} from "../shared";
+import { promises } from "fs";
+import { fromBuffer } from "file-type";
+import { fetchFileAsBuffer } from "./utils";
+import { LLmMessageImageDataUrlContent, LLmMessageImageUrlContent } from "../shared";
 
 interface BufferImage {
   type: "buffer";
@@ -41,7 +41,9 @@ export class ImageContent {
   static fromDataUrl(dataUrl: string): ImageContent {
     const [mimeType, base64] = dataUrl.split(/[:;,]/).slice(1, 3);
     return new ImageContent({
-      type: "base64", data: base64, mimeType
+      type: "base64",
+      data: base64,
+      mimeType,
     });
   }
 
@@ -54,12 +56,16 @@ export class ImageContent {
    * @param mimeType The MIME type of the image
    * @param downloadMedia Whether to download the image or not
    */
-  static async fromUrl(url: string, mimeType: string, downloadMedia: false): Promise<ImageContent>
-  static async fromUrl(url: string, mimeType?: string, downloadMedia?: true): Promise<ImageContent>
+  static async fromUrl(url: string, mimeType: string, downloadMedia: false): Promise<ImageContent>;
+  static async fromUrl(url: string, mimeType?: string, downloadMedia?: true): Promise<ImageContent>;
   static async fromUrl(url: string, mimeType?: string, downloadMedia: boolean = true): Promise<ImageContent> {
-    if (!downloadMedia) return new ImageContent({type: "url", url, mimeType: mimeType || ""});
+    if (!downloadMedia) return new ImageContent({ type: "url", url, mimeType: mimeType || "" });
     const buffer = await fetchFileAsBuffer(url, mimeType);
-    return new ImageContent({type: "buffer", buffer: buffer.buffer, mimeType: buffer.mimeType});
+    return new ImageContent({
+      type: "buffer",
+      buffer: buffer.buffer,
+      mimeType: buffer.mimeType,
+    });
   }
 
   /**
@@ -73,7 +79,7 @@ export class ImageContent {
     if (!type) {
       throw new Error("Unsupported image type. Unable to detect MIME type from the buffer.");
     }
-    return new ImageContent({type: "buffer", buffer, mimeType: type});
+    return new ImageContent({ type: "buffer", buffer, mimeType: type });
   }
 
   /**
@@ -98,9 +104,12 @@ export class ImageContent {
    */
   async toBuffer(): Promise<{ buffer: Buffer; mimeType: string }> {
     if (this._source.type === "buffer") {
-      return {buffer: this._source.buffer, mimeType: this._source.mimeType};
+      return { buffer: this._source.buffer, mimeType: this._source.mimeType };
     } else if (this._source.type === "base64") {
-      return {buffer: Buffer.from(this._source.data, "base64"), mimeType: this._source.mimeType};
+      return {
+        buffer: Buffer.from(this._source.data, "base64"),
+        mimeType: this._source.mimeType,
+      };
     } else {
       return fetchFileAsBuffer(this._source.url, this._source.mimeType);
     }
@@ -111,7 +120,7 @@ export class ImageContent {
    * @returns The image as a Uint8Array
    */
   async toUint8Array(): Promise<Uint8Array> {
-    const {buffer} = await this.toBuffer();
+    const { buffer } = await this.toBuffer();
     return new Uint8Array(buffer);
   }
 
@@ -121,12 +130,18 @@ export class ImageContent {
    */
   async toBase64(): Promise<{ data: string; mimeType: string }> {
     if (this._source.type === "base64") {
-      return {data: this._source.data, mimeType: this._source.mimeType};
+      return { data: this._source.data, mimeType: this._source.mimeType };
     } else if (this._source.type === "buffer") {
-      return {data: this._source.buffer.toString("base64"), mimeType: this._source.mimeType};
+      return {
+        data: this._source.buffer.toString("base64"),
+        mimeType: this._source.mimeType,
+      };
     } else {
       const buffer = await fetchFileAsBuffer(this._source.url, this._source.mimeType);
-      return {data: buffer.buffer.toString("base64"), mimeType: buffer.mimeType};
+      return {
+        data: buffer.buffer.toString("base64"),
+        mimeType: buffer.mimeType,
+      };
     }
   }
 
@@ -135,7 +150,7 @@ export class ImageContent {
    * @returns The image data URL
    */
   async toDataUrl(): Promise<string> {
-    const {data, mimeType} = await this.toBase64();
+    const { data, mimeType } = await this.toBase64();
     return `data:${mimeType};base64,${data}`;
   }
 
@@ -144,13 +159,19 @@ export class ImageContent {
    * @param downloadUrls Whether to download the image and return a data URL
    * @returns The image as a message content
    */
-  async toMessageContent(downloadUrls?: false): Promise<LLmMessageImageDataUrlContent | LLmMessageImageUrlContent>
-  async toMessageContent(downloadUrls: true): Promise<LLmMessageImageDataUrlContent>
-  async toMessageContent(downloadUrls: boolean = false): Promise<LLmMessageImageUrlContent | LLmMessageImageDataUrlContent> {
+  async toMessageContent(downloadUrls?: false): Promise<LLmMessageImageDataUrlContent | LLmMessageImageUrlContent>;
+  async toMessageContent(downloadUrls: true): Promise<LLmMessageImageDataUrlContent>;
+  async toMessageContent(
+    downloadUrls: boolean = false,
+  ): Promise<LLmMessageImageUrlContent | LLmMessageImageDataUrlContent> {
     if (this._source.type === "url" && !downloadUrls) {
-      return {type: "imageUrl", url: this._source.url};
+      return { type: "imageUrl", url: this._source.url };
     }
-    const {data, mimeType} = await this.toBase64();
-    return {type: "imageData", data: `data:${mimeType};base64,${data}`, mimeType};
+    const { data, mimeType } = await this.toBase64();
+    return {
+      type: "imageData",
+      data: `data:${mimeType};base64,${data}`,
+      mimeType,
+    };
   }
 }

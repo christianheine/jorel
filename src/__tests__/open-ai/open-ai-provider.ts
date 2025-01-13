@@ -1,5 +1,5 @@
-import {OpenAIProvider} from "../../providers";
-import {config} from "dotenv";
+import { OpenAIProvider } from "../../providers";
+import { config } from "dotenv";
 
 config();
 
@@ -9,7 +9,7 @@ describe("OpenAIProvider", () => {
   let provider: OpenAIProvider;
 
   beforeEach(() => {
-    provider = new OpenAIProvider({apiKey: apiKey, defaultTemperature: 0.5});
+    provider = new OpenAIProvider({ apiKey: apiKey, defaultTemperature: 0.5 });
   });
 
   it("should initialize with default values", () => {

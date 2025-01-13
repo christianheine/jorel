@@ -1,5 +1,5 @@
 import axios from "axios";
-import {fetchFileAsBuffer} from "../../../media/utils";
+import { fetchFileAsBuffer } from "../../../media/utils";
 
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -12,7 +12,7 @@ describe("fetchFileAsBuffer", () => {
 
     mockedAxios.get.mockResolvedValue({
       data: bufferData,
-      headers: {"content-type": mimeType}
+      headers: { "content-type": mimeType },
     });
 
     const result = await fetchFileAsBuffer(url);
@@ -27,7 +27,7 @@ describe("fetchFileAsBuffer", () => {
 
     mockedAxios.get.mockResolvedValue({
       data: bufferData,
-      headers: {}
+      headers: {},
     });
 
     const result = await fetchFileAsBuffer(url, fallbackMimeType);
@@ -50,7 +50,7 @@ describe("fetchFileAsBuffer", () => {
 
     mockedAxios.get.mockResolvedValue({
       data: bufferData,
-      headers: {}
+      headers: {},
     });
 
     await expect(fetchFileAsBuffer(url)).rejects.toThrow("Unable to detect MIME type from the response headers.");

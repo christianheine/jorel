@@ -1,6 +1,6 @@
-import {LlmMessage} from "../../shared";
-import {Message, ToolCall} from "ollama";
-import {ImageContent} from "../../media";
+import { LlmMessage } from "../../shared";
+import { Message, ToolCall } from "ollama";
+import { ImageContent } from "../../media";
 
 /** Convert unified LLM messages to Ollama messages (Message) */
 export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[]): Promise<Message[]> => {
@@ -15,12 +15,14 @@ export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[])
       convertedMessages.push({
         role: "assistant",
         content: message.content || "",
-        tool_calls: message.toolCalls.map((toolCall): ToolCall => ({
-          function: {
-            name: toolCall.request.function.name,
-            arguments: toolCall.request.function.arguments,
-          }
-        }))
+        tool_calls: message.toolCalls.map(
+          (toolCall): ToolCall => ({
+            function: {
+              name: toolCall.request.function.name,
+              arguments: toolCall.request.function.arguments,
+            },
+          }),
+        ),
       });
       for (const toolCall of message.toolCalls) {
         if (toolCall.executionState === "completed") {
@@ -39,7 +41,7 @@ export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[])
       if (typeof message.content === "string") {
         convertedMessages.push({
           role: message.role,
-          content: message.content
+          content: message.content,
         });
       } else if (Array.isArray(message.content)) {
         const content: string[] = [];
@@ -67,7 +69,7 @@ export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[])
         convertedMessages.push({
           role: message.role,
           content: content.join(""),
-          images: images.length > 0 ? images : undefined
+          images: images.length > 0 ? images : undefined,
         });
       }
     }

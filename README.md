@@ -527,6 +527,8 @@ There are many more examples in the `examples` directory that demonstrate how to
 - [X] Return metadata with responses (added in v0.5.1)
 - [X] Add support for tool use (~~experimental,~~ added in v0.6.0)
 - [X] Add support for external documents for context/ grounding (added in v0.7.0)
+- [ ] Add logger: onLog: 'console' | async function | undefined, logLevel: string
+- [ ] Add Middleware: before and after generate calls & tool use, async (logging, pub/sub trigger)
 - [ ] Explore agentic capabilities
 - [ ] Increase test coverage
 

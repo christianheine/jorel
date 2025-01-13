@@ -1,47 +1,65 @@
-import ollama, {Tool} from "ollama";
+import ollama, { Tool } from "ollama";
 
-import {generateAssistantMessage, generateRandomId, LlmCoreProvider, LlmGenerationConfig, LlmMessage, LlmResponse, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall, MaybeUndefined} from "../../shared";
-import {convertLlmMessagesToOllamaMessages} from "./convert-llm-message";
+import {
+  generateAssistantMessage,
+  generateRandomId,
+  generateUniqueId,
+  LlmCoreProvider,
+  LlmGenerationConfig,
+  LlmMessage,
+  LlmResponse,
+  LlmStreamResponse,
+  LlmStreamResponseChunk,
+  LlmToolCall,
+  MaybeUndefined,
+} from "../../shared";
+import { convertLlmMessagesToOllamaMessages } from "./convert-llm-message";
 
 export interface OllamaConfig {
   apiKey?: string;
   apiUrl?: string;
   defaultTemperature?: number;
+  name?: string;
 }
-
-const _provider = "OllamaProvider";
 
 /** Provides access to local Ollama server */
 export class OllamaProvider implements LlmCoreProvider {
+  public readonly name;
   public defaultTemperature;
 
-  constructor({defaultTemperature}: OllamaConfig = {}) {
+  constructor({ defaultTemperature, name }: OllamaConfig = {}) {
+    this.name = name || "ollama";
     this.defaultTemperature = defaultTemperature ?? 0;
   }
 
-  async generateResponse(model: string, messages: LlmMessage[], config: LlmGenerationConfig = {}): Promise<LlmResponse > {
+  async generateResponse(
+    model: string,
+    messages: LlmMessage[],
+    config: LlmGenerationConfig = {},
+  ): Promise<LlmResponse> {
     const start = Date.now();
 
     const response = await ollama.chat({
       model,
       messages: await convertLlmMessagesToOllamaMessages(messages),
       format: config.json ? "json" : undefined,
-      tools: config.tools?.llmFunctions.map((f): Tool => ({
-        type: "function",
-        function: {
-          name: f.function.name,
-          description: f.function.description,
-          parameters: {
-            type: f.function.parameters?.type ?? "object",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            properties: f.function.parameters?.properties ?? {} as Record<string, any>,
-            required: f.function.parameters?.required ?? [],
-          }
-        },
-      })),
+      tools: config.tools?.llmFunctions.map(
+        (f): Tool => ({
+          type: "function",
+          function: {
+            name: f.function.name,
+            description: f.function.description,
+            parameters: {
+              type: f.function.parameters?.type ?? "object",
+              properties: f.function.parameters?.properties ?? ({} as Record<string, any>),
+              required: f.function.parameters?.required ?? [],
+            },
+          },
+        }),
+      ),
       options: {
         temperature: config.temperature || this.defaultTemperature,
-      }
+      },
     });
 
     const durationMs = Date.now() - start;
@@ -51,39 +69,41 @@ export class OllamaProvider implements LlmCoreProvider {
 
     const message = response.message;
 
-    const toolCalls: MaybeUndefined<LlmToolCall[]> = message.tool_calls?.map(call =>
-      (
-        {
-          request: {
-            id: generateRandomId(),
-            function: {
-              name: call.function.name,
-              arguments: call.function.arguments,
-            }
-          },
-          approvalState: config.tools?.getTool(call.function.name)?.requiresConfirmation ? "requiresApproval" : "noApprovalRequired",
-          executionState: "pending",
-          result: null,
-          error: null
-        }
-      ));
+    const toolCalls: MaybeUndefined<LlmToolCall[]> = message.tool_calls?.map((call) => ({
+      id: generateUniqueId(),
+      request: {
+        id: generateRandomId(),
+        function: {
+          name: call.function.name,
+          arguments: call.function.arguments,
+        },
+      },
+      approvalState: config.tools?.getTool(call.function.name)?.requiresConfirmation
+        ? "requiresApproval"
+        : "noApprovalRequired",
+      executionState: "pending",
+      result: null,
+      error: null,
+    }));
+
+    const provider = this.name;
 
     return {
       ...generateAssistantMessage(message.content, toolCalls),
       meta: {
         model,
-        _provider,
+        provider,
         durationMs,
         inputTokens,
         outputTokens,
-      }
+      },
     };
   }
 
-  async* generateResponseStream(
+  async *generateResponseStream(
     model: string,
     messages: LlmMessage[],
-    config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {}
+    config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
   ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
     const start = Date.now();
 
@@ -94,7 +114,7 @@ export class OllamaProvider implements LlmCoreProvider {
       format: config.json ? "json" : undefined,
       options: {
         temperature: config.temperature || this.defaultTemperature,
-      }
+      },
     });
 
     let content = "";
@@ -102,7 +122,7 @@ export class OllamaProvider implements LlmCoreProvider {
       const contentChunk = chunk.message.content;
       if (contentChunk) {
         content += contentChunk;
-        yield {type: "chunk", content: contentChunk};
+        yield { type: "chunk", content: contentChunk };
       }
     }
 
@@ -111,22 +131,24 @@ export class OllamaProvider implements LlmCoreProvider {
     const inputTokens = undefined;
     const outputTokens = undefined;
 
+    const provider = this.name;
+
     return {
       type: "response",
       role: "assistant",
       content,
       meta: {
         model,
-        _provider,
+        provider,
         durationMs,
         inputTokens,
         outputTokens,
-      }
+      },
     };
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const {models} = await ollama.ps();
-    return models.map(model => model.name);
+    const { models } = await ollama.ps();
+    return models.map((model) => model.name);
   }
 }

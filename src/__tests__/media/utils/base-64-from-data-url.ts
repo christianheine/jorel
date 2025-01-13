@@ -1,4 +1,4 @@
-import {getBase64PartFromDataUrl} from "../../../media/utils";
+import { getBase64PartFromDataUrl } from "../../../media/utils";
 
 describe("getBase64PartFromDataUrl", () => {
   it("should extract the Base64 part from a valid Data URL", () => {

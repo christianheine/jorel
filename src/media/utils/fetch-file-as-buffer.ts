@@ -1,4 +1,4 @@
-import axios, {AxiosResponse} from "axios";
+import axios, { AxiosResponse } from "axios";
 
 /**
  * Fetches a file from the given URL and returns it as a buffer.
@@ -6,13 +6,18 @@ import axios, {AxiosResponse} from "axios";
  * @param fallbackMimeType Fallback MIME type to use if the response headers do not contain a MIME type.
  * @returns The file as a buffer and its MIME type.
  */
-export async function fetchFileAsBuffer(url: string, fallbackMimeType?: string): Promise<{ buffer: Buffer; mimeType: string }> {
+export async function fetchFileAsBuffer(
+  url: string,
+  fallbackMimeType?: string,
+): Promise<{ buffer: Buffer; mimeType: string }> {
   let response: AxiosResponse;
 
   try {
-    response = await axios.get(url, {responseType: "arraybuffer"});
+    response = await axios.get(url, { responseType: "arraybuffer" });
   } catch (error: unknown) {
-    throw new Error(`Failed to fetch file from URL: ${url}. ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error(
+      `Failed to fetch file from URL: ${url}. ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 
   const mimeType = response.headers["content-type"] || fallbackMimeType;
@@ -25,6 +30,6 @@ export async function fetchFileAsBuffer(url: string, fallbackMimeType?: string):
 
   return {
     buffer,
-    mimeType
+    mimeType,
   };
 }

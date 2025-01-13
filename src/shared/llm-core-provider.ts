@@ -1,6 +1,6 @@
-import {ImageContent} from "../media";
-import {Nullable} from "./type-utils";
-import {LlmToolKit} from "../tools/llm-tool-kit";
+import { ImageContent } from "../media";
+import { Nullable } from "./type-utils";
+import { LLmToolContextSegment, LlmToolKit } from "../tools";
 
 export type LlmToolChoice = "none" | "auto" | "required" | string;
 
@@ -15,7 +15,7 @@ export interface LlmGenerationConfig {
 export type LlmSystemMessage = {
   role: "system";
   content: string;
-}
+};
 
 export interface LLmMessageTextContent {
   type: "text";
@@ -34,21 +34,23 @@ export interface LLmMessageImageDataUrlContent {
   data: string;
 }
 
-export type LlmUserMessageContent = string | (string | LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent | ImageContent)[]
+export type LlmUserMessageContent =
+  | string
+  | (string | LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent | ImageContent)[];
 
 export type LlmUserMessage = {
   role: "user";
   content: LlmUserMessageContent;
-}
+};
 
 export type LlmFunctionParameter = "string" | "number" | "integer" | "boolean" | "array" | "object";
 
 export interface LlmFunctionParameters {
-  type: LlmFunctionParameter;
+  type?: LlmFunctionParameter;
   properties?: Record<string, Partial<LlmFunctionParameters>>;
   items?: Partial<LlmFunctionParameters> | Partial<LlmFunctionParameters>[];
-  required: string[];
-  additionalProperties: boolean | Partial<LlmFunctionParameters>;
+  required?: string[];
+  additionalProperties?: boolean | Partial<LlmFunctionParameters>;
 
   [key: string]: unknown;
 }
@@ -56,9 +58,9 @@ export interface LlmFunctionParameters {
 export interface LlmFunction {
   type: "function";
   function: {
-    name: string
-    description: string
-    parameters?: LlmFunctionParameters
+    name: string;
+    description: string;
+    parameters?: LlmFunctionParameters;
   };
 }
 
@@ -66,20 +68,23 @@ export interface LlmToolCallRequest {
   id: string;
   function: {
     name: string;
-    arguments: object
+    arguments: object;
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type LlmToolExecutionInputs = any
+export type LlmToolExecutionInputs = any;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type LlmToolExecutionOutputs = any
+export type LlmToolExecutionOutputs = any;
 
-export type LlmToolExecutor = (ToolExecutionInputs: LlmToolExecutionInputs) => Promise<LlmToolExecutionOutputs>
+export type LlmToolExecutor = (
+  ToolExecutionInputs: LlmToolExecutionInputs,
+  context: LLmToolContextSegment,
+  secureContext: LLmToolContextSegment,
+) => Promise<LlmToolExecutionOutputs>;
 export type LlmToolCallApprovalState = "noApprovalRequired" | "requiresApproval" | "approved" | "rejected";
 
 export interface LlmToolCall__Pending {
+  id: string;
   approvalState: LlmToolCallApprovalState;
   executionState: "pending";
   request: LlmToolCallRequest;
@@ -87,7 +92,17 @@ export interface LlmToolCall__Pending {
   error?: null;
 }
 
+export interface LlmToolCall__InProgress {
+  id: string;
+  approvalState: LlmToolCallApprovalState;
+  executionState: "inProgress";
+  request: LlmToolCallRequest;
+  result: Nullable<object>;
+  error?: null;
+}
+
 export interface LlmToolCall__Completed {
+  id: string;
   approvalState: LlmToolCallApprovalState;
   executionState: "completed";
   request: LlmToolCallRequest;
@@ -96,6 +111,7 @@ export interface LlmToolCall__Completed {
 }
 
 export interface LlmToolCall__Error {
+  id: string;
   approvalState: LlmToolCallApprovalState;
   executionState: "error";
   request: LlmToolCallRequest;
@@ -103,37 +119,37 @@ export interface LlmToolCall__Error {
   error: {
     type: string;
     message: string;
-    numberOfAttempts: number
-    lastAttempt: Date
+    numberOfAttempts: number;
+    lastAttempt: Date;
   };
 }
 
-export type LlmToolCall = LlmToolCall__Pending | LlmToolCall__Completed | LlmToolCall__Error
+export type LlmToolCall = LlmToolCall__Pending | LlmToolCall__InProgress | LlmToolCall__Completed | LlmToolCall__Error;
 
 export type LlmAssistantMessage = {
   role: "assistant";
   content: string;
   meta?: LlmAssistantMessageMeta;
-}
+};
 
 export type LlmAssistantMessageWithToolCalls = {
   role: "assistant_with_tools";
-  content: Nullable<string>
+  content: Nullable<string>;
   toolCalls: LlmToolCall[];
   meta?: LlmAssistantMessageMeta;
-}
-
-export type LlmMessage = LlmSystemMessage | LlmUserMessage | LlmAssistantMessage | LlmAssistantMessageWithToolCalls
+};
 
 export interface LlmAssistantMessageMeta {
   model: string;
-  _provider: string;
+  provider: string;
   durationMs: number;
   inputTokens?: number;
   outputTokens?: number;
 }
 
-export type LlmResponse = (LlmAssistantMessage | LlmAssistantMessageWithToolCalls) & { meta: LlmAssistantMessageMeta }
+export type LlmMessage = LlmSystemMessage | LlmUserMessage | LlmAssistantMessage | LlmAssistantMessageWithToolCalls;
+
+export type LlmResponse = (LlmAssistantMessage | LlmAssistantMessageWithToolCalls) & { meta: LlmAssistantMessageMeta };
 
 export interface LlmStreamResponseChunk {
   type: "chunk";
@@ -148,9 +164,15 @@ export interface LlmStreamResponse {
 }
 
 export interface LlmCoreProvider {
+  readonly name: string;
+
   generateResponse(model: string, messages: LlmMessage[], config?: LlmGenerationConfig): Promise<LlmResponse>;
 
-  generateResponseStream(model: string, messages: LlmMessage[], config?: LlmGenerationConfig): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown>;
+  generateResponseStream(
+    model: string,
+    messages: LlmMessage[],
+    config?: LlmGenerationConfig,
+  ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown>;
 
   getAvailableModels(): Promise<string[]>;
 }
