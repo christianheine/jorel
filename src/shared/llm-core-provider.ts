@@ -175,4 +175,6 @@ export interface LlmCoreProvider {
   ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown>;
 
   getAvailableModels(): Promise<string[]>;
+
+  createEmbedding(model: string, text: string): Promise<number[]>;
 }

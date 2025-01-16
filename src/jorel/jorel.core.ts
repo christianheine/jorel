@@ -95,4 +95,15 @@ export class JorElCoreStore {
     });
     yield* stream;
   }
+
+  /**
+   * Generate an embedding for a given text
+   * @param text
+   * @param model
+   */
+  async generateEmbedding(text: string, model?: string) {
+    const modelEntry = this.modelManager.getEmbeddingModel(model || this.modelManager.getDefaultEmbeddingModel());
+    const provider = this.providerManager.getProvider(modelEntry.provider);
+    return await provider.createEmbedding(modelEntry.model, text);
+  }
 }

@@ -151,4 +151,12 @@ export class OllamaProvider implements LlmCoreProvider {
     const { models } = await ollama.ps();
     return models.map((model) => model.name);
   }
+
+  async createEmbedding(model: string, text: string): Promise<number[]> {
+    const response = await ollama.embeddings({
+      model,
+      prompt: text,
+    });
+    return response.embedding;
+  }
 }

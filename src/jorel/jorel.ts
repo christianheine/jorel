@@ -7,6 +7,7 @@ import {
   defaultAnthropicModels,
   defaultGrokModels,
   defaultGroqModels,
+  defaultOpenAiEmbeddingModels,
   defaultOpenAiModels,
   defaultVertexAiModels,
   GoogleVertexAiConfig,
@@ -98,6 +99,14 @@ export class JorEl {
         provider: "",
         setAsDefault: true,
       }),
+    embeddings: {
+      register: (params: { model: string; provider: string; dimensions: number; setAsDefault?: boolean }) =>
+        this._core.modelManager.registerEmbeddingModel(params),
+      unregister: (model: string) => this._core.modelManager.unregisterEmbeddingModel(model),
+      getDefault: () => this._core.modelManager.getDefaultEmbeddingModel(),
+      setDefault: (model: string) => this._core.modelManager.setDefaultEmbeddingModel(model),
+      list: () => this._core.modelManager.listEmbeddingModels(),
+    },
   };
   /** Public methods for managing providers */
   public providers = {
@@ -130,6 +139,9 @@ export class JorEl {
       this._core.providerManager.registerProvider("openai", new OpenAIProvider(config));
       for (const model of defaultOpenAiModels) {
         this.models.register({ model, provider: "openai" });
+      }
+      for (const { model, dimensions } of defaultOpenAiEmbeddingModels) {
+        this.models.embeddings.register({ model, dimensions, provider: "openai" });
       }
     },
     registerGoogleVertexAi: (config?: GoogleVertexAiConfig) => {
@@ -259,6 +271,15 @@ export class JorEl {
     for await (const chunk of stream) {
       yield chunk.content;
     }
+  }
+
+  /**
+   * Create an embedding for a given text
+   * @param text
+   * @param model
+   */
+  async embed(text: string, model?: string): Promise<number[]> {
+    return this._core.generateEmbedding(text, model);
   }
 
   private generateMessages(

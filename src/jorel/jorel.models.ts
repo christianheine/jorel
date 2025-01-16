@@ -3,7 +3,9 @@
  */
 export class JorElModelManager {
   private models: { model: string; provider: string }[] = [];
+  private embeddingModels: { model: string; provider: string; dimensions: number }[] = [];
   private defaultModel: string = "";
+  private defaultEmbeddingModel: string = "";
 
   /**
    * Register a model for an existing provider
@@ -64,5 +66,78 @@ export class JorElModelManager {
    */
   listModels(): { model: string; provider: string }[] {
     return this.models;
+  }
+
+  /**
+   * Register an embedding model for an existing provider
+   * @param model The model name
+   * @param provider The provider name
+   * @param dimensions The number of dimensions
+   * @param setAsDefault Whether to set this model as the default
+   * @returns The model entry
+   * @throws Error - If the provider does not exist
+   */
+  registerEmbeddingModel({
+    model,
+    provider,
+    dimensions,
+    setAsDefault,
+  }: {
+    model: string;
+    provider: string;
+    dimensions: number;
+    setAsDefault?: boolean;
+  }) {
+    this.embeddingModels.push({ model, provider, dimensions });
+    if (setAsDefault || !this.defaultEmbeddingModel) this.defaultEmbeddingModel = model;
+  }
+
+  /**
+   * Unregister an embedding model
+   * @param model The model name
+   */
+  unregisterEmbeddingModel(model: string) {
+    this.embeddingModels = this.embeddingModels.filter((m) => m.model !== model);
+    if (this.defaultEmbeddingModel === model) {
+      this.defaultEmbeddingModel = this.embeddingModels.length ? this.embeddingModels[0].model : "";
+    }
+  }
+
+  /**
+   * Get an embedding model entry
+   * @param model The model name
+   * @returns The model entry
+   * @throws Error - If the model does not exist
+   */
+  getEmbeddingModel(model: string): { model: string; provider: string } {
+    const modelEntry = this.embeddingModels.find((m) => m.model === model);
+    if (!modelEntry) throw new Error(`Model ${model} is not registered`);
+    return modelEntry;
+  }
+
+  /**
+   * Get the default embedding model
+   * @returns The default model id
+   */
+  getDefaultEmbeddingModel(): string {
+    return this.defaultEmbeddingModel;
+  }
+
+  /**
+   * Set the default embedding model
+   * @param model The model name
+   * @throws Error - If the model does not exist
+   */
+  setDefaultEmbeddingModel(model: string) {
+    this.getEmbeddingModel(model); // Ensure model exists
+    this.defaultEmbeddingModel = model;
+  }
+
+  /**
+   * List all embedding models
+   * @returns The list of embedding models
+   */
+  listEmbeddingModels(): { model: string; provider: string }[] {
+    return this.embeddingModels;
   }
 }

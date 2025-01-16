@@ -15,6 +15,7 @@ Apart from the unified interface, JorEl also significantly simplifies working wi
         - [Text-only usage](#text-only-usage)
         - [Prompts-with-images](#prompts-with-images)
         - [Providing documents for context/ grounding](#providing-documents-for-context-grounding)
+        - [Creating embeddings](#creating-embeddings)
         - [Tool Use](#tool-use)
     - [Core Tenets](#core-tenets)
     - [Usage](#usage)
@@ -114,6 +115,19 @@ const response = await jorEl.ask("What is the best company to get custom packagi
 });
 
 console.log(response); // "Response considering the documents provided"
+```
+
+### Creating embeddings
+
+```typescript
+import { JorEl } from "jorel";
+
+const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
+
+// Will return an array of numbers
+const response = await jorEl.embed("Embeddings are really just numbers");
+
+console.log(response); // [-0.002006665,  -0.03894945, 0.024507659,  0.015396313, ...]
 ```
 
 ### Tool Use

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.2
+
+- Add support for creating embeddings (Open AI, Groq, Grok, Ollama)
+
 ## 0.7.1
 
 - Add native support for passing Zod objects as tool params

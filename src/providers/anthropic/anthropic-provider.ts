@@ -231,4 +231,9 @@ export class AnthropicProvider implements LlmCoreProvider {
     };
     return response.data.map((model) => model.id);
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async createEmbedding(model: string, text: string): Promise<number[]> {
+    throw new Error("Embeddings are not yet supported for Anthropic");
+  }
 }

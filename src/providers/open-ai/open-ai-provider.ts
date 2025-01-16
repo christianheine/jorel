@@ -166,4 +166,17 @@ export class OpenAIProvider implements LlmCoreProvider {
     const models = await this.client.models.list();
     return models.data.map((model) => model.id);
   }
+
+  async createEmbedding(model: string, text: string): Promise<number[]> {
+    const response = await this.client.embeddings.create({
+      model,
+      input: text,
+    });
+
+    if (!response || !response.data || !response.data || response.data.length === 0) {
+      throw new Error("Failed to create embedding");
+    }
+
+    return response.data[0].embedding;
+  }
 }
