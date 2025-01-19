@@ -42,7 +42,8 @@ const buildContext = (base: string, include: (string | RegExp)[], exclude: (stri
   return { tree, contents, excludedTree };
 };
 
-const folder = "src";
+const folder = process.argv[2] || "src";
+
 const includedFileTypes = [".ts"];
 const excludedFolders = [
   "__tests__",
@@ -54,6 +55,7 @@ const excludedFolders = [
   "anthropic",
   "google-vertex-ai",
   "media/utils",
+  "_utilities",
 ];
 
 console.log(`Building context for ${folder} with included file types ${includedFileTypes.join(", ")} and excluded folders ${excludedFolders.join(", ")}`);
@@ -82,7 +84,7 @@ ${excludedTree.map((x) => ` - ${x.folder} (Files: ${x.files}, folders: ${x.folde
 ${contents.join("\n\n")}
 `;
 
-const outFile = "source-code-context.md";
+const outFile = `source-code-context-${folder}.md`;
 
 writeFileSync(outFile, context);
 
