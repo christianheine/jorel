@@ -1,7 +1,7 @@
 import { promises } from "fs";
 import { fromBuffer } from "file-type";
 import { fetchFileAsBuffer } from "./utils";
-import { LLmMessageImageDataUrlContent, LLmMessageImageUrlContent } from "../shared";
+import { LLmMessageImageDataUrlContent, LLmMessageImageUrlContent } from "../providers";
 
 interface BufferImage {
   type: "buffer";

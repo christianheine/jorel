@@ -1,7 +1,8 @@
-import { LlmMessage } from "../../shared";
+import { CoreLlmMessage } from "../../providers";
 import Anthropic from "@anthropic-ai/sdk";
 import { ImageContent } from "../../media";
 import { getBase64PartFromDataUrl } from "../../media/utils";
+import { LlmToolKit } from "../../tools";
 
 type ValidMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
@@ -17,7 +18,7 @@ const validateMediaType = (mediaType?: string): ValidMediaType => {
 
 /** Convert unified LLM messages to Anthropic messages */
 export const convertLlmMessagesToAnthropicMessages = async (
-  messages: LlmMessage[],
+  messages: CoreLlmMessage[],
 ): Promise<{
   systemMessage: string;
   chatMessages: Anthropic.MessageParam[];
@@ -71,7 +72,7 @@ export const convertLlmMessagesToAnthropicMessages = async (
                 content:
                   toolCall.executionState === "error"
                     ? `Error: ${toolCall.error.message}`
-                    : JSON.stringify(toolCall.result),
+                    : LlmToolKit.serialize(toolCall.result),
               },
             ],
           });

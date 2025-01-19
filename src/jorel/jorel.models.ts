@@ -1,3 +1,5 @@
+import { LogService } from "../logger";
+
 /**
  * Manages models for JorEl
  */
@@ -6,6 +8,10 @@ export class JorElModelManager {
   private embeddingModels: { model: string; provider: string; dimensions: number }[] = [];
   private defaultModel: string = "";
   private defaultEmbeddingModel: string = "";
+
+  constructor(private logger: LogService) {
+    this.logger.debug("ModelManager", "Model manager initialized");
+  }
 
   /**
    * Register a model for an existing provider
@@ -17,6 +23,7 @@ export class JorElModelManager {
    */
   registerModel({ model, provider, setAsDefault }: { model: string; provider: string; setAsDefault?: boolean }) {
     this.models.push({ model, provider });
+    this.logger.debug("ModelManager", `Registered model ${model} with provider ${provider}`);
     if (setAsDefault || !this.defaultModel) this.defaultModel = model;
   }
 
@@ -26,8 +33,10 @@ export class JorElModelManager {
    */
   unregisterModel(model: string) {
     this.models = this.models.filter((m) => m.model !== model);
+    this.logger.debug("ModelManager", `Unregistered model ${model}`);
     if (this.defaultModel === model) {
       this.defaultModel = this.models.length ? this.models[0].model : "";
+      this.logger.debug("ModelManager", `Set default model to ${this.defaultModel}`);
     }
   }
 
@@ -59,6 +68,7 @@ export class JorElModelManager {
   setDefaultModel(model: string) {
     this.getModel(model); // Ensure model exists
     this.defaultModel = model;
+    this.logger.debug("ModelManager", `Set default model to ${model}`);
   }
 
   /**
@@ -89,7 +99,11 @@ export class JorElModelManager {
     setAsDefault?: boolean;
   }) {
     this.embeddingModels.push({ model, provider, dimensions });
-    if (setAsDefault || !this.defaultEmbeddingModel) this.defaultEmbeddingModel = model;
+    this.logger.debug("ModelManager", `Registered embedding model ${model} with provider ${provider}`);
+    if (setAsDefault || !this.defaultEmbeddingModel) {
+      this.defaultEmbeddingModel = model;
+      this.logger.debug("ModelManager", `Set default embedding model to ${model}`);
+    }
   }
 
   /**
@@ -98,8 +112,10 @@ export class JorElModelManager {
    */
   unregisterEmbeddingModel(model: string) {
     this.embeddingModels = this.embeddingModels.filter((m) => m.model !== model);
+    this.logger.debug("ModelManager", `Unregistered embedding model ${model}`);
     if (this.defaultEmbeddingModel === model) {
       this.defaultEmbeddingModel = this.embeddingModels.length ? this.embeddingModels[0].model : "";
+      this.logger.debug("ModelManager", `Set default embedding model to ${this.defaultEmbeddingModel}`);
     }
   }
 
@@ -131,6 +147,7 @@ export class JorElModelManager {
   setDefaultEmbeddingModel(model: string) {
     this.getEmbeddingModel(model); // Ensure model exists
     this.defaultEmbeddingModel = model;
+    this.logger.debug("ModelManager", `Set default embedding model to ${model}`);
   }
 
   /**

@@ -1,11 +1,11 @@
+import { MaybeUndefined } from "../shared";
 import {
   LlmFunction,
   LlmFunctionParameters,
   LlmToolExecutionInputs,
   LlmToolExecutionOutputs,
   LlmToolExecutor,
-  MaybeUndefined,
-} from "../shared";
+} from "../providers";
 import { ZodObject } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
@@ -20,17 +20,20 @@ export interface LlmToolConfiguration {
   name: string;
   description: string;
   requiresConfirmation?: boolean;
-  executor?: LlmToolExecutor;
+  executor?: LlmToolExecutor | "transfer" | "subTask";
   params?: Partial<LlmFunctionParameters> | ZodObject<any>;
 }
 
+/**
+ * A tool that can be used in generations and task executions
+ */
 export class LlmTool {
   public readonly name: string;
   public readonly description: string;
   public requiresConfirmation;
 
   private readonly params: MaybeUndefined<LlmFunctionParameters>;
-  private readonly executor: MaybeUndefined<LlmToolExecutor>;
+  private readonly executor: MaybeUndefined<LlmToolExecutor | "transfer" | "subTask">;
 
   constructor(config: LlmToolConfiguration) {
     this.requiresConfirmation = config.requiresConfirmation ?? false;
@@ -45,6 +48,31 @@ export class LlmTool {
   }
 
   /**
+   * Get the type of the tool
+   */
+  get type(): "function" | "functionDefinition" | "transfer" | "subTask" {
+    return this.executor === "transfer" || this.executor === "subTask"
+      ? this.executor
+      : this.executor
+        ? "function"
+        : "functionDefinition";
+  }
+
+  /**
+   * Return the tool as a llm function (e.g., for use inside tool-use messages)
+   */
+  get asLLmFunction(): LlmFunction {
+    return {
+      type: "function",
+      function: {
+        name: this.name,
+        description: this.description,
+        parameters: this.params,
+      },
+    };
+  }
+
+  /**
    * Execute the tool
    * @param args Deserialized arguments
    * @param env
@@ -55,21 +83,12 @@ export class LlmTool {
     if (!this.executor) {
       throw new Error(`Executor not defined for tool: ${this.name}`);
     }
-    return this.executor(args, env.context || {}, env.secureContext || {});
-  }
 
-  /**
-   * Return the tool as a function
-   */
-  toFunction(): LlmFunction {
-    return {
-      type: "function",
-      function: {
-        name: this.name,
-        description: this.description,
-        parameters: this.params,
-      },
-    };
+    if (this.executor === "transfer" || this.executor === "subTask") {
+      throw new Error(`Cannot execute tool "${this.name}". ${this.executor} tools cannot be executed directly.`);
+    }
+
+    return this.executor(args, env.context || {}, env.secureContext || {});
   }
 
   /**

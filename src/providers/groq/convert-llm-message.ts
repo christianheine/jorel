@@ -1,10 +1,11 @@
-import { LlmMessage } from "../../shared";
+import { CoreLlmMessage } from "../../providers";
 import { ChatCompletionContentPart, ChatCompletionMessageParam } from "groq-sdk/resources/chat";
 import { ImageContent } from "../../media";
+import { LlmToolKit } from "../../tools";
 
 /** Convert unified LLM messages to Groq messages (ChatCompletionMessageParam) */
 export const convertLlmMessagesToGroqMessages = async (
-  messages: LlmMessage[],
+  messages: CoreLlmMessage[],
   detail?: "low" | "high",
 ): Promise<ChatCompletionMessageParam[]> => {
   const convertedMessages: ChatCompletionMessageParam[] = [];
@@ -23,7 +24,7 @@ export const convertLlmMessagesToGroqMessages = async (
           type: "function",
           function: {
             name: toolCall.request.function.name,
-            arguments: JSON.stringify(toolCall.request.function.arguments),
+            arguments: LlmToolKit.serialize(toolCall.request.function.arguments),
           },
         })),
       });
@@ -31,7 +32,7 @@ export const convertLlmMessagesToGroqMessages = async (
         if (toolCall.executionState === "completed") {
           convertedMessages.push({
             role: "tool",
-            content: JSON.stringify(toolCall.result),
+            content: LlmToolKit.serialize(toolCall.result),
             tool_call_id: toolCall.request.id,
           });
         } else if (toolCall.executionState === "error") {

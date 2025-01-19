@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+- Add support for streaming with tool use
+- Add logging
+- Add support for tasks via agents, including transfer and delegation
+
 ## 0.7.2
 
 - Add support for creating embeddings (Open AI, Groq, Grok, Ollama)

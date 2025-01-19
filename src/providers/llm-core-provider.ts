@@ -1,21 +1,36 @@
 import { ImageContent } from "../media";
-import { Nullable } from "./type-utils";
+import { Nullable } from "../shared";
 import { LLmToolContextSegment, LlmToolKit } from "../tools";
+import { LoggerOption, LogLevel, LogService } from "../logger";
 
 export type LlmToolChoice = "none" | "auto" | "required" | string;
 
-export interface LlmGenerationConfig {
+interface CoreLlmGenerationConfig {
   temperature?: number;
   maxTokens?: number;
   json?: boolean;
   tools?: LlmToolKit;
   toolChoice?: LlmToolChoice;
+  logLevel?: LogLevel;
 }
 
-export type LlmSystemMessage = {
+export interface LlmGenerationConfig extends CoreLlmGenerationConfig {
+  logger?: LogService;
+}
+
+export interface InitLlmGenerationConfig extends CoreLlmGenerationConfig {
+  logger?: LoggerOption | LogService;
+}
+
+export interface CoreLlmSystemMessage {
   role: "system";
   content: string;
-};
+}
+
+export interface LlmSystemMessage extends CoreLlmSystemMessage {
+  id: string;
+  createdAt: number;
+}
 
 export interface LLmMessageTextContent {
   type: "text";
@@ -38,10 +53,15 @@ export type LlmUserMessageContent =
   | string
   | (string | LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent | ImageContent)[];
 
-export type LlmUserMessage = {
+export interface CoreLlmUserMessage {
   role: "user";
   content: LlmUserMessageContent;
-};
+}
+
+export interface LlmUserMessage extends CoreLlmUserMessage {
+  id: string;
+  createdAt: number;
+}
 
 export type LlmFunctionParameter = "string" | "number" | "integer" | "boolean" | "array" | "object";
 
@@ -126,18 +146,28 @@ export interface LlmToolCall__Error {
 
 export type LlmToolCall = LlmToolCall__Pending | LlmToolCall__InProgress | LlmToolCall__Completed | LlmToolCall__Error;
 
-export type LlmAssistantMessage = {
+export interface CoreLlmAssistantMessage {
   role: "assistant";
   content: string;
   meta?: LlmAssistantMessageMeta;
-};
+}
 
-export type LlmAssistantMessageWithToolCalls = {
+export interface LlmAssistantMessage extends CoreLlmAssistantMessage {
+  id: string;
+  createdAt: number;
+}
+
+export interface CoreLlmAssistantMessageWithToolCalls {
   role: "assistant_with_tools";
   content: Nullable<string>;
   toolCalls: LlmToolCall[];
   meta?: LlmAssistantMessageMeta;
-};
+}
+
+export interface LlmAssistantMessageWithToolCalls extends CoreLlmAssistantMessageWithToolCalls {
+  id: string;
+  createdAt: number;
+}
 
 export interface LlmAssistantMessageMeta {
   model: string;
@@ -148,6 +178,12 @@ export interface LlmAssistantMessageMeta {
 }
 
 export type LlmMessage = LlmSystemMessage | LlmUserMessage | LlmAssistantMessage | LlmAssistantMessageWithToolCalls;
+
+export type CoreLlmMessage =
+  | CoreLlmSystemMessage
+  | CoreLlmUserMessage
+  | CoreLlmAssistantMessage
+  | CoreLlmAssistantMessageWithToolCalls;
 
 export type LlmResponse = (LlmAssistantMessage | LlmAssistantMessageWithToolCalls) & { meta: LlmAssistantMessageMeta };
 
@@ -163,16 +199,24 @@ export interface LlmStreamResponse {
   meta: LlmAssistantMessageMeta;
 }
 
+export interface LlmStreamResponseWithToolCalls {
+  type: "response";
+  role: "assistant_with_tools";
+  content: Nullable<string>;
+  toolCalls: LlmToolCall[];
+  meta: LlmAssistantMessageMeta;
+}
+
 export interface LlmCoreProvider {
   readonly name: string;
 
-  generateResponse(model: string, messages: LlmMessage[], config?: LlmGenerationConfig): Promise<LlmResponse>;
+  generateResponse(model: string, messages: CoreLlmMessage[], config?: LlmGenerationConfig): Promise<LlmResponse>;
 
   generateResponseStream(
     model: string,
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config?: LlmGenerationConfig,
-  ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown>;
+  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown>;
 
   getAvailableModels(): Promise<string[]>;
 

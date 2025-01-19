@@ -1,4 +1,5 @@
-import { LlmCoreProvider } from "../shared";
+import { LlmCoreProvider } from "../providers";
+import { LogService } from "../logger";
 
 /**
  *  Manages LLM providers for JorEl
@@ -6,10 +7,15 @@ import { LlmCoreProvider } from "../shared";
 export class JorElProviderManager {
   private providers: { [provider: string]: LlmCoreProvider } = {};
 
+  constructor(private logger: LogService) {
+    this.logger.debug("ProviderManager", "Provider manager initialized");
+  }
+
   /** Register a new LLM provider */
   registerProvider(provider: string, coreProvider: LlmCoreProvider) {
     if (this.providers[provider]) throw new Error(`Provider ${provider} is already registered`);
     this.providers[provider] = coreProvider;
+    this.logger.debug("ProviderManager", `Registered provider ${provider}`);
   }
 
   /** Get a registered LLM provider */

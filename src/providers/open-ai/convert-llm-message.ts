@@ -1,10 +1,11 @@
-import { LlmMessage } from "../../shared";
+import { CoreLlmMessage } from "../../providers";
 import { ChatCompletionContentPart, ChatCompletionMessageParam } from "openai/resources";
 import { ImageContent } from "../../media";
+import { LlmToolKit } from "../../tools";
 
 /** Convert unified LLM messages to OpenAI messages (ChatCompletionMessageParam) */
 export const convertLlmMessagesToOpenAiMessages = async (
-  messages: LlmMessage[],
+  messages: CoreLlmMessage[],
   detail?: "low" | "high",
 ): Promise<ChatCompletionMessageParam[]> => {
   const convertedMessages: ChatCompletionMessageParam[] = [];
@@ -26,7 +27,7 @@ export const convertLlmMessagesToOpenAiMessages = async (
           type: "function",
           function: {
             name: toolCall.request.function.name,
-            arguments: JSON.stringify(toolCall.request.function.arguments),
+            arguments: LlmToolKit.serialize(toolCall.request.function.arguments),
           },
         })),
       });
@@ -34,7 +35,7 @@ export const convertLlmMessagesToOpenAiMessages = async (
         if (toolCall.executionState === "completed") {
           convertedMessages.push({
             role: "tool",
-            content: JSON.stringify(toolCall.result),
+            content: LlmToolKit.serialize(toolCall.result),
             tool_call_id: toolCall.request.id,
           });
         } else if (toolCall.executionState === "error") {

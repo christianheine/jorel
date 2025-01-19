@@ -1,18 +1,16 @@
 import ollama, { Tool } from "ollama";
 
 import {
+  CoreLlmMessage,
   generateAssistantMessage,
-  generateRandomId,
-  generateUniqueId,
   LlmCoreProvider,
   LlmGenerationConfig,
-  LlmMessage,
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmToolCall,
-  MaybeUndefined,
-} from "../../shared";
+} from "../../providers";
+import { generateRandomId, generateUniqueId, MaybeUndefined } from "../../shared";
 import { convertLlmMessagesToOllamaMessages } from "./convert-llm-message";
 
 export interface OllamaConfig {
@@ -34,7 +32,7 @@ export class OllamaProvider implements LlmCoreProvider {
 
   async generateResponse(
     model: string,
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config: LlmGenerationConfig = {},
   ): Promise<LlmResponse> {
     const start = Date.now();
@@ -43,7 +41,7 @@ export class OllamaProvider implements LlmCoreProvider {
       model,
       messages: await convertLlmMessagesToOllamaMessages(messages),
       format: config.json ? "json" : undefined,
-      tools: config.tools?.llmFunctions.map(
+      tools: config.tools?.asLlmFunctions?.map(
         (f): Tool => ({
           type: "function",
           function: {
@@ -102,9 +100,9 @@ export class OllamaProvider implements LlmCoreProvider {
 
   async *generateResponseStream(
     model: string,
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
-  ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
     const start = Date.now();
 
     const stream = await ollama.chat({
@@ -133,7 +131,7 @@ export class OllamaProvider implements LlmCoreProvider {
 
     const provider = this.name;
 
-    return {
+    yield {
       type: "response",
       role: "assistant",
       content,

@@ -1,19 +1,17 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
-
 import {
+  CoreLlmMessage,
   generateAssistantMessage,
-  generateUniqueId,
   LlmCoreProvider,
   LlmGenerationConfig,
-  LlmMessage,
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmToolCall,
-  MaybeUndefined,
-} from "../../shared";
+} from "../../providers";
 import { convertLlmMessagesToAnthropicMessages } from "./convert-llm-message";
+import { generateUniqueId, MaybeUndefined } from "../../shared";
 
 export interface AnthropicConfig {
   apiKey?: string;
@@ -75,7 +73,7 @@ export class AnthropicProvider implements LlmCoreProvider {
 
   async generateResponse(
     model: string,
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config: LlmGenerationConfig = {},
   ): Promise<LlmResponse> {
     const start = Date.now();
@@ -89,7 +87,7 @@ export class AnthropicProvider implements LlmCoreProvider {
       max_tokens: config.maxTokens || 4096,
       system: systemMessage,
       tool_choice:
-        config.toolChoice === "none"
+        config.toolChoice === "none" || !config.tools || !config.tools.hasTools
           ? undefined
           : config.toolChoice === "any"
             ? {
@@ -111,7 +109,7 @@ export class AnthropicProvider implements LlmCoreProvider {
       tools:
         config.toolChoice === "none"
           ? undefined
-          : config.tools?.llmFunctions.map<Anthropic.Messages.Tool>((tool) => ({
+          : config.tools?.asLlmFunctions?.map<Anthropic.Messages.Tool>((tool) => ({
               name: tool.function.name,
               input_schema: {
                 ...tool.function.parameters?.properties,
@@ -164,9 +162,9 @@ export class AnthropicProvider implements LlmCoreProvider {
 
   async *generateResponseStream(
     model: string,
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
-  ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
     const start = Date.now();
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToAnthropicMessages(messages);
@@ -203,7 +201,7 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const provider = this.name;
 
-    return {
+    yield {
       type: "response",
       content,
       role: "assistant",

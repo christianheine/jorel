@@ -1,6 +1,15 @@
+export {
+  LlmAgentDefinition,
+  AgentError,
+  TaskExecutionError,
+  TaskExecutionDefinition,
+  TaskExecutionThreadDefinition,
+  TaskExecutionThreadEventType,
+  TaskExecutionStatus,
+  TaskExecutionThreadEvent,
+} from "./agents";
+export * from "./documents";
 export * from "./jorel";
 export * from "./media";
 export * from "./providers";
-export * from "./shared/llm-core-provider";
-export * from "./shared/generate-message";
 export * from "./tools";

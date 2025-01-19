@@ -1,36 +1,4 @@
-import { generateUniqueId } from "./unique-ids";
-
-export type CreateLlmDocument = Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument>;
-
-export class LlmDocument {
-  id: string;
-  type: string;
-  title: string;
-  content: string;
-  source?: string;
-
-  constructor({ id, type, title, content, source }: CreateLlmDocument) {
-    this.id = id || generateUniqueId();
-    this.type = type || "text";
-    this.title = title;
-    this.content = content;
-    this.source = source;
-  }
-
-  static text(id: string, body: Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument>): LlmDocument {
-    return new LlmDocument({ id, type: "text", ...body });
-  }
-
-  toJSON() {
-    return {
-      id: this.id,
-      type: this.type,
-      title: this.title,
-      content: this.content,
-      source: this.source,
-    };
-  }
-}
+import { CreateLlmDocument, LlmDocument } from "./document";
 
 const xmlDocumentToTextTemplate =
   "<Document></Document><DocumentId>{{id}}</DocumentId>\n<DocumentType>{{type}}</DocumentType>\n<Title>{{title}}</Title>\n<Content>{{content}}</Content>\n<Source>{{source}}</Source></Document>";
@@ -47,6 +15,12 @@ interface LlmDocumentCollectionConfig {
   _documentToText?: DocumentToTextTemplate;
 }
 
+/**
+ * A collection of LLM documents, like a binder or folder of documents
+ * that can be used for grounding LLM generations (either directly or passed to agents).
+ *
+ * Also provides a system message representation of the documents
+ */
 export class LlmDocumentCollection {
   public documentToTextTemplate: DocumentToTextTemplate;
   private _documents: Map<string, LlmDocument>;
@@ -59,38 +33,64 @@ export class LlmDocumentCollection {
     this.documentToTextTemplate = config._documentToText || "xml";
   }
 
+  /**
+   * The number of documents in the collection
+   */
   get length() {
     return this._documents.size;
   }
 
+  /**
+   * Get all documents in the collection (as a copy)
+   */
   get all() {
     return Array.from(this._documents.values());
   }
 
+  /**
+   * Create a new collection from a JSON representation
+   */
   static fromJSON(documents: (LlmDocument | CreateLlmDocument)[] = []) {
     return new LlmDocumentCollection(
-      documents.map((document) => new LlmDocument(document instanceof LlmDocument ? document.toJSON() : document)),
+      documents.map((document) => new LlmDocument(document instanceof LlmDocument ? document.definition : document)),
     );
   }
 
+  /**
+   * Add a document to the collection
+   */
   add(document: LlmDocument) {
     this._documents.set(document.id, document);
   }
 
+  /**
+   * Remove a document from the collection
+   */
   remove(id: string) {
     this._documents.delete(id);
   }
 
+  /**
+   * Get a document by its ID
+   */
   get(id: string) {
     return this._documents.get(id);
   }
 
-  toJSON() {
-    return this.all.map((document) => document.toJSON());
+  /**
+   * Get the definition of all documents in the collection (e.g. for serialization)
+   */
+  get definition() {
+    return this.all.map((document) => document.definition);
   }
 
-  toSystemMessage(): string {
-    if (this.documentToTextTemplate === "json") return JSON.stringify(this.toJSON());
+  /**
+   * Get a system message representation of the documents
+   */
+  get systemMessageRepresentation(): string {
+    if (this._documents.size === 0) return "-";
+
+    if (this.documentToTextTemplate === "json") return JSON.stringify(this.definition);
 
     const template =
       this.documentToTextTemplate === "xml" ? xmlDocumentToTextTemplate : this.documentToTextTemplate.template;

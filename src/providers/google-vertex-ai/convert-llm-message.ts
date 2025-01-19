@@ -1,4 +1,4 @@
-import { LlmMessage } from "../../shared";
+import { CoreLlmMessage } from "../../providers";
 import { Content, Part } from "@google-cloud/vertexai";
 import { ImageContent } from "../../media";
 import { getBase64PartFromDataUrl } from "../../media/utils";
@@ -11,7 +11,7 @@ const textContentToParts = (text: string): Part[] => {
   ];
 };
 
-const mixedContentToParts = async (content: LlmMessage["content"]): Promise<Part[]> => {
+const mixedContentToParts = async (content: CoreLlmMessage["content"]): Promise<Part[]> => {
   if (typeof content === "string") {
     return textContentToParts(content);
   } else if (Array.isArray(content)) {
@@ -61,7 +61,7 @@ const mixedContentToParts = async (content: LlmMessage["content"]): Promise<Part
 
 /** Converts unified LLM messages to Vertex AI's messages (Content) */
 export const convertLlmMessagesToVertexAiMessages = async (
-  messages: LlmMessage[],
+  messages: CoreLlmMessage[],
 ): Promise<{ systemMessage: string | undefined; chatMessages: Content[] }> => {
   // 1. Extract system messages and join them together
   const systemMessages = messages.filter((m) => m.role === "system");

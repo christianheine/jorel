@@ -1,5 +1,6 @@
 import { LlmTool, LlmToolConfiguration, LLmToolContextSegment } from "./llm-tool";
-import { dateReviver, LlmFunction, LlmToolCall } from "../shared";
+import { dateReviver, MaybeUndefined, Nullable } from "../shared";
+import { LlmFunction, LlmToolCall } from "../providers";
 
 interface LlmToolKitConfiguration {
   allowParallelCalls?: boolean;
@@ -27,15 +28,16 @@ export class LlmToolKit {
   /**
    * Get all tools as LlmFunction objects
    */
-  get llmFunctions(): LlmFunction[] {
-    return this.tools.map((tool) => tool.toFunction());
+  get asLlmFunctions(): MaybeUndefined<LlmFunction[]> {
+    if (this.tools.length === 0) return undefined;
+    return this.tools.map((tool) => tool.asLLmFunction);
   }
 
   /**
    * Deserialize strings
    * @param input
    */
-  static deserialize(input: string): LlmToolCall {
+  static deserialize(input: string): object {
     return JSON.parse(input, dateReviver);
   }
 
@@ -43,12 +45,36 @@ export class LlmToolKit {
    * Serialize objects
    * @param input
    */
-  static serialize(input: LlmToolCall): string {
+  static serialize(input: object): string {
     return JSON.stringify(input);
   }
 
-  static getNextToolCall(input: LlmToolCall[]): LlmToolCall | null {
-    return input.find((call) => call.executionState === "pending" || call.executionState === "inProgress") || null;
+  /**
+   * Create a new toolkit with only selected (allowed) tools
+   * @param allowedToolIds
+   */
+  withAllowedToolsOnly(allowedToolIds: string[]): LlmToolKit {
+    return new LlmToolKit(
+      this.tools.filter((tool) => allowedToolIds.includes(tool.name)),
+      {
+        allowParallelCalls: this.allowParallelCalls,
+      },
+    );
+  }
+
+  /**
+   * Get the next tool call that requires processing
+   * @param input
+   */
+  getNextToolCall(input: LlmToolCall[]): Nullable<{ toolCall: LlmToolCall; tool: LlmTool }> {
+    const toolCall =
+      input.find((call) => call.executionState === "pending" || call.executionState === "inProgress") || null;
+    if (!toolCall) return null;
+    const tool = this.getTool(toolCall.request.function.name);
+    if (!tool) {
+      throw new Error(`Tool not found: ${toolCall.request.function.name}`);
+    }
+    return { toolCall, tool };
   }
 
   /**
@@ -82,6 +108,9 @@ export class LlmToolKit {
   unregisterTool(id: string): void {
     const index = this.tools.findIndex((tool) => tool.name === id);
     if (index === -1) throw new Error(`Tool not found: ${id}`);
+    if (this.tools[index].type === "transfer" || this.tools[index].type === "subTask") {
+      throw new Error(`Cannot unregister tool "${id}". ${this.tools[index].type} tools cannot be unregistered.`);
+    }
     this.tools.splice(index, 1);
   }
 
@@ -89,10 +118,8 @@ export class LlmToolKit {
    * Get a tool by name
    * @param id Tool name
    */
-  getTool(id: string): LlmTool {
-    const tool = this.tools.find((tool) => tool.name === id);
-    if (!tool) throw new Error(`Tool not found: ${id}`);
-    return tool;
+  getTool(id: string): Nullable<LlmTool> {
+    return this.tools.find((tool) => tool.name === id) ?? null;
   }
 
   /**
@@ -114,10 +141,55 @@ export class LlmToolKit {
   }
 
   /**
+   * Classify what type of tool calls are present
+   * @param toolCalls
+   */
+  classifyToolCalls(
+    toolCalls: LlmToolCall[],
+  ): "approvalPending" | "transferPending" | "executionPending" | "completed" | "missingExecutor" {
+    if (toolCalls.some((call) => call.approvalState === "requiresApproval")) {
+      return "approvalPending";
+    }
+    if (
+      toolCalls.some((call) => {
+        const tool = this.getTool(call.request.function.name);
+        if (!tool) {
+          throw new Error(`Tool not found: ${call.request.function.name}`);
+        }
+        return (
+          tool.type === "functionDefinition" &&
+          (call.executionState === "pending" || call.executionState === "inProgress")
+        );
+      })
+    ) {
+      return "missingExecutor";
+    }
+    if (
+      toolCalls.some((call) => {
+        const tool = this.getTool(call.request.function.name);
+        if (!tool) {
+          throw new Error(`Tool not found: ${call.request.function.name}`);
+        }
+        return (
+          (tool.type === "transfer" || tool.type === "subTask") &&
+          (call.executionState === "pending" || call.executionState === "inProgress")
+        );
+      })
+    ) {
+      return "transferPending";
+    }
+    if (toolCalls.some((call) => call.executionState === "pending" || call.executionState === "inProgress")) {
+      return "executionPending";
+    }
+    return "completed";
+  }
+
+  /**
    * Process a single tool call and return the updated tool call
    * @param toolCall
    * @param config
-   * @returns Updated tool call
+   * @returns Object containing the updated tool call and a boolean indicating whether the tool call was handled
+   * If the tool call was not handled, it requires additional processing (e.g. approval or delegation)
    */
   async processToolCall(
     toolCall: LlmToolCall,
@@ -126,29 +198,37 @@ export class LlmToolKit {
       context?: LLmToolContextSegment;
       secureContext?: LLmToolContextSegment;
     },
-  ): Promise<LlmToolCall> {
+  ): Promise<{
+    toolCall: LlmToolCall;
+    handled: boolean;
+  }> {
     const { id, request, approvalState, executionState } = toolCall;
 
     if (approvalState === "requiresApproval") {
-      return toolCall;
+      return { toolCall, handled: false };
     }
 
     if (executionState === "completed") {
-      return toolCall;
+      return { toolCall, handled: true };
     } else if (executionState === "error" && !config?.retryFailed) {
-      return toolCall;
+      return { toolCall, handled: true };
+    } else if (executionState === "inProgress") {
+      return { toolCall, handled: false };
     }
 
     if (approvalState === "rejected") {
       return {
-        id,
-        request,
-        approvalState: "rejected",
-        executionState: "completed",
-        result: {
-          error: "Tool call was rejected by user",
+        toolCall: {
+          id,
+          request,
+          approvalState: "rejected",
+          executionState: "completed",
+          result: {
+            error: "Tool call was rejected by user",
+          },
+          error: null,
         },
-        error: null,
+        handled: true,
       };
     }
 
@@ -156,18 +236,25 @@ export class LlmToolKit {
 
     if (!tool) {
       return {
-        id,
-        request,
-        approvalState,
-        executionState: "error",
-        result: null,
-        error: {
-          message: `Tool not found: ${request.function.name}`,
-          type: "ToolNotFoundError",
-          numberOfAttempts: toolCall.error ? toolCall.error.numberOfAttempts + 1 : 1,
-          lastAttempt: new Date(),
+        toolCall: {
+          id,
+          request,
+          approvalState,
+          executionState: "error",
+          result: null,
+          error: {
+            message: `Tool not found: ${request.function.name}`,
+            type: "ToolNotFoundError",
+            numberOfAttempts: toolCall.error ? toolCall.error.numberOfAttempts + 1 : 1,
+            lastAttempt: new Date(),
+          },
         },
+        handled: true,
       };
+    }
+
+    if (tool.type !== "function") {
+      return { toolCall, handled: false };
     }
 
     try {
@@ -177,28 +264,34 @@ export class LlmToolKit {
       });
 
       return {
-        id,
-        request,
-        approvalState,
-        executionState: "completed",
-        result,
-        error: null,
+        toolCall: {
+          id,
+          request,
+          approvalState,
+          executionState: "completed",
+          result,
+          error: null,
+        },
+        handled: true,
       };
     } catch (_error: unknown) {
       const error = _error instanceof Error ? _error : new Error("Unknown error");
 
       return {
-        id,
-        request,
-        approvalState,
-        executionState: "error",
-        result: null,
-        error: {
-          message: _error instanceof Error ? error.message : `Unable to execute tool: ${request.function.name}`,
-          type: _error instanceof Error ? error.name : "ToolExecutionError",
-          numberOfAttempts: toolCall.error ? toolCall.error.numberOfAttempts + 1 : 1,
-          lastAttempt: new Date(),
+        toolCall: {
+          id,
+          request,
+          approvalState,
+          executionState: "error",
+          result: null,
+          error: {
+            message: _error instanceof Error ? error.message : `Unable to execute tool: ${request.function.name}`,
+            type: _error instanceof Error ? error.name : "ToolExecutionError",
+            numberOfAttempts: toolCall.error ? toolCall.error.numberOfAttempts + 1 : 1,
+            lastAttempt: new Date(),
+          },
         },
+        handled: true,
       };
     }
   }
@@ -223,8 +316,15 @@ export class LlmToolKit {
     },
   ): Promise<T> {
     if (!input.toolCalls) return input;
+    const classification = this.classifyToolCalls(input.toolCalls);
+    if (classification === "transferPending") {
+      throw new Error("Transfer tools can only be processed by this method");
+    }
     const toolCalls: LlmToolCall[] = [];
-    for (const call of input.toolCalls) toolCalls.push(await this.processToolCall(call, config));
+    for (const call of input.toolCalls) {
+      const { toolCall } = await this.processToolCall(call, config);
+      toolCalls.push(toolCall);
+    }
     return {
       ...input,
       toolCalls,

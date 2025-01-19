@@ -1,9 +1,10 @@
-import { LlmMessage } from "../../shared";
+import { CoreLlmMessage } from "../../providers";
 import { Message, ToolCall } from "ollama";
 import { ImageContent } from "../../media";
+import { LlmToolKit } from "../../tools";
 
 /** Convert unified LLM messages to Ollama messages (Message) */
-export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[]): Promise<Message[]> => {
+export const convertLlmMessagesToOllamaMessages = async (messages: CoreLlmMessage[]): Promise<Message[]> => {
   const convertedMessages: Message[] = [];
 
   for (const message of messages) {
@@ -28,7 +29,7 @@ export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[])
         if (toolCall.executionState === "completed") {
           convertedMessages.push({
             role: "tool",
-            content: JSON.stringify(toolCall.result),
+            content: LlmToolKit.serialize(toolCall.result),
           });
         } else if (toolCall.executionState === "error") {
           convertedMessages.push({

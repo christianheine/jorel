@@ -1,18 +1,26 @@
 import { OpenAI } from "openai";
+import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
 import {
-  firstEntry,
+  CoreLlmMessage,
   generateAssistantMessage,
-  generateUniqueId,
   LlmCoreProvider,
   LlmGenerationConfig,
-  LlmMessage,
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseWithToolCalls,
   LlmToolCall,
-  MaybeUndefined,
-} from "../../shared";
+} from "../../providers";
 import { convertLlmMessagesToOpenAiMessages } from "./convert-llm-message";
+import { LlmToolKit } from "../../tools";
+
+interface ToolCall {
+  id: string;
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
 
 export interface OpenAIConfig {
   apiKey?: string;
@@ -38,7 +46,7 @@ export class OpenAIProvider implements LlmCoreProvider {
 
   async generateResponse(
     model: string,
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config: LlmGenerationConfig = {},
   ): Promise<LlmResponse> {
     const start = Date.now();
@@ -49,7 +57,7 @@ export class OpenAIProvider implements LlmCoreProvider {
       temperature: config.temperature || this.defaultTemperature,
       response_format: config.json ? { type: "json_object" } : { type: "text" },
       max_tokens: config.maxTokens,
-      parallel_tool_calls: config.tools ? config.tools.allowParallelCalls : undefined,
+      parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
       tool_choice:
         config.toolChoice === "auto"
           ? "auto"
@@ -60,7 +68,7 @@ export class OpenAIProvider implements LlmCoreProvider {
               : config.toolChoice
                 ? { type: "function", function: { name: config.toolChoice } }
                 : undefined,
-      tools: config.tools?.llmFunctions,
+      tools: config.tools?.asLlmFunctions,
     });
 
     const durationMs = Date.now() - start;
@@ -77,7 +85,7 @@ export class OpenAIProvider implements LlmCoreProvider {
           id: call.id,
           function: {
             name: call.function.name,
-            arguments: JSON.parse(call.function.arguments),
+            arguments: LlmToolKit.deserialize(call.function.arguments),
           },
         },
         approvalState: config.tools?.getTool(call.function.name)?.requiresConfirmation
@@ -105,14 +113,10 @@ export class OpenAIProvider implements LlmCoreProvider {
 
   async *generateResponseStream(
     model: string,
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const start = Date.now();
-
-    if (config.tools && config.tools.hasTools) {
-      throw new Error("Tool calls are not yet fully supported for OpenAI stream responses");
-    }
 
     const response = await this.client.chat.completions.create({
       model,
@@ -121,8 +125,8 @@ export class OpenAIProvider implements LlmCoreProvider {
       response_format: config.json ? { type: "json_object" } : { type: "text" },
       max_tokens: config.maxTokens,
       stream: true,
-      tools: config.tools?.llmFunctions,
-      parallel_tool_calls: config.tools ? config.tools.allowParallelCalls : undefined,
+      tools: config.tools?.asLlmFunctions,
+      parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
       stream_options: {
         include_usage: true,
       },
@@ -131,13 +135,28 @@ export class OpenAIProvider implements LlmCoreProvider {
     let inputTokens: MaybeUndefined<number>;
     let outputTokens: MaybeUndefined<number>;
 
+    const _toolCalls: ToolCall[] = [];
+
     let content = "";
     for await (const chunk of response) {
-      const contentChunk = firstEntry(chunk.choices)?.delta?.content;
-      if (contentChunk) {
-        content += contentChunk;
-        yield { type: "chunk", content: contentChunk };
+      const delta = firstEntry(chunk.choices)?.delta;
+      if (delta?.content) {
+        content += delta.content;
+        yield { type: "chunk", content: delta.content };
       }
+
+      if (delta?.tool_calls) {
+        for (const toolCall of delta.tool_calls) {
+          const _toolCall = _toolCalls[toolCall.index] || { id: "", function: { name: "", arguments: "" } };
+          if (toolCall.id) _toolCall.id += toolCall.id;
+          if (toolCall.function) {
+            if (toolCall.function.name) _toolCall.function.name += toolCall.function.name;
+            if (toolCall.function.arguments) _toolCall.function.arguments += toolCall.function.arguments;
+          }
+          _toolCalls[toolCall.index] = _toolCall;
+        }
+      }
+
       if (chunk.usage) {
         inputTokens = chunk.usage?.prompt_tokens;
         outputTokens = chunk.usage?.completion_tokens;
@@ -148,18 +167,49 @@ export class OpenAIProvider implements LlmCoreProvider {
 
     const provider = this.name;
 
-    return {
-      type: "response",
-      role: "assistant",
-      content,
-      meta: {
-        model,
-        provider,
-        durationMs,
-        inputTokens,
-        outputTokens,
-      },
+    const toolCalls: MaybeUndefined<LlmToolCall[]> = _toolCalls.map((call) => {
+      return {
+        id: generateUniqueId(),
+        request: {
+          id: call.id,
+          function: {
+            name: call.function.name,
+            arguments: LlmToolKit.deserialize(call.function.arguments),
+          },
+        },
+        approvalState: config.tools?.getTool(call.function.name)?.requiresConfirmation
+          ? "requiresApproval"
+          : "noApprovalRequired",
+        executionState: "pending",
+        result: null,
+        error: null,
+      };
+    });
+
+    const meta = {
+      model,
+      provider,
+      durationMs,
+      inputTokens,
+      outputTokens,
     };
+
+    if (_toolCalls.length > 0) {
+      yield {
+        type: "response",
+        role: "assistant_with_tools",
+        content,
+        toolCalls,
+        meta,
+      };
+    } else {
+      yield {
+        type: "response",
+        role: "assistant",
+        content,
+        meta,
+      };
+    }
   }
 
   async getAvailableModels(): Promise<string[]> {

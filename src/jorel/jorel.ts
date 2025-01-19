@@ -1,8 +1,7 @@
-import { JorElProviderManager } from "./jorel.providers";
-import { JorElModelManager } from "./jorel.models";
 import {
   AnthropicConfig,
   AnthropicProvider,
+  CoreLlmMessage,
   defaultAnthropicBedrockModels,
   defaultAnthropicModels,
   defaultGrokModels,
@@ -10,32 +9,30 @@ import {
   defaultOpenAiEmbeddingModels,
   defaultOpenAiModels,
   defaultVertexAiModels,
+  generateSystemMessage,
+  generateUserMessage,
   GoogleVertexAiConfig,
   GoogleVertexAiProvider,
   GrokProvider,
   GroqConfig,
   GroqProvider,
+  LlmAssistantMessage,
+  LlmAssistantMessageMeta,
+  LlmAssistantMessageWithToolCalls,
+  LlmCoreProvider,
+  LlmMessage,
+  LlmToolChoice,
   OllamaConfig,
   OllamaProvider,
   OpenAIConfig,
   OpenAIProvider,
 } from "../providers";
-import {
-  CreateLlmDocument,
-  generateSystemMessage,
-  generateUserMessage,
-  LlmAssistantMessage,
-  LlmAssistantMessageMeta,
-  LlmAssistantMessageWithToolCalls,
-  LlmCoreProvider,
-  LlmDocument,
-  LlmDocumentCollection,
-  LlmMessage,
-  LlmToolChoice,
-} from "../shared";
 import { ImageContent } from "../media";
 import { LLmToolContextSegment, LlmToolKit } from "../tools";
 import { JorElCoreStore } from "./jorel.core";
+import { JorElAgentManager } from "./jorel.team";
+import { LoggerOption, LogLevel, LogService } from "../logger";
+import { CreateLlmDocument, LlmDocument, LlmDocumentCollection } from "../documents";
 
 interface InitialConfig {
   anthropic?: AnthropicConfig | true;
@@ -47,6 +44,8 @@ interface InitialConfig {
   systemMessage?: string;
   documentSystemMessage?: string;
   temperature?: number;
+  logger?: LoggerOption | LogService;
+  logLevel?: LogLevel;
 }
 
 export interface JorElCoreGenerationConfig {
@@ -70,7 +69,7 @@ export interface JorElAskGenerationConfigWithTools extends JorElAskGenerationCon
 export type JorElTaskInput = string | (string | ImageContent)[];
 
 export type JorElGenerationOutput = (LlmAssistantMessage | LlmAssistantMessageWithToolCalls) & {
-  meta: LlmAssistantMessageMeta & { provider: string };
+  meta: LlmAssistantMessageMeta;
 };
 
 /**
@@ -80,12 +79,10 @@ export class JorEl {
   /** System message use for all requests by default (unless specified per request) */
   public systemMessage;
   public documentSystemMessage;
-
+  public readonly team: JorElAgentManager;
   private readonly _core: JorElCoreStore;
-  // public readonly team: JorElAgentManager;
-
   /** Public methods for managing models */
-  public models = {
+  public readonly models = {
     list: () => this._core.modelManager.listModels(),
     register: (params: { model: string; provider: string; setAsDefault?: boolean }) => {
       this._core.providerManager.getProvider(params.provider); // Ensure provider exists
@@ -109,7 +106,7 @@ export class JorEl {
     },
   };
   /** Public methods for managing providers */
-  public providers = {
+  public readonly providers = {
     list: () => this._core.providerManager.listProviders(),
     registerCustom: (provider: string, coreProvider: LlmCoreProvider) =>
       this._core.providerManager.registerProvider(provider, coreProvider),
@@ -169,15 +166,25 @@ export class JorEl {
     this.systemMessage = config.systemMessage ?? "You are a helpful assistant.";
     this.documentSystemMessage =
       config.documentSystemMessage ?? "Here are some documents that you can consider in your response: {{documents}}";
-    this._core = new JorElCoreStore(new JorElProviderManager(), new JorElModelManager(), {
+    this._core = new JorElCoreStore({
       temperature: config.temperature,
+      logger: config.logger,
+      logLevel: config.logLevel,
     });
+    this.team = new JorElAgentManager(this._core);
     if (config.anthropic) this.providers.registerAnthropic(config.anthropic === true ? undefined : config.anthropic);
     if (config.grok) this.providers.registerGrok(config.grok === true ? undefined : config.grok);
     if (config.groq) this.providers.registerGroq(config.groq === true ? undefined : config.groq);
     if (config.vertexAi) this.providers.registerGoogleVertexAi(config.vertexAi === true ? undefined : config.vertexAi);
     if (config.ollama) this.providers.registerOllama(config.ollama === true ? undefined : config.ollama);
     if (config.openAI) this.providers.registerOpenAi(config.openAI === true ? undefined : config.openAI);
+  }
+
+  /**
+   * Get the logger instance
+   */
+  public get logger() {
+    return this._core.logger;
   }
 
   /**
@@ -191,7 +198,7 @@ export class JorEl {
    * @param json
    */
   async generate(
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config: JorElAskGenerationConfigWithTools = {},
     json?: boolean,
   ): Promise<JorElGenerationOutput> {
@@ -247,7 +254,7 @@ export class JorEl {
   ): Promise<object | { response: object; meta: LlmAssistantMessageMeta }> {
     const messages = this.generateMessages(task, config.systemMessage, config.documents);
     const generation = await this._core.generateAndProcessTools(messages, config, true, true);
-    const parsed = generation.content ? JSON.parse(generation.content) : {};
+    const parsed = generation.content ? LlmToolKit.deserialize(generation.content) : {};
     return includeMeta ? { response: parsed, meta: generation.meta } : parsed;
   }
 
@@ -256,7 +263,7 @@ export class JorEl {
    * @param messages
    * @param config
    */
-  async *generateContentStream(messages: LlmMessage[], config: JorElAskGenerationConfig = {}) {
+  async *generateContentStream(messages: CoreLlmMessage[], config: JorElAskGenerationConfigWithTools = {}) {
     yield* this._core.generateContentStream(messages, config);
   }
 
@@ -265,11 +272,13 @@ export class JorEl {
    * @param task
    * @param config
    */
-  async *stream(task: JorElTaskInput, config: JorElAskGenerationConfig = {}) {
+  async *stream(task: JorElTaskInput, config: JorElAskGenerationConfigWithTools = {}) {
     const messages = this.generateMessages(task, config.systemMessage, config.documents);
-    const stream = this._core.generateContentStream(messages, config);
+    const stream = config.tools
+      ? this._core.generateStreamAndProcessTools(messages, config) // Still experimental
+      : this._core.generateContentStream(messages, config);
     for await (const chunk of stream) {
-      yield chunk.content;
+      if (chunk.content) yield chunk.content;
     }
   }
 

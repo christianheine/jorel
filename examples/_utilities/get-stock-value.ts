@@ -9,7 +9,6 @@ const getPreviousDate = () => {
 export const getStockValue = async (params: { tickerSymbol: string }) => {
   const apiKey = process.env.POLYGON_API_KEY;
   const date = getPreviousDate();
-  console.log(`[getStockValue] Fetching stock data for ${params.tickerSymbol} on ${date}`);
   const response = await fetch(
     `https://api.polygon.io/v1/open-close/${params.tickerSymbol.toUpperCase()}/${date}?adjusted=true&apiKey=${apiKey}`,
   );

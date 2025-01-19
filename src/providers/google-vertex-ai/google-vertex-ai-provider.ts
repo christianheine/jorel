@@ -1,4 +1,14 @@
 import {
+  CoreLlmMessage,
+  generateAssistantMessage,
+  LlmCoreProvider,
+  LlmGenerationConfig,
+  LlmResponse,
+  LlmStreamResponse,
+  LlmStreamResponseChunk,
+  LlmToolCall,
+} from "../../providers";
+import {
   ClientError,
   Content,
   CountTokensResponse,
@@ -10,19 +20,7 @@ import {
   Tool,
   VertexAI,
 } from "@google-cloud/vertexai";
-import {
-  generateAssistantMessage,
-  generateRandomId,
-  generateUniqueId,
-  LlmCoreProvider,
-  LlmGenerationConfig,
-  LlmMessage,
-  LlmResponse,
-  LlmStreamResponse,
-  LlmStreamResponseChunk,
-  LlmToolCall,
-  MaybeUndefined,
-} from "../../shared";
+import { generateRandomId, generateUniqueId, MaybeUndefined } from "../../shared";
 import { convertLlmMessagesToVertexAiMessages } from "./convert-llm-message";
 import { FunctionDeclaration, FunctionDeclarationSchema } from "@google-cloud/vertexai/src/types/content";
 
@@ -104,7 +102,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
 
   async generateResponse(
     model: string,
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config: LlmGenerationConfig = {},
   ): Promise<LlmResponse> {
     const start = Date.now();
@@ -125,7 +123,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         await generativeModel.generateContent({
           contents: chatMessages,
           systemInstruction: systemMessage,
-          tools: config.tools?.llmFunctions.map<Tool>((f) => {
+          tools: config.tools?.asLlmFunctions?.map<Tool>((f) => {
             const functionDeclarations: FunctionDeclaration[] = [
               {
                 name: f.function.name,
@@ -207,9 +205,9 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
 
   async *generateResponseStream(
     model: string,
-    messages: LlmMessage[],
+    messages: CoreLlmMessage[],
     config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
-  ): AsyncGenerator<LlmStreamResponseChunk, LlmStreamResponse, unknown> {
+  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
     const start = Date.now();
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToVertexAiMessages(messages);
@@ -258,7 +256,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
 
     const provider = this.name;
 
-    return {
+    yield {
       type: "response",
       role: "assistant",
       content: contentText,
