@@ -3,6 +3,6 @@
   "position": 5,
   "link": {
     "type": "generated-index",
-    "description": "TK"
+    "description": "An introduction to providers which are the lowest level of abstraction in JorEl."
   }
 }

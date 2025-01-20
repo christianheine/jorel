@@ -8,6 +8,10 @@ Apart from the unified interface, JorEl also significantly simplifies working wi
 
 Finally, JorEl supports complex task processing via agents, in a very straightforward manner.
 
+## Documentation
+
+The documentation is available at [https://christianheine.github.io/jorel](https://christianheine.github.io/jorel).
+
 ## Features
 
 - Straightforward api to a range of leading language models (LLMs): OpenAI, Anthropic, Groq, Vertex AI, Ollama, Grok.
@@ -427,7 +431,7 @@ There are many more examples in the `examples` directory that demonstrate how to
 - [X] Add logging (added in v0.8.0)
 - [X] Add support for streaming with tool use (added in v0.8.0)
 - [X] Add support for tasks via agents, including transfer and delegation (added in v0.8.0)
-- [ ] Set up dedicated documentation site
+- [ ] Set up dedicated documentation site (in progress)
 - [ ] Add Middleware: before and after generate calls & potentially tool use
 - [ ] Increase test coverage
 
