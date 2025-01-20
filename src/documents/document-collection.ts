@@ -1,7 +1,7 @@
 import { CreateLlmDocument, LlmDocument } from "./document";
 
 const xmlDocumentToTextTemplate =
-  "<Document></Document><DocumentId>{{id}}</DocumentId>\n<DocumentType>{{type}}</DocumentType>\n<Title>{{title}}</Title>\n<Content>{{content}}</Content>\n<Source>{{source}}</Source></Document>";
+  "<Document id='{{id}}' type='{{type}}' title='{{title}}' source='{{source}}'{{attributes}}>{{content}}</Document>";
 
 type DocumentToTextTemplate =
   | "xml"
@@ -99,11 +99,14 @@ export class LlmDocumentCollection {
       if (!template.includes("{{id}}")) throw new Error("Document template must include '{{id}}' placeholder.");
       if (!template.includes("{{content}}"))
         throw new Error("Document template must include '{{content}}' placeholder.");
+      const _attributes = document.attributes ? Object.entries(document.attributes): [];
+      const attributes = _attributes.map(([key, value]) => `${key}='${value}'`).join(" ").trim();
       return template
         .replace("{{id}}", document.id)
         .replace("{{type}}", document.type)
         .replace("{{title}}", document.title)
         .replace("{{content}}", document.content)
+        .replace("{{attributes}}", attributes ? ` ${attributes}` : "")
         .replace("{{source}}", document.source || "n/a");
     });
 

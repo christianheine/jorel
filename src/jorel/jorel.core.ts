@@ -24,7 +24,7 @@ export class JorElCoreStore {
     if (config.logger instanceof LogService) {
       this.logger = config.logger;
       if (config.logLevel) {
-        this.logger.setLogLevel(config.logLevel);
+        this.logger.logLevel = config.logLevel;
       }
     } else {
       this.logger = this.logger = new LogService(config.logger, config.logLevel);

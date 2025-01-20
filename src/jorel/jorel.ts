@@ -1,38 +1,10 @@
-import {
-  AnthropicConfig,
-  AnthropicProvider,
-  CoreLlmMessage,
-  defaultAnthropicBedrockModels,
-  defaultAnthropicModels,
-  defaultGrokModels,
-  defaultGroqModels,
-  defaultOpenAiEmbeddingModels,
-  defaultOpenAiModels,
-  defaultVertexAiModels,
-  generateSystemMessage,
-  generateUserMessage,
-  GoogleVertexAiConfig,
-  GoogleVertexAiProvider,
-  GrokProvider,
-  GroqConfig,
-  GroqProvider,
-  LlmAssistantMessage,
-  LlmAssistantMessageMeta,
-  LlmAssistantMessageWithToolCalls,
-  LlmCoreProvider,
-  LlmMessage,
-  LlmToolChoice,
-  OllamaConfig,
-  OllamaProvider,
-  OpenAIConfig,
-  OpenAIProvider,
-} from "../providers";
-import { ImageContent } from "../media";
-import { LLmToolContextSegment, LlmToolKit } from "../tools";
-import { JorElCoreStore } from "./jorel.core";
-import { JorElAgentManager } from "./jorel.team";
-import { LoggerOption, LogLevel, LogService } from "../logger";
-import { CreateLlmDocument, LlmDocument, LlmDocumentCollection } from "../documents";
+import {AnthropicConfig, AnthropicProvider, CoreLlmMessage, defaultAnthropicBedrockModels, defaultAnthropicModels, defaultGrokModels, defaultGroqModels, defaultOpenAiEmbeddingModels, defaultOpenAiModels, defaultVertexAiModels, generateSystemMessage, generateUserMessage, GoogleVertexAiConfig, GoogleVertexAiProvider, GrokProvider, GroqConfig, GroqProvider, LlmAssistantMessage, LlmAssistantMessageMeta, LlmAssistantMessageWithToolCalls, LlmCoreProvider, LlmMessage, LlmToolChoice, OllamaConfig, OllamaProvider, OpenAIConfig, OpenAIProvider,} from "../providers";
+import {ImageContent} from "../media";
+import {LLmToolContextSegment, LlmToolKit} from "../tools";
+import {JorElCoreStore} from "./jorel.core";
+import {JorElAgentManager} from "./jorel.team";
+import {LoggerOption, LogLevel, LogService} from "../logger";
+import {CreateLlmDocument, LlmDocument, LlmDocumentCollection} from "../documents";
 
 interface InitialConfig {
   anthropic?: AnthropicConfig | true;
@@ -55,6 +27,7 @@ export interface JorElCoreGenerationConfig {
 export interface JorElAskGenerationConfig extends JorElCoreGenerationConfig {
   model?: string;
   systemMessage?: string;
+  documentSystemMessage?: string;
   documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection;
 }
 
@@ -78,7 +51,7 @@ export type JorElGenerationOutput = (LlmAssistantMessage | LlmAssistantMessageWi
 export class JorEl {
   /** System message use for all requests by default (unless specified per request) */
   public systemMessage;
-  public documentSystemMessage;
+  private _documentSystemMessage;
   public readonly team: JorElAgentManager;
   private readonly _core: JorElCoreStore;
   /** Public methods for managing models */
@@ -114,19 +87,19 @@ export class JorEl {
       this._core.providerManager.registerProvider("anthropic", new AnthropicProvider(config));
       const defaultModels = config?.bedrock ? defaultAnthropicBedrockModels : defaultAnthropicModels;
       for (const model of defaultModels) {
-        this.models.register({ model, provider: "anthropic" });
+        this.models.register({model, provider: "anthropic"});
       }
     },
     registerGrok: (config?: OpenAIConfig) => {
       this._core.providerManager.registerProvider("grok", new GrokProvider(config));
       for (const model of defaultGrokModels) {
-        this.models.register({ model, provider: "grok" });
+        this.models.register({model, provider: "grok"});
       }
     },
     registerGroq: (config?: GroqConfig) => {
       this._core.providerManager.registerProvider("groq", new GroqProvider(config));
       for (const model of defaultGroqModels) {
-        this.models.register({ model, provider: "groq" });
+        this.models.register({model, provider: "groq"});
       }
     },
     registerOllama: (config?: OllamaConfig) => {
@@ -135,16 +108,16 @@ export class JorEl {
     registerOpenAi: (config?: OpenAIConfig) => {
       this._core.providerManager.registerProvider("openai", new OpenAIProvider(config));
       for (const model of defaultOpenAiModels) {
-        this.models.register({ model, provider: "openai" });
+        this.models.register({model, provider: "openai"});
       }
-      for (const { model, dimensions } of defaultOpenAiEmbeddingModels) {
-        this.models.embeddings.register({ model, dimensions, provider: "openai" });
+      for (const {model, dimensions} of defaultOpenAiEmbeddingModels) {
+        this.models.embeddings.register({model, dimensions, provider: "openai"});
       }
     },
     registerGoogleVertexAi: (config?: GoogleVertexAiConfig) => {
       this._core.providerManager.registerProvider("google-vertex-ai", new GoogleVertexAiProvider(config));
       for (const model of defaultVertexAiModels) {
-        this.models.register({ model, provider: "google-vertex-ai" });
+        this.models.register({model, provider: "google-vertex-ai"});
       }
     },
   };
@@ -164,8 +137,10 @@ export class JorEl {
    */
   constructor(config: InitialConfig = {}) {
     this.systemMessage = config.systemMessage ?? "You are a helpful assistant.";
-    this.documentSystemMessage =
-      config.documentSystemMessage ?? "Here are some documents that you can consider in your response: {{documents}}";
+    this._documentSystemMessage =
+      config.documentSystemMessage ?
+        this.validateDocumentSystemMessage(config.documentSystemMessage)
+        : "Here are some documents that you can consider in your response: {{documents}}";
     this._core = new JorElCoreStore({
       temperature: config.temperature,
       logger: config.logger,
@@ -181,10 +156,59 @@ export class JorEl {
   }
 
   /**
+   * Get the default temperature for all requests
+   */
+  public get temperature(): number | undefined {
+    return this._core.defaultConfig.temperature;
+  }
+
+  /**
+   * Set the default temperature for all requests
+   */
+  public set temperature(temperature: number) {
+    this._core.defaultConfig.temperature = temperature;
+  }
+
+  /**
+   * Get the default document system message for all requests (only used when documents are included)
+   */
+  public get documentSystemMessage(): string {
+    return this._documentSystemMessage;
+  }
+
+  /**
+   * Set the default document system message for all requests (only used when documents are included)
+   */
+  public set documentSystemMessage(documentSystemMessage: string) {
+    this._documentSystemMessage = this.validateDocumentSystemMessage(documentSystemMessage);
+  }
+
+  /**
    * Get the logger instance
    */
   public get logger() {
     return this._core.logger;
+  }
+
+  /**
+   * Set the logger instance
+   */
+  public set logger(logger: LogService) {
+    this._core.logger = logger;
+  }
+
+  /**
+   * Get the log level
+   */
+  public get logLevel() {
+    return this._core.logger.logLevel;
+  }
+
+  /**
+   * Set the log level
+   */
+  public set logLevel(logLevel: LogLevel) {
+    this._core.logger.logLevel = logLevel;
   }
 
   /**
@@ -223,14 +247,14 @@ export class JorEl {
     includeMeta = false,
   ): Promise<string | { response: string; meta: LlmAssistantMessageMeta }> {
     const generation = await this._core.generateAndProcessTools(
-      this.generateMessages(task, config.systemMessage, config.documents),
+      this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage),
       config,
       false,
       true,
     );
     const response = generation.content || "";
     const meta = generation.meta;
-    return includeMeta ? { response, meta } : response;
+    return includeMeta ? {response, meta} : response;
   }
 
   /**
@@ -252,10 +276,10 @@ export class JorEl {
     config: JorElAskGenerationConfigWithTools = {},
     includeMeta = false,
   ): Promise<object | { response: object; meta: LlmAssistantMessageMeta }> {
-    const messages = this.generateMessages(task, config.systemMessage, config.documents);
+    const messages = this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage);
     const generation = await this._core.generateAndProcessTools(messages, config, true, true);
     const parsed = generation.content ? LlmToolKit.deserialize(generation.content) : {};
-    return includeMeta ? { response: parsed, meta: generation.meta } : parsed;
+    return includeMeta ? {response: parsed, meta: generation.meta} : parsed;
   }
 
   /**
@@ -263,7 +287,7 @@ export class JorEl {
    * @param messages
    * @param config
    */
-  async *generateContentStream(messages: CoreLlmMessage[], config: JorElAskGenerationConfigWithTools = {}) {
+  async* generateContentStream(messages: CoreLlmMessage[], config: JorElAskGenerationConfigWithTools = {}) {
     yield* this._core.generateContentStream(messages, config);
   }
 
@@ -272,8 +296,8 @@ export class JorEl {
    * @param task
    * @param config
    */
-  async *stream(task: JorElTaskInput, config: JorElAskGenerationConfigWithTools = {}) {
-    const messages = this.generateMessages(task, config.systemMessage, config.documents);
+  async* stream(task: JorElTaskInput, config: JorElAskGenerationConfigWithTools = {}) {
+    const messages = this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage);
     const stream = config.tools
       ? this._core.generateStreamAndProcessTools(messages, config) // Still experimental
       : this._core.generateContentStream(messages, config);
@@ -295,13 +319,22 @@ export class JorEl {
     content: JorElTaskInput,
     systemMessage?: string,
     documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection,
+    documentSystemMessage?: string,
   ): LlmMessage[] {
     const _documents = documents instanceof LlmDocumentCollection ? documents : new LlmDocumentCollection(documents);
     if (systemMessage || this.systemMessage)
       return [
-        generateSystemMessage(systemMessage || this.systemMessage, this.documentSystemMessage, _documents),
+        generateSystemMessage(systemMessage || this.systemMessage, documentSystemMessage || this._documentSystemMessage, _documents),
         generateUserMessage(content),
       ];
     return [generateUserMessage(content)];
+  }
+
+  private validateDocumentSystemMessage(documentSystemMessage: string) {
+    if (!documentSystemMessage) return documentSystemMessage;
+    if (documentSystemMessage.includes("{{documents}}")) return documentSystemMessage;
+    throw new Error(
+      "The \"documentSystemMessage\" must either be empty or include the placeholder \"{{documents}}\" to insert the document list.",
+    );
   }
 }

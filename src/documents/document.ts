@@ -1,6 +1,15 @@
-import { generateUniqueId } from "../shared";
+import { generateUniqueId, shallowFilterUndefined } from "../shared";
 
-export type CreateLlmDocument = Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument>;
+export type CreateLlmDocument = Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument> & { attributes?: Record<string, string | number | boolean | null> };
+
+export interface LlmDocumentDefinition {
+  id: string;
+  type: string;
+  title: string;
+  content: string;
+  source?: string;
+  attributes?: Record<string, string | number | boolean | null>;
+}
 
 /**
  * A document that can be used for grounding LLM generations (either directly or passed to agents)
@@ -11,13 +20,15 @@ export class LlmDocument {
   title: string;
   content: string;
   source?: string;
+  attributes?: Record<string, string | number | boolean | null>;
 
-  constructor({ id, type, title, content, source }: CreateLlmDocument) {
+  constructor({ id, type, title, content, source, attributes }: CreateLlmDocument) {
     this.id = id || generateUniqueId();
     this.type = type || "text";
     this.title = title;
     this.content = content;
     this.source = source;
+    this.attributes = attributes || {};
   }
 
   /**
@@ -30,13 +41,14 @@ export class LlmDocument {
   /**
    * Get the definition of the document (e.g. for serialization)
    */
-  get definition() {
-    return {
+  get definition(): LlmDocumentDefinition {
+    return shallowFilterUndefined({
       id: this.id,
       type: this.type,
       title: this.title,
       content: this.content,
-      source: this.source,
-    };
+      source: this.source || undefined,
+      attributes: this.attributes || undefined,
+    });
   }
 }

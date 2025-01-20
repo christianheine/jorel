@@ -1,22 +1,28 @@
 # Changelog
 
-## 0.8.0
+## 0.8.1 (2025-01-20)
+
+- Add support for custom attributes in documents
+- Extend public API for jorEl, e.g. to set the document system message after initialization
+- Add initial content for dedicated documentation website
+
+## 0.8.0 (2025-01-19)
 
 - Add support for streaming with tool use
 - Add logging
 - Add support for tasks via agents, including transfer and delegation
 
-## 0.7.2
+## 0.7.2 (2025-01-16)
 
 - Add support for creating embeddings (Open AI, Groq, Grok, Ollama)
 
-## 0.7.1
+## 0.7.1 (2025-01-13)
 
 - Add native support for passing Zod objects as tool params
 - Restructured examples into major categories (standard-use, provider-apis, agents)
 - Prepare tool-use for agentic use cases
 
-## 0.7.0
+## 0.7.0 (2025-01-12)
 
 - Add support for passing documents to JorEls, `ask`, `stream` and `json` methods'
 - Further simplify provider instantiation, by allowing to pass a {[provider]:true} to the JorEl constructor

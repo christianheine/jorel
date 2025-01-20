@@ -13,3 +13,15 @@ export const maskAll = <T extends Record<string, any>>(obj: T): Record<keyof T, 
   }
   return copy;
 };
+
+export function shallowFilterUndefined<T = any>(arg: T): T {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  return Object.keys(arg).reduce((acc, key) => {
+    const _acc = acc;
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    if (arg[key] !== undefined) _acc[key] = arg[key];
+    return _acc;
+  }, {});
+}

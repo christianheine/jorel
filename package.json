@@ -1,7 +1,7 @@
 {
   "name": "jorel",
-  "version": "0.8.0",
-  "description": "Unified wrapper leading LLMs with support for streaming, documents, tool use and various agent scenarios.",
+  "version": "0.8.1",
+  "description": "Unified wrapper for leading LLMs with support for streaming, documents, tool use and various agent scenarios.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -34,7 +34,7 @@
     "type": "git",
     "url": "https://github.com/christianheine/jorel.git"
   },
-  "homepage": "https://github.com/christianheine/jorel#readme",
+  "homepage": "https://christianheine.github.io/jorel/",
   "bugs": {
     "url": "https://github.com/christianheine/jorel/issues"
   },

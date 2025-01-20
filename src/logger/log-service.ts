@@ -1,6 +1,6 @@
-import { createLogger, format, Logger, transports } from "winston";
+import {createLogger, format, Logger, transports} from "winston";
 
-export type LogLevel = "silent" | "error" | "warn" | "info" | "verbose" | "debug";
+export type LogLevel = "silent" | "error" | "warn" | "info" | "verbose" | "debug" | "silly";
 export type LoggerOption = "console" | ((level: string, message: string, context?: object) => void) | Logger;
 
 /**
@@ -14,11 +14,19 @@ export class LogService {
   }
 
   /**
+   * Gets the current logging level of the logger.
+   * @returns The current log level.
+   */
+  get logLevel(): LogLevel {
+    return this.logger.level as LogLevel;
+  }
+
+  /**
    * Updates the logging level of the logger dynamically.
    * Useful for changing verbosity without recreating the logger.
    * @param logLevel The new log level to set.
    */
-  setLogLevel(logLevel: LogLevel) {
+  set logLevel(logLevel: LogLevel) {
     this.logger.level = logLevel;
   }
 
@@ -39,7 +47,7 @@ export class LogService {
    * @param context Optional metadata or contextual information to include.
    */
   log(logDomain: string, level: LogLevel, message: string, context?: object) {
-    this.logger.log({ level, message, ...context, logDomain });
+    this.logger.log({level, message, ...context, logDomain});
   }
 
   /**
@@ -50,7 +58,7 @@ export class LogService {
    * @param context Optional metadata or contextual information to include.
    */
   silly(logDomain: string, message: string, context?: object) {
-    this.logger.silly(message, { ...context, logDomain });
+    if (typeof this.logger.silly === "function") this.logger.silly(message, {...context, logDomain});
   }
 
   /**
@@ -61,7 +69,7 @@ export class LogService {
    * @param context Optional metadata or contextual information to include.
    */
   debug(logDomain: string, message: string, context?: object) {
-    this.logger.debug(message, { ...context, logDomain });
+    if (typeof this.logger.debug === "function") this.logger.debug(message, {...context, logDomain});
   }
 
   /**
@@ -72,7 +80,7 @@ export class LogService {
    * @param context Optional metadata or contextual information to include.
    */
   verbose(logDomain: string, message: string, context?: object) {
-    this.logger.verbose(message, { ...context, logDomain });
+    if (typeof this.logger.verbose === "function") this.logger.verbose(message, {...context, logDomain});
   }
 
   /**
@@ -83,7 +91,7 @@ export class LogService {
    * @param context Optional metadata or contextual information to include.
    */
   info(logDomain: string, message: string, context?: object) {
-    this.logger.info(message, { ...context, logDomain });
+    if (typeof this.logger.info === "function") this.logger.info(message, {...context, logDomain});
   }
 
   /**
@@ -94,7 +102,7 @@ export class LogService {
    * @param context Optional metadata or contextual information to include.
    */
   warn(logDomain: string, message: string, context?: object) {
-    this.logger.warn(message, { ...context, logDomain });
+    if (typeof this.logger.warn === "function") this.logger.warn(message, {...context, logDomain});
   }
 
   /**
@@ -105,7 +113,7 @@ export class LogService {
    * @param context Optional metadata or contextual information to include.
    */
   error(logDomain: string, message: string, context?: object) {
-    this.logger.error(message, { ...context, logDomain });
+    if (typeof this.logger.error === "function") this.logger.error(message, {...context, logDomain});
   }
 
   /**
@@ -126,8 +134,8 @@ export class LogService {
           format.padLevels(),
           format.colorize(),
           format.timestamp(),
-          format.printf(({ timestamp, level, message, ...meta }) => {
-            const { logDomain, ...context } = meta;
+          format.printf(({timestamp, level, message, ...meta}) => {
+            const {logDomain, ...context} = meta;
             const metaString = Object.keys(context).length ? ` | context: ${JSON.stringify(context)}` : "";
             return `${timestamp} ${level} ${message} [${logDomain}]${metaString}`;
           }),
