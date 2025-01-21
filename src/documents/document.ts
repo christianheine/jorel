@@ -1,6 +1,7 @@
 import { generateUniqueId, shallowFilterUndefined } from "../shared";
 
-export type CreateLlmDocument = Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument> & { attributes?: Record<string, string | number | boolean | null> };
+export type CreateLlmDocument = Pick<LlmDocument, "title" | "content"> &
+  Partial<LlmDocument> & { attributes?: Record<string, string | number | boolean | null> };
 
 export interface LlmDocumentDefinition {
   id: string;
@@ -48,7 +49,7 @@ export class LlmDocument {
       title: this.title,
       content: this.content,
       source: this.source || undefined,
-      attributes: this.attributes || undefined,
+      attributes: this.attributes && Object.keys(this.attributes).length > 0 ? this.attributes : undefined,
     });
   }
 }

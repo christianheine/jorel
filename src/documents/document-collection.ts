@@ -12,7 +12,7 @@ type DocumentToTextTemplate =
     };
 
 interface LlmDocumentCollectionConfig {
-  _documentToText?: DocumentToTextTemplate;
+  documentToText?: DocumentToTextTemplate;
 }
 
 /**
@@ -30,7 +30,7 @@ export class LlmDocumentCollection {
       document instanceof LlmDocument ? document : new LlmDocument(document),
     );
     this._documents = new Map(_documents.map((document) => [document.id, document]));
-    this.documentToTextTemplate = config._documentToText || "xml";
+    this.documentToTextTemplate = config.documentToText || "xml";
   }
 
   /**
@@ -99,8 +99,11 @@ export class LlmDocumentCollection {
       if (!template.includes("{{id}}")) throw new Error("Document template must include '{{id}}' placeholder.");
       if (!template.includes("{{content}}"))
         throw new Error("Document template must include '{{content}}' placeholder.");
-      const _attributes = document.attributes ? Object.entries(document.attributes): [];
-      const attributes = _attributes.map(([key, value]) => `${key}='${value}'`).join(" ").trim();
+      const _attributes = document.attributes ? Object.entries(document.attributes) : [];
+      const attributes = _attributes
+        .map(([key, value]) => `${key}='${value}'`)
+        .join(" ")
+        .trim();
       return template
         .replace("{{id}}", document.id)
         .replace("{{type}}", document.type)
