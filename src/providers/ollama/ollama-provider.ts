@@ -1,8 +1,17 @@
-import ollama, {Tool} from "ollama";
+import ollama, { Tool } from "ollama";
 
-import {CoreLlmMessage, generateAssistantMessage, LlmCoreProvider, LlmGenerationConfig, LlmResponse, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall,} from "../../providers";
-import {generateRandomId, generateUniqueId, MaybeUndefined} from "../../shared";
-import {convertLlmMessagesToOllamaMessages} from "./convert-llm-message";
+import {
+  CoreLlmMessage,
+  generateAssistantMessage,
+  LlmCoreProvider,
+  LlmGenerationConfig,
+  LlmResponse,
+  LlmStreamResponse,
+  LlmStreamResponseChunk,
+  LlmToolCall,
+} from "../../providers";
+import { generateRandomId, generateUniqueId, MaybeUndefined } from "../../shared";
+import { convertLlmMessagesToOllamaMessages } from "./convert-llm-message";
 
 export interface OllamaConfig {
   defaultTemperature?: number;
@@ -14,7 +23,7 @@ export class OllamaProvider implements LlmCoreProvider {
   public readonly name;
   public defaultTemperature;
 
-  constructor({defaultTemperature, name}: OllamaConfig = {}) {
+  constructor({ defaultTemperature, name }: OllamaConfig = {}) {
     this.name = name || "ollama";
     this.defaultTemperature = defaultTemperature ?? 0;
   }
@@ -87,7 +96,7 @@ export class OllamaProvider implements LlmCoreProvider {
     };
   }
 
-  async* generateResponseStream(
+  async *generateResponseStream(
     model: string,
     messages: CoreLlmMessage[],
     config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
@@ -109,7 +118,7 @@ export class OllamaProvider implements LlmCoreProvider {
       const contentChunk = chunk.message.content;
       if (contentChunk) {
         content += contentChunk;
-        yield {type: "chunk", content: contentChunk};
+        yield { type: "chunk", content: contentChunk };
       }
     }
 
@@ -135,7 +144,7 @@ export class OllamaProvider implements LlmCoreProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const {models} = await ollama.ps();
+    const { models } = await ollama.ps();
     return models.map((model) => model.name);
   }
 

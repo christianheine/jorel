@@ -1,10 +1,38 @@
-import {AnthropicConfig, AnthropicProvider, CoreLlmMessage, defaultAnthropicBedrockModels, defaultAnthropicModels, defaultGrokModels, defaultGroqModels, defaultOpenAiEmbeddingModels, defaultOpenAiModels, defaultVertexAiModels, generateSystemMessage, generateUserMessage, GoogleVertexAiConfig, GoogleVertexAiProvider, GrokProvider, GroqConfig, GroqProvider, LlmAssistantMessage, LlmAssistantMessageMeta, LlmAssistantMessageWithToolCalls, LlmCoreProvider, LlmMessage, LlmToolChoice, OllamaConfig, OllamaProvider, OpenAIConfig, OpenAIProvider,} from "../providers";
-import {ImageContent} from "../media";
-import {LLmToolContextSegment, LlmToolKit} from "../tools";
-import {JorElCoreStore} from "./jorel.core";
-import {JorElAgentManager} from "./jorel.team";
-import {LoggerOption, LogLevel, LogService} from "../logger";
-import {CreateLlmDocument, LlmDocument, LlmDocumentCollection} from "../documents";
+import { CreateLlmDocument, LlmDocument, LlmDocumentCollection } from "../documents";
+import { LoggerOption, LogLevel, LogService } from "../logger";
+import { ImageContent } from "../media";
+import {
+  AnthropicConfig,
+  AnthropicProvider,
+  CoreLlmMessage,
+  defaultAnthropicBedrockModels,
+  defaultAnthropicModels,
+  defaultGrokModels,
+  defaultGroqModels,
+  defaultOpenAiEmbeddingModels,
+  defaultOpenAiModels,
+  defaultVertexAiModels,
+  generateSystemMessage,
+  generateUserMessage,
+  GoogleVertexAiConfig,
+  GoogleVertexAiProvider,
+  GrokProvider,
+  GroqConfig,
+  GroqProvider,
+  LlmAssistantMessage,
+  LlmAssistantMessageMeta,
+  LlmAssistantMessageWithToolCalls,
+  LlmCoreProvider,
+  LlmMessage,
+  LlmToolChoice,
+  OllamaConfig,
+  OllamaProvider,
+  OpenAIConfig,
+  OpenAIProvider,
+} from "../providers";
+import { LLmToolContextSegment, LlmToolKit } from "../tools";
+import { JorElCoreStore } from "./jorel.core";
+import { JorElAgentManager } from "./jorel.team";
 
 interface InitialConfig {
   anthropic?: AnthropicConfig | true;
@@ -51,7 +79,6 @@ export type JorElGenerationOutput = (LlmAssistantMessage | LlmAssistantMessageWi
 export class JorEl {
   /** System message use for all requests by default (unless specified per request) */
   public systemMessage;
-  private _documentSystemMessage;
   public readonly team: JorElAgentManager;
   private readonly _core: JorElCoreStore;
   /** Public methods for managing models */
@@ -155,19 +182,7 @@ export class JorEl {
     if (config.openAI) this.providers.registerOpenAi(config.openAI === true ? undefined : config.openAI);
   }
 
-  /**
-   * Get the default temperature for all requests
-   */
-  public get temperature(): number | undefined {
-    return this._core.defaultConfig.temperature;
-  }
-
-  /**
-   * Set the default temperature for all requests
-   */
-  public set temperature(temperature: number) {
-    this._core.defaultConfig.temperature = temperature;
-  }
+  private _documentSystemMessage;
 
   /**
    * Get the default document system message for all requests (only used when documents are included)
@@ -181,6 +196,20 @@ export class JorEl {
    */
   public set documentSystemMessage(documentSystemMessage: string) {
     this._documentSystemMessage = this.validateDocumentSystemMessage(documentSystemMessage);
+  }
+
+  /**
+   * Get the default temperature for all requests
+   */
+  public get temperature(): number | undefined {
+    return this._core.defaultConfig.temperature;
+  }
+
+  /**
+   * Set the default temperature for all requests
+   */
+  public set temperature(temperature: number) {
+    this._core.defaultConfig.temperature = temperature;
   }
 
   /**
@@ -334,7 +363,7 @@ export class JorEl {
     if (!documentSystemMessage) return documentSystemMessage;
     if (documentSystemMessage.includes("{{documents}}")) return documentSystemMessage;
     throw new Error(
-      "The \"documentSystemMessage\" must either be empty or include the placeholder \"{{documents}}\" to insert the document list.",
+      'The "documentSystemMessage" must either be empty or include the placeholder "{{documents}}" to insert the document list.',
     );
   }
 }

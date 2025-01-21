@@ -1,5 +1,4 @@
-import { JorElProviderManager } from "./jorel.providers";
-import { JorElModelManager } from "./jorel.models";
+import { LogService } from "../logger";
 import {
   CoreLlmMessage,
   generateAssistantMessage,
@@ -10,7 +9,8 @@ import {
 } from "../providers";
 import { maskAll, MaybeUndefined, omit } from "../shared";
 import { JorElAskGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
-import { LogService } from "../logger";
+import { JorElModelManager } from "./jorel.models";
+import { JorElProviderManager } from "./jorel.providers";
 
 export class JorElCoreStore {
   defaultConfig: InitLlmGenerationConfig = {};
