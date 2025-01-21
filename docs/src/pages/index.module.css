@@ -21,3 +21,33 @@
   align-items: center;
   justify-content: center;
 }
+
+.features {
+  display: flex;
+  align-items: center;
+  padding: 2rem 0;
+  width: 100%;
+}
+
+.codeExample {
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.codeBlock {
+  background-color: var(--ifm-pre-background);
+  border-radius: var(--ifm-code-border-radius);
+  padding: 1rem;
+  margin: 1rem 0;
+  overflow: auto;
+}
+
+.codeBlock pre {
+  margin: 0;
+}
+
+.codeBlock code {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}

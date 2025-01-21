@@ -1,10 +1,10 @@
-import { themes as prismThemes } from "prism-react-renderer";
-import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
+import type { Config } from "@docusaurus/types";
+import { themes as prismThemes } from "prism-react-renderer";
 
 const config: Config = {
   title: "JorEl",
-  tagline: "Unified interface for interacting with LLMs & LLM-based agents",
+  tagline: "The easiest way to use LLMs - from simple text generation to advanced agent systems",
   favicon: "img/favicon.ico",
 
   url: "https://christianheine.github.io",
