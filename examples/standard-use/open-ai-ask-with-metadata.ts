@@ -10,7 +10,7 @@ const main = async () => {
   const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
 
   // When requesting metadata (third function parameter), the response will include additional information about the request
-  const { response, meta } = await jorEl.ask(
+  const { response, meta, messages } = await jorEl.ask(
     "What are the capitals of France and Germany?",
     {
       systemMessage: "Answer as succinctly as possible",
@@ -25,10 +25,26 @@ const main = async () => {
   // {
   //   model: 'gpt-4o-mini',
   //   provider: 'openai',
-  //   durationMs: 730,
+  //   durationMs: 757,
   //   inputTokens: 26,
-  //   outputTokens: 16,
+  //   outputTokens: 16
   // }
+
+  console.log(messages);
+  // [
+  //   {
+  //     id: 'a473376f-0c12-4ae6-b449-c2e9cb75c27d',
+  //     role: 'system',
+  //     content: 'Answer as succinctly as possible',
+  //     createdAt: 1737504961402
+  //   },
+  //   {
+  //     id: '16fb56cc-2cd8-4663-976c-bc8a123d9bce',
+  //     role: 'user',
+  //     content: 'What are the capitals of France and Germany?',
+  //     createdAt: 1737504961402
+  //   }
+  // ]
 };
 
 void main();

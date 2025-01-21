@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.3
+
+- Add helpers to generate system and user messages from an existing JorEl instance
+- Return previous messages (including tool messages which were internally generated) from the `ask` and `json` methods
+
+## 0.8.2
+
+- Small refinements to how 
+
 ## 0.8.1 (2025-01-20)
 
 - Add support for custom attributes in documents

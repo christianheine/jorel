@@ -95,7 +95,8 @@ export class JorElCoreStore {
     config: Omit<JorElAskGenerationConfigWithTools, "systemMessage" | "documents"> = {},
     json = false,
     autoApprove = false,
-  ): Promise<JorElGenerationOutput> {
+  ): Promise<{ output: JorElGenerationOutput; messages: CoreLlmMessage[] }> {
+    const _messages = [...messages];
     if (config.tools && config.tools.tools.some((t) => t.type !== "function")) {
       throw new Error("Only tools with a function executor can be used in this context");
     }
@@ -104,7 +105,7 @@ export class JorElCoreStore {
 
     let generation: MaybeUndefined<JorElGenerationOutput>;
     for (let i = 0; i < maxAttempts; i++) {
-      generation = await this.generate(messages, config, json);
+      generation = await this.generate(_messages, config, json);
       if (generation.role === "assistant" || !config.tools) {
         break;
       } else {
@@ -124,7 +125,7 @@ export class JorElCoreStore {
         this.logger.silly("Core", `Tool call outputs`, {
           generation,
         });
-        messages.push(generateAssistantMessage(generation.content, generation.toolCalls));
+        _messages.push(generateAssistantMessage(generation.content, generation.toolCalls));
       }
     }
 
@@ -132,7 +133,10 @@ export class JorElCoreStore {
       throw new Error("Unable to generate a response");
     }
 
-    return generation;
+    return {
+      output: generation,
+      messages: _messages,
+    };
   }
 
   /**
