@@ -1,4 +1,4 @@
-import { generateUserMessage } from "../providers";
+import { generateUserMessage, LlmToolCall } from "../providers";
 import { JorElAgentManager } from "../jorel/jorel.team";
 import { TaskExecutionThread, TaskExecutionThreadDefinition } from "./task-execution-thread";
 import { TaskExecutionThreadEvent } from "./task-execution-thread-event";
@@ -265,6 +265,17 @@ export class TaskExecution implements TaskExecutionDefinition {
    */
   get copy(): TaskExecution {
     return new TaskExecution(this.definition, this.jorEl);
+  }
+
+  /**
+   * Get the tool calls with pending approvals for this task execution
+   */
+  get toolCallsWithPendingApprovals(): (LlmToolCall & { messageId: string; threadId: string })[] {
+    const toolCalls: (LlmToolCall & { messageId: string; threadId: string })[] = [];
+    for (const thread of Object.values(this.threads)) {
+      toolCalls.push(...thread.toolCallsWithPendingApprovals);
+    }
+    return toolCalls;
   }
 
   /**

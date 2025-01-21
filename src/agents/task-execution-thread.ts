@@ -1,5 +1,5 @@
 import { Nullable } from "../shared";
-import { LlmAssistantMessage, LlmAssistantMessageWithToolCalls, LlmUserMessage } from "../providers";
+import { LlmAssistantMessage, LlmAssistantMessageWithToolCalls, LlmToolCall, LlmToolCallApprovalState, LlmUserMessage } from "../providers";
 import { JorElAgentManager } from "../jorel/jorel.team";
 import { LlmAgent } from "./agent";
 import { TaskExecutionThreadEvent } from "./task-execution-thread-event";
@@ -92,6 +92,42 @@ export class TaskExecutionThread {
    */
   get copy(): TaskExecutionThread {
     return new TaskExecutionThread(this.definition, this.jorEl);
+  }
+
+  /**
+   * Get the pending approvals for this thread
+   */
+  get toolCallsWithPendingApprovals(): (LlmToolCall & { messageId: string; threadId: string })[] {
+    const toolCalls: (LlmToolCall & { messageId: string; threadId: string })[] = [];
+    for (const message of this.messages) {
+      if (message.role === "assistant_with_tools") {
+        toolCalls.push(...message.toolCalls.map((toolCall) => ({ ...toolCall, messageId: message.id, threadId: this.id })));
+      }
+    }
+    return toolCalls
+  }
+
+  /**
+   * Approve or reject tool calls
+   * @param messageId
+   * @param toolCallIds
+   * @param approvalState
+   */
+  public approveOrRejectToolCalls(messageId: string, toolCallIds: string[], approvalState: LlmToolCallApprovalState): void {
+    let modified = false;
+    this.messages.forEach((message) => {
+      if (message.role === "assistant_with_tools" && message.id === messageId) {
+        message.toolCalls.forEach((toolCall) => {
+          if (toolCallIds.includes(toolCall.id)) {
+            toolCall.approvalState = approvalState;
+            modified = true;
+          }
+        });
+      }
+    });
+    if (modified) {
+      this.modified = true;
+    }
   }
 
   /**
