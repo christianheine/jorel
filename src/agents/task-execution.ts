@@ -4,6 +4,7 @@ import { TaskExecutionThread, TaskExecutionThreadDefinition } from "./task-execu
 import { TaskExecutionThreadEvent } from "./task-execution-thread-event";
 import { LLmToolContextSegment } from "../tools";
 import { generateUniqueId, Nullable } from "../shared";
+import { JorElTaskInput } from "../jorel";
 
 /** Thrown when a task creation fails */
 export class TaskCreationError extends Error {
@@ -272,7 +273,7 @@ export class TaskExecution implements TaskExecutionDefinition {
    * @param agentId
    * @param jorEl
    */
-  static fromTask(task: string, agentId: string, jorEl: JorElAgentManager): TaskExecution {
+  static fromTask(task: JorElTaskInput, agentId: string, jorEl: JorElAgentManager): TaskExecution {
     return new TaskExecution(
       {
         id: generateUniqueId(),

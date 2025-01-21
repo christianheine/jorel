@@ -1,9 +1,10 @@
-import { JorElCoreStore } from "./jorel.core";
-import { generateUniqueId, Nullable } from "../shared";
-import { generateSystemMessage, generateUserMessage, LlmAssistantMessageWithToolCalls, LlmToolCall } from "../providers";
-import { LlmAgent, LlmAgentDefinition, TaskCreationError, TaskExecution, TaskExecutionDefinition, TaskExecutionEnvironment, TaskExecutionError, TaskExecutionThread } from "../agents";
-import { LlmTool, LlmToolConfiguration, LlmToolKit } from "../tools";
 import { z } from "zod";
+import { LlmAgent, LlmAgentDefinition, TaskCreationError, TaskExecution, TaskExecutionDefinition, TaskExecutionEnvironment, TaskExecutionError, TaskExecutionThread } from "../agents";
+import { generateSystemMessage, generateUserMessage, LlmAssistantMessageWithToolCalls, LlmToolCall } from "../providers";
+import { generateUniqueId, Nullable } from "../shared";
+import { LlmTool, LlmToolConfiguration, LlmToolKit } from "../tools";
+import { JorElTaskInput } from "./jorel";
+import { JorElCoreStore } from "./jorel.core";
 
 /**
  * Manages teams of agents for JorEl
@@ -142,7 +143,7 @@ export class JorElAgentManager {
    * @param config
    */
   async createTask(
-    task: string,
+    task: JorElTaskInput,
     config?: {
       agent?: string;
     },
