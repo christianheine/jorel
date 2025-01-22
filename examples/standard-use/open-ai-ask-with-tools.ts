@@ -26,7 +26,7 @@ const main = async () => {
     {
       name: "get_weather",
       description: "Get the current temperature and conditions for a city",
-      executor: getWeather, // Requires a Weather API key
+      executor: getWeather,
       params: {
         type: "object",
         properties: {
