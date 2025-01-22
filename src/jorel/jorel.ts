@@ -338,10 +338,11 @@ export class JorEl {
   /**
    * Create an embedding for a given text
    * @param text
-   * @param model
+   * @param config
+   * @param config.model
    */
-  async embed(text: string, model?: string): Promise<number[]> {
-    return this._core.generateEmbedding(text, model);
+  async embed(text: string, config: { model?: string } = {}): Promise<number[]> {
+    return this._core.generateEmbedding(text, config.model);
   }
 
   /**

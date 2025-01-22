@@ -206,6 +206,22 @@ for await (const chunk of stream) {
 // The weather in Sydney is 22 degrees and sunny.
 ```
 
+## Embeddings
+
+JorEl also supports creating embeddings. It will use the default embedding model.
+
+```typescript
+const embedding = await jorEl.embed("What is the capital of France?");
+```
+
+Similar to the ask method, you can pass a configuration object to the `embed` method. It currently only supports the `model` parameter.
+
+```typescript
+const embedding = await jorEl.embed("What is the capital of France?", {
+  model: "text-embedding-3-small",
+});
+```
+
 ## Preview to agents
 
 Agents allow you to define more complex interactions with the LLM, including delegation and transfer. Here's a simple example (which would be better solved with tools, but it should give you an idea
