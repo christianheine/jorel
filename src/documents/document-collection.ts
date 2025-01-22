@@ -48,36 +48,6 @@ export class LlmDocumentCollection {
   }
 
   /**
-   * Create a new collection from a JSON representation
-   */
-  static fromJSON(documents: (LlmDocument | CreateLlmDocument)[] = []) {
-    return new LlmDocumentCollection(
-      documents.map((document) => new LlmDocument(document instanceof LlmDocument ? document.definition : document)),
-    );
-  }
-
-  /**
-   * Add a document to the collection
-   */
-  add(document: LlmDocument) {
-    this._documents.set(document.id, document);
-  }
-
-  /**
-   * Remove a document from the collection
-   */
-  remove(id: string) {
-    this._documents.delete(id);
-  }
-
-  /**
-   * Get a document by its ID
-   */
-  get(id: string) {
-    return this._documents.get(id);
-  }
-
-  /**
    * Get the definition of all documents in the collection (e.g. for serialization)
    */
   get definition() {
@@ -116,5 +86,35 @@ export class LlmDocumentCollection {
     if (this.documentToTextTemplate === "xml") return `<Documents>\n${rendered.join("\n")}\n</Documents>`;
 
     return rendered.join(this.documentToTextTemplate.separator);
+  }
+
+  /**
+   * Create a new collection from a JSON representation
+   */
+  static fromJSON(documents: (LlmDocument | CreateLlmDocument)[] = []) {
+    return new LlmDocumentCollection(
+      documents.map((document) => new LlmDocument(document instanceof LlmDocument ? document.definition : document)),
+    );
+  }
+
+  /**
+   * Add a document to the collection
+   */
+  add(document: LlmDocument) {
+    this._documents.set(document.id, document);
+  }
+
+  /**
+   * Remove a document from the collection
+   */
+  remove(id: string) {
+    this._documents.delete(id);
+  }
+
+  /**
+   * Get a document by its ID
+   */
+  get(id: string) {
+    return this._documents.get(id);
   }
 }

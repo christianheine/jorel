@@ -33,13 +33,6 @@ export class LlmDocument {
   }
 
   /**
-   * Create a new text document
-   */
-  static text(id: string, body: Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument>): LlmDocument {
-    return new LlmDocument({ id, type: "text", ...body });
-  }
-
-  /**
    * Get the definition of the document (e.g. for serialization)
    */
   get definition(): LlmDocumentDefinition {
@@ -51,5 +44,12 @@ export class LlmDocument {
       source: this.source || undefined,
       attributes: this.attributes && Object.keys(this.attributes).length > 0 ? this.attributes : undefined,
     });
+  }
+
+  /**
+   * Create a new text document
+   */
+  static text(id: string, body: Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument>): LlmDocument {
+    return new LlmDocument({ id, type: "text", ...body });
   }
 }
