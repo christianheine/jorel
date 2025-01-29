@@ -11,17 +11,14 @@ const main = async () => {
 
   jorEl.providers.registerOllama({ defaultTemperature: 0.2 });
 
-  jorEl.systemMessage = "You are a helpful llama.";
+  jorEl.systemMessage = "You are a helpful assistant";
 
-  // Register Ollama model
-  jorEl.models.register({
-    model: "llama3.2",
-    provider: "ollama",
-    setAsDefault: true,
-  });
+  jorEl.models.register({model: "deepseek-r1:8b", provider: "ollama"})
 
   // Will return a string
-  const response = await jorEl.ask("What is the capital of France?");
+  const response = await jorEl.ask("Write a basic webserver in Typescript (using Hono)", {
+    model: "deepseek-r1:8b"
+  });
 
   console.log(response);
 };
