@@ -1,6 +1,6 @@
 {
   "name": "jorel",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "The easiest way to use LLMs, including streaming, image prompts, documents, tool use and various agent scenarios.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
