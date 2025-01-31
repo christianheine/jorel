@@ -1,4 +1,5 @@
 import { generateUniqueId, shallowFilterUndefined } from "../shared";
+import * as fs from "fs";
 
 export type CreateLlmDocument = Pick<LlmDocument, "title" | "content"> &
   Partial<LlmDocument> & { attributes?: Record<string, string | number | boolean | null> };
@@ -47,9 +48,46 @@ export class LlmDocument {
   }
 
   /**
+   * Write the document content to a local file
+   * @param path
+   */
+  async writeContentToLocalFile(path: string): Promise<void> {
+    await fs.promises.writeFile(path, this.content, "utf-8");
+  }
+
+  /**
+   * Create a new document from a local file
+   */
+  static async fromLocalFile(path: string, meta: Partial<Pick<LlmDocument, 'type' | 'title' | 'id'>> = {}): Promise<LlmDocument> {
+    const content = await fs.promises.readFile(path, "utf-8");
+    return new LlmDocument({
+      id: meta.id || generateUniqueId(),
+      type: meta.type || getDocumentType(path),
+      title: meta.title || path.split("/").pop() || path,
+      content,
+      source: path,
+    });
+  }
+
+  /**
+   * Create a new markdown document
+   */
+  static md(payload: Pick<LlmDocument, "id" | "title" | "content"> & Partial<LlmDocument>): LlmDocument {
+    return new LlmDocument({ type: "markdown", ...payload });
+  }
+
+  /**
    * Create a new text document
    */
-  static text(id: string, body: Pick<LlmDocument, "title" | "content"> & Partial<LlmDocument>): LlmDocument {
-    return new LlmDocument({ id, type: "text", ...body });
+  static text(payload: Pick<LlmDocument, "id" | "title" | "content"> & Partial<LlmDocument>): LlmDocument {
+    return new LlmDocument({ type: "text", ...payload });
   }
 }
+
+const getDocumentType = (path: string): "text" | "markdown" => {
+  const ext = path.split(".").pop();
+  if (ext === "md") {
+    return "markdown";
+  }
+  return "text";
+};

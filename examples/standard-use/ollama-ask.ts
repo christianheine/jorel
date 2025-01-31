@@ -9,7 +9,7 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl();
 
-  jorEl.providers.registerOllama({ defaultTemperature: 0.2 });
+  jorEl.providers.registerOllama();
 
   jorEl.systemMessage = "You are a helpful assistant";
 

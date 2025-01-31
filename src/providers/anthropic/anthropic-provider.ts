@@ -20,17 +20,15 @@ export interface AnthropicConfig {
     awsAccessKey?: string;
     awsSecretKey?: string;
   };
-  defaultTemperature?: number;
   name?: string;
 }
 
 /** Provides access to OpenAI and other compatible services */
 export class AnthropicProvider implements LlmCoreProvider {
-  public defaultTemperature;
   public readonly name;
   private readonly client: AnthropicBedrock | Anthropic;
 
-  constructor({ apiKey, bedrock, defaultTemperature, name }: AnthropicConfig = {}) {
+  constructor({ apiKey, bedrock, name }: AnthropicConfig = {}) {
     this.name = name || "anthropic";
     if (bedrock) {
       const region = bedrock.awsRegion || process.env.AWS_REGION;
@@ -67,8 +65,6 @@ export class AnthropicProvider implements LlmCoreProvider {
         apiKey: _apiKey,
       });
     }
-
-    this.defaultTemperature = defaultTemperature ?? 0;
   }
 
   async generateResponse(
@@ -80,10 +76,12 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToAnthropicMessages(messages);
 
+    const temperature = config.temperature || undefined;
+
     const response = await this.client.messages.create({
       model,
       messages: chatMessages,
-      temperature: config.temperature || this.defaultTemperature,
+      temperature,
       max_tokens: config.maxTokens || 4096,
       system: systemMessage,
       tool_choice:
@@ -153,6 +151,7 @@ export class AnthropicProvider implements LlmCoreProvider {
       meta: {
         model,
         provider,
+        temperature,
         durationMs,
         inputTokens,
         outputTokens,
@@ -169,10 +168,12 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToAnthropicMessages(messages);
 
+    const temperature = config.temperature || undefined;
+
     const responseStream = await this.client.messages.create({
       model,
       messages: chatMessages,
-      temperature: config.temperature || this.defaultTemperature,
+      temperature,
       max_tokens: config.maxTokens || 4096,
       system: systemMessage,
       stream: true,
@@ -209,6 +210,7 @@ export class AnthropicProvider implements LlmCoreProvider {
         model,
         provider,
         durationMs,
+        temperature,
         inputTokens,
         outputTokens,
       },

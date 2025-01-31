@@ -1,22 +1,28 @@
-import ollama, {Tool} from "ollama";
+import ollama, { Tool } from "ollama";
 
-import {CoreLlmMessage, generateAssistantMessage, LlmCoreProvider, LlmGenerationConfig, LlmResponse, LlmStreamResponse, LlmStreamResponseChunk, LlmToolCall,} from "../../providers";
-import {generateRandomId, generateUniqueId, MaybeUndefined} from "../../shared";
-import {convertLlmMessagesToOllamaMessages} from "./convert-llm-message";
+import {
+  CoreLlmMessage,
+  generateAssistantMessage,
+  LlmCoreProvider,
+  LlmGenerationConfig,
+  LlmResponse,
+  LlmStreamResponse,
+  LlmStreamResponseChunk,
+  LlmToolCall,
+} from "../../providers";
+import { generateRandomId, generateUniqueId, MaybeUndefined } from "../../shared";
+import { convertLlmMessagesToOllamaMessages } from "./convert-llm-message";
 
 export interface OllamaConfig {
-  defaultTemperature?: number;
   name?: string;
 }
 
 /** Provides access to local Ollama server */
 export class OllamaProvider implements LlmCoreProvider {
   public readonly name;
-  public defaultTemperature;
 
-  constructor({defaultTemperature, name}: OllamaConfig = {}) {
+  constructor({ name }: OllamaConfig = {}) {
     this.name = name || "ollama";
-    this.defaultTemperature = defaultTemperature ?? 0;
   }
 
   async generateResponse(
@@ -25,6 +31,8 @@ export class OllamaProvider implements LlmCoreProvider {
     config: LlmGenerationConfig = {},
   ): Promise<LlmResponse> {
     const start = Date.now();
+
+    const temperature = config.temperature || undefined;
 
     const response = await ollama.chat({
       model,
@@ -45,7 +53,7 @@ export class OllamaProvider implements LlmCoreProvider {
         }),
       ),
       options: {
-        temperature: config.temperature || this.defaultTemperature,
+        temperature,
       },
     });
 
@@ -80,6 +88,7 @@ export class OllamaProvider implements LlmCoreProvider {
       meta: {
         model,
         provider,
+        temperature,
         durationMs,
         inputTokens,
         outputTokens,
@@ -87,12 +96,14 @@ export class OllamaProvider implements LlmCoreProvider {
     };
   }
 
-  async* generateResponseStream(
+  async *generateResponseStream(
     model: string,
     messages: CoreLlmMessage[],
     config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
     const start = Date.now();
+
+    const temperature = config.temperature || undefined;
 
     const stream = await ollama.chat({
       model,
@@ -100,7 +111,7 @@ export class OllamaProvider implements LlmCoreProvider {
       stream: true,
       format: config.json ? "json" : undefined,
       options: {
-        temperature: config.temperature || this.defaultTemperature,
+        temperature,
       },
     });
 
@@ -109,7 +120,7 @@ export class OllamaProvider implements LlmCoreProvider {
       const contentChunk = chunk.message.content;
       if (contentChunk) {
         content += contentChunk;
-        yield {type: "chunk", content: contentChunk};
+        yield { type: "chunk", content: contentChunk };
       }
     }
 
@@ -127,6 +138,7 @@ export class OllamaProvider implements LlmCoreProvider {
       meta: {
         model,
         provider,
+        temperature,
         durationMs,
         inputTokens,
         outputTokens,
@@ -135,7 +147,7 @@ export class OllamaProvider implements LlmCoreProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const {models} = await ollama.ps();
+    const { models } = await ollama.ps();
     return models.map((model) => model.name);
   }
 

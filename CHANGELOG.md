@@ -1,13 +1,24 @@
 # Changelog
 
-## 0.8.3
+## 0.8.5
+
+- Add feature to easily load documents from local files
+- Improve support for models w/o temperature parameter (e.g., o3-mini)
+- Improve support for models w/o system message (e.g., o1-mini)
+- Add o3-mini to default models, and add example
+
+## 0.8.4
+
+- Future-proof embed signature and add documentation
+
+## 0.8.3 (2025-01-23)
 
 - Add helpers to generate system and user messages from an existing JorEl instance
 - Return previous messages (including tool messages which were internally generated) from the `ask` and `json` methods
 
-## 0.8.2
+## 0.8.2 (2025-01-21)
 
-- Small refinements to how 
+- Small refinements to how tasks are created
 
 ## 0.8.1 (2025-01-20)
 

@@ -33,6 +33,7 @@ import {
 import { LLmToolContextSegment, LlmToolKit } from "../tools";
 import { JorElCoreStore } from "./jorel.core";
 import { JorElAgentManager } from "./jorel.team";
+import { Nullable } from "../shared";
 
 interface InitialConfig {
   anthropic?: AnthropicConfig | true;
@@ -41,15 +42,15 @@ interface InitialConfig {
   ollama?: OllamaConfig | true;
   openAI?: OpenAIConfig | true;
   vertexAi?: GoogleVertexAiConfig | true;
-  systemMessage?: string;
+  systemMessage?: Nullable<string>;
   documentSystemMessage?: string;
-  temperature?: number;
+  temperature?: Nullable<number>;
   logger?: LoggerOption | LogService;
   logLevel?: LogLevel;
 }
 
 export interface JorElCoreGenerationConfig {
-  temperature?: number;
+  temperature?: Nullable<number>;
 }
 
 export interface JorElAskGenerationConfig extends JorElCoreGenerationConfig {
@@ -168,7 +169,7 @@ export class JorEl {
       ? this.validateDocumentSystemMessage(config.documentSystemMessage)
       : "Here are some documents that you can consider in your response: {{documents}}";
     this._core = new JorElCoreStore({
-      temperature: config.temperature,
+      temperature: config.temperature === undefined ? 0 : config.temperature,
       logger: config.logger,
       logLevel: config.logLevel,
     });
@@ -200,14 +201,14 @@ export class JorEl {
   /**
    * Get the default temperature for all requests
    */
-  public get temperature(): number | undefined {
-    return this._core.defaultConfig.temperature;
+  public get temperature(): Nullable<number> | undefined {
+    return this._core.defaultConfig.temperature
   }
 
   /**
    * Set the default temperature for all requests
    */
-  public set temperature(temperature: number) {
+  public set temperature(temperature: Nullable<number>) {
     this._core.defaultConfig.temperature = temperature;
   }
 
@@ -376,14 +377,22 @@ export class JorEl {
 
   private generateMessages(
     content: JorElTaskInput,
-    systemMessage: string = "",
+    systemMessage?: string,
     documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection,
     documentSystemMessage?: string,
   ): LlmMessage[] {
     const _userMessage = this.generateUserMessage(content);
-    if (this.systemMessage || systemMessage) {
+    if (systemMessage !== "" && (systemMessage || this.systemMessage)) {
+      // Empty string overrides default to skip system message
       const _systemMessage = this.generateSystemMessage(systemMessage, { documents, documentSystemMessage });
       return [_systemMessage, _userMessage];
+    } else {
+      if (documents && documents.length > 0) {
+        this.logger.warn(
+          "JorEl",
+          "Documents were provided but no system message was included. The documents will not be included in the response.",
+        );
+      }
     }
     return [_userMessage];
   }

@@ -1,4 +1,4 @@
-import { LlmDocument } from "../../documents/document";
+import { LlmDocument } from "../../documents";
 
 describe("LlmDocument", () => {
   describe("constructor", () => {
@@ -37,7 +37,8 @@ describe("LlmDocument", () => {
 
   describe("text", () => {
     it("should create a text document with the static method", () => {
-      const doc = LlmDocument.text("text-123", {
+      const doc = LlmDocument.text({
+        id: "text-123",
         title: "Static Text",
         content: "Created with static method",
         source: "test",
@@ -68,7 +69,7 @@ describe("LlmDocument", () => {
         title: "Definition Test",
         content: "Testing definition getter",
       });
-      console.log(definition);
+
       // Should not include undefined or empty values
       expect(definition.source).toBeUndefined();
       expect(definition.attributes).toBeUndefined();

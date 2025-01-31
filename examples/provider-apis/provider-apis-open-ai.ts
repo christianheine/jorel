@@ -10,40 +10,40 @@ const main = async () => {
 
   const models = await provider.getAvailableModels();
 
-  console.log(models);
-
-  const response = await provider.generateResponse(
-    "gpt-4o-mini",
-    [generateUserMessage("What is the capital of France?")],
-    { temperature: 0.1 },
-  );
-
-  console.log(response.content, response.meta);
-
-  const image = await ImageContent.fromFile("./image.png");
-
-  const imageResponse = await provider.generateResponse(
-    "gpt-4o-mini",
-    [{ role: "user", content: ["What is in this image?", image] }],
-    { temperature: 0.1 },
-  );
-
-  console.log(imageResponse.content, imageResponse.meta);
-
-  const stream = provider.generateResponseStream(
-    "gpt-4o-mini",
-    [generateUserMessage("What is the capital of France?")],
-    { temperature: 0.1 },
-  );
-
-  for await (const chunk of stream) {
-    if (chunk.type === "chunk") {
-      process.stdout.write(chunk.content);
-    }
-    if (chunk.type === "response") {
-      console.log(chunk.meta);
-    }
-  }
+  console.log(models.filter((model) => model.includes('o3')));
+  //
+  // const response = await provider.generateResponse(
+  //   "gpt-4o-mini",
+  //   [generateUserMessage("What is the capital of France?")],
+  //   { temperature: 0.1 },
+  // );
+  //
+  // console.log(response.content, response.meta);
+  //
+  // const image = await ImageContent.fromFile("./image.png");
+  //
+  // const imageResponse = await provider.generateResponse(
+  //   "gpt-4o-mini",
+  //   [{ role: "user", content: ["What is in this image?", image] }],
+  //   { temperature: 0.1 },
+  // );
+  //
+  // console.log(imageResponse.content, imageResponse.meta);
+  //
+  // const stream = provider.generateResponseStream(
+  //   "gpt-4o-mini",
+  //   [generateUserMessage("What is the capital of France?")],
+  //   { temperature: 0.1 },
+  // );
+  //
+  // for await (const chunk of stream) {
+  //   if (chunk.type === "chunk") {
+  //     process.stdout.write(chunk.content);
+  //   }
+  //   if (chunk.type === "response") {
+  //     console.log(chunk.meta);
+  //   }
+  // }
 };
 
 void main();

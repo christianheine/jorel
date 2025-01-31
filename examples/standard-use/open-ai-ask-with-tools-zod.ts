@@ -3,7 +3,6 @@
 import { config } from "dotenv";
 import { JorEl, LlmToolKit } from "../../src";
 import { getStockValue } from "../_utilities/get-stock-value";
-import { getWeather } from "../_utilities/get-weather";
 import { z } from "zod";
 
 config({ path: "../../.env" });
@@ -18,56 +17,49 @@ const main = async () => {
       executor: getStockValue, // Returns random data
       params: z.object({ tickerSymbol: z.string() }),
     },
-    {
-      name: "get_weather",
-      description: "Get the current temperature and conditions for a city",
-      executor: getWeather, // Returns fixed data
-      params: z.object({ city: z.string() }),
-    },
   ]);
 
   const { response, meta, messages } = await jorEl.ask(
-    "What is the current stock price for Apple, and the weather in Sydney?",
+    "What is the current stock price for Apple?",
     { tools },
-    true,
-  );
+    true);
 
   console.log(response);
-  // The current stock price for Apple (AAPL) is approximately $755.99.
-  // In Sydney, the weather is sunny with a temperature of 25°C.
+  // The current stock price for Apple (AAPL) is $445.23.
 
   console.log(meta);
   // {
   //   model: 'gpt-4o-mini',
   //   provider: 'openai',
-  //   durationMs: 975,
-  //   inputTokens: 223,
-  //   outputTokens: 35
+  //   temperature: undefined,
+  //   durationMs: 1804,
+  //   inputTokens: 134,
+  //   outputTokens: 18
   // }
 
   console.dir(messages, { depth: null });
   // [
   //   {
-  //     id: '73897542-c3be-4865-9215-6cc930ffb707',
+  //     id: '827d5c2a-cce4-4f67-916d-51232e139a7a',
   //     role: 'system',
   //     content: 'You are a helpful assistant.',
-  //     createdAt: 1737504817895
+  //     createdAt: 1738361692615
   //   },
   //   {
-  //     id: 'dca46163-5479-4dc3-94ac-57c04ed739d8',
+  //     id: 'd8a55c59-7371-44a8-8add-d5e528e83a1b',
   //     role: 'user',
-  //     content: 'What is the current stock price for Apple, and the weather in Sydney?',
-  //     createdAt: 1737504817895
+  //     content: 'What is the current stock price for Apple?',
+  //     createdAt: 1738361692615
   //   },
   //   {
-  //     id: '846546b0-a5a5-4b4f-b1ce-30c8941b945f',
+  //     id: '339350fb-ccea-40dd-9837-b6f346b016ae',
   //     role: 'assistant_with_tools',
   //     content: null,
   //     toolCalls: [
   //       {
-  //         id: 'cc9660c1-1026-4c91-b49a-7f3d243aa224',
+  //         id: '62c5434e-1c12-4904-a0a2-cb196cbe33bc',
   //         request: {
-  //           id: 'call_cCT8bttlcUUM1KWRFXFLd854',
+  //           id: 'call_QCsco1QYILSpazNcUWVykYAr',
   //           function: {
   //             name: 'get_stock_data',
   //             arguments: { tickerSymbol: 'AAPL' }
@@ -76,27 +68,16 @@ const main = async () => {
   //         approvalState: 'noApprovalRequired',
   //         executionState: 'completed',
   //         result: {
-  //           date: '2025-01-21',
+  //           date: '2025-01-30',
   //           tickerSymbol: 'AAPL',
-  //           open: 752.455980166495,
-  //           close: 755.9934767785387,
+  //           open: 436.21986165374426,
+  //           close: 445.2300153342376,
   //           volume: 1000000
   //         },
   //         error: null
-  //       },
-  //       {
-  //         id: '774ef820-e228-4d18-bdb1-41f8d5074c60',
-  //         request: {
-  //           id: 'call_1q8qHwxA01D6FfeOSmXGh0Cq',
-  //           function: { name: 'get_weather', arguments: { city: 'Sydney' } }
-  //         },
-  //         approvalState: 'noApprovalRequired',
-  //         executionState: 'completed',
-  //         result: { city: 'Sydney', temperature: 25, condition: 'Sunny' },
-  //         error: null
   //       }
   //     ],
-  //     createdAt: 1737504819304
+  //     createdAt: 1738361693962
   //   }
   // ]
 };

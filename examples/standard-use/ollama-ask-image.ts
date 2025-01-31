@@ -10,7 +10,7 @@ const main = async () => {
   const jorEl = new JorEl();
 
   // Register Ollama provider
-  jorEl.providers.registerOllama({ defaultTemperature: 0.2 });
+  jorEl.providers.registerOllama();
 
   // System messages are required for Ollama
   jorEl.systemMessage = "You are an expert in describing images";

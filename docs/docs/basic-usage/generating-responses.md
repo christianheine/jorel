@@ -213,7 +213,7 @@ interface GenerationConfig {
   documentSystemMessage?: string;    // Override how documents are presented
   
   // Generation parameters
-  temperature?: number;              // Controls randomness (0-1, default varies by provider)
+  temperature?: Nullable<number>;              // Controls randomness (0-1, use 'null' to explicityly unset it, e.g. for certain models w/o temperature support)
   
   // Context
   documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection;  // Reference documents

@@ -45,8 +45,9 @@ The `JorEl` constructor takes an optional configuration object. The following op
   + Can also be overridden on a per-request basis.
 * `temperature`
   + The default temperature to use for all requests using the `ask`,  `json` or `stream` methods. 
-  + Can also be overridden on a per-request basis. 
   + Defaults to 0.
+  + Set it to null, in order explicitly use not default temperature.
+  + Can also be overridden on a per-request basis (including the null setting)
 * `logger`
   + The logger to use for logging messages. 
   + You can either pass a function or a Winston instance or set it to `console` to use the default logger. 

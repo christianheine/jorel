@@ -25,23 +25,20 @@ interface ToolCall {
 export interface OpenAIConfig {
   apiKey?: string;
   apiUrl?: string;
-  defaultTemperature?: number;
   name?: string;
 }
 
 /** Provides access to OpenAI and other compatible services */
 export class OpenAIProvider implements LlmCoreProvider {
   public readonly name;
-  public defaultTemperature;
   private client: OpenAI;
 
-  constructor({ apiKey, apiUrl, defaultTemperature, name }: OpenAIConfig = {}) {
+  constructor({ apiKey, apiUrl, name }: OpenAIConfig = {}) {
     this.name = name || "openai";
     this.client = new OpenAI({
       apiKey: apiKey ?? process.env.OPENAI_API_KEY,
       baseURL: apiUrl,
     });
-    this.defaultTemperature = defaultTemperature ?? 0;
   }
 
   async generateResponse(
@@ -51,10 +48,12 @@ export class OpenAIProvider implements LlmCoreProvider {
   ): Promise<LlmResponse> {
     const start = Date.now();
 
+    const temperature = config.temperature || undefined;
+
     const response = await this.client.chat.completions.create({
       model,
       messages: await convertLlmMessagesToOpenAiMessages(messages),
-      temperature: config.temperature || this.defaultTemperature,
+      temperature,
       response_format: config.json ? { type: "json_object" } : { type: "text" },
       max_tokens: config.maxTokens,
       parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
@@ -104,6 +103,7 @@ export class OpenAIProvider implements LlmCoreProvider {
       meta: {
         model,
         provider,
+        temperature,
         durationMs,
         inputTokens,
         outputTokens,
@@ -118,10 +118,12 @@ export class OpenAIProvider implements LlmCoreProvider {
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const start = Date.now();
 
+    const temperature = config.temperature || undefined;
+
     const response = await this.client.chat.completions.create({
       model,
       messages: await convertLlmMessagesToOpenAiMessages(messages),
-      temperature: config.temperature || this.defaultTemperature,
+      temperature,
       response_format: config.json ? { type: "json_object" } : { type: "text" },
       max_tokens: config.maxTokens,
       stream: true,
@@ -189,6 +191,7 @@ export class OpenAIProvider implements LlmCoreProvider {
     const meta = {
       model,
       provider,
+      temperature,
       durationMs,
       inputTokens,
       outputTokens,

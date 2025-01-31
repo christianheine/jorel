@@ -53,14 +53,12 @@ export interface GoogleVertexAiConfig {
   project?: string;
   location?: string;
   keyFilename?: string;
-  defaultTemperature?: number;
   safetySettings?: { category: HarmCategory; threshold: HarmBlockThreshold }[];
   name?: string;
 }
 
 /** Provides access to GoogleVertexAi and other compatible services */
 export class GoogleVertexAiProvider implements LlmCoreProvider {
-  public defaultTemperature;
   public readonly name;
   private client: VertexAI;
   private readonly safetySettings: {
@@ -68,7 +66,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     threshold: HarmBlockThreshold;
   }[] = defaultSafetySettings;
 
-  constructor({ project, location, keyFilename, defaultTemperature, safetySettings, name }: GoogleVertexAiConfig = {}) {
+  constructor({ project, location, keyFilename, safetySettings, name }: GoogleVertexAiConfig = {}) {
     this.name = name || "google-vertex-ai";
     const config = {
       project: project || process.env.GCP_PROJECT,
@@ -94,7 +92,6 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       project: config.project,
     });
 
-    this.defaultTemperature = defaultTemperature ?? 0;
     if (safetySettings) {
       this.safetySettings = safetySettings;
     }
@@ -113,7 +110,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       model,
     });
 
-    const temperature = config.temperature || 0;
+    const temperature = config.temperature || undefined;
     const maxTokens = config.maxTokens || undefined;
 
     let response: GenerateContentResponse;
@@ -196,6 +193,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       meta: {
         model,
         provider,
+        temperature,
         durationMs,
         inputTokens,
         outputTokens,
@@ -216,7 +214,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       model,
     });
 
-    const temperature = config.temperature || 0;
+    const temperature = config.temperature || undefined;
     const maxTokens = config.maxTokens || undefined;
 
     const response: StreamGenerateContentResult = await generativeModel.generateContentStream({
@@ -263,6 +261,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       meta: {
         model,
         provider,
+        temperature,
         durationMs,
         inputTokens,
         outputTokens,

@@ -16,23 +16,20 @@ import { LlmToolKit } from "../../tools";
 export interface GroqConfig {
   apiKey?: string;
   apiUrl?: string;
-  defaultTemperature?: number;
   name?: string;
 }
 
 /** Provides access to Groq and other compatible services */
 export class GroqProvider implements LlmCoreProvider {
   public readonly name;
-  public defaultTemperature;
   private client: Groq;
 
-  constructor({ apiKey, apiUrl, defaultTemperature, name }: GroqConfig = {}) {
+  constructor({ apiKey, apiUrl, name }: GroqConfig = {}) {
     this.name = name || "groq";
     this.client = new Groq({
       apiKey: apiKey ?? process.env.Groq_API_KEY,
       baseURL: apiUrl,
     });
-    this.defaultTemperature = defaultTemperature ?? 0;
   }
 
   async generateResponse(
@@ -42,10 +39,12 @@ export class GroqProvider implements LlmCoreProvider {
   ): Promise<LlmResponse> {
     const start = Date.now();
 
+    const temperature = config.temperature || undefined;
+
     const response = await this.client.chat.completions.create({
       model,
       messages: await convertLlmMessagesToGroqMessages(messages),
-      temperature: config.temperature || this.defaultTemperature,
+      temperature,
       max_tokens: config.maxTokens || undefined,
       response_format: config.json ? { type: "json_object" } : { type: "text" },
       tools: config.tools?.asLlmFunctions,
@@ -93,6 +92,7 @@ export class GroqProvider implements LlmCoreProvider {
       meta: {
         model,
         provider,
+        temperature,
         durationMs,
         inputTokens,
         outputTokens,
@@ -107,10 +107,12 @@ export class GroqProvider implements LlmCoreProvider {
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
     const start = Date.now();
 
+    const temperature = config.temperature || undefined;
+
     const response = await this.client.chat.completions.create({
       model,
       messages: await convertLlmMessagesToGroqMessages(messages),
-      temperature: config.temperature || this.defaultTemperature,
+      temperature,
       response_format: config.json ? { type: "json_object" } : { type: "text" },
       max_tokens: config.maxTokens || undefined,
       stream: true,
@@ -139,6 +141,7 @@ export class GroqProvider implements LlmCoreProvider {
       meta: {
         model,
         provider,
+        temperature,
         durationMs,
         inputTokens,
         outputTokens,
