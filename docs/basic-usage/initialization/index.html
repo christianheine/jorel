@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.7.0">
 <title data-rh="true">Initialization | JorEl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://christianheine.github.io/jorel/docs/basic-usage/initialization"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Initialization | JorEl"><meta data-rh="true" name="description" content="Creating the JorEl instance"><meta data-rh="true" property="og:description" content="Creating the JorEl instance"><link data-rh="true" rel="icon" href="/jorel/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://christianheine.github.io/jorel/docs/basic-usage/initialization"><link data-rh="true" rel="alternate" href="https://christianheine.github.io/jorel/docs/basic-usage/initialization" hreflang="en"><link data-rh="true" rel="alternate" href="https://christianheine.github.io/jorel/docs/basic-usage/initialization" hreflang="x-default"><link rel="stylesheet" href="/jorel/assets/css/styles.e6f330b1.css">
-<script src="/jorel/assets/js/runtime~main.f7dcd9c5.js" defer="defer"></script>
+<script src="/jorel/assets/js/runtime~main.c7e05ba4.js" defer="defer"></script>
 <script src="/jorel/assets/js/main.7f44aff5.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -75,8 +75,9 @@
 <p><code>temperature</code></p>
 <ul>
 <li>The default temperature to use for all requests using the <code>ask</code>,  <code>json</code> or <code>stream</code> methods.</li>
-<li>Can also be overridden on a per-request basis.</li>
 <li>Defaults to 0.</li>
+<li>Set it to null, in order explicitly use not default temperature.</li>
+<li>Can also be overridden on a per-request basis (including the null setting)</li>
 </ul>
 </li>
 <li>
