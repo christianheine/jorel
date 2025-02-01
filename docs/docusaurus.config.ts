@@ -40,10 +40,10 @@ const config: Config = {
     // image: "img/social-card.jpg",
     navbar: {
       title: "JorEl",
-      // logo: {
-      //   alt: "JorEl Logo",
-      //   src: "img/logo.svg",
-      // },
+      logo: {
+        alt: "JorEl Logo",
+        src: "img/logo.svg",
+      },
       items: [
         {
           to: "docs/quick-start",

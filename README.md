@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" width="140px" alt="JorEl logo" />
+</p>
+
 # JorEl
 
 JorEl is a lightweight, unified wrapper for interacting with multiple large language models (LLMs) such as OpenAI, Anthropic, Groq, Google, Ollama, and more.
