@@ -76,7 +76,7 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToAnthropicMessages(messages);
 
-    const temperature = config.temperature || undefined;
+    const temperature = config.temperature ?? undefined;
 
     const response = await this.client.messages.create({
       model,
@@ -168,7 +168,7 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToAnthropicMessages(messages);
 
-    const temperature = config.temperature || undefined;
+    const temperature = config.temperature ?? undefined;
 
     const responseStream = await this.client.messages.create({
       model,

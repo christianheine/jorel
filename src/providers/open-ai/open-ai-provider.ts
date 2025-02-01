@@ -48,7 +48,7 @@ export class OpenAIProvider implements LlmCoreProvider {
   ): Promise<LlmResponse> {
     const start = Date.now();
 
-    const temperature = config.temperature || undefined;
+    const temperature = config.temperature ?? undefined;
 
     const response = await this.client.chat.completions.create({
       model,
@@ -118,7 +118,7 @@ export class OpenAIProvider implements LlmCoreProvider {
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const start = Date.now();
 
-    const temperature = config.temperature || undefined;
+    const temperature = config.temperature ?? undefined;
 
     const response = await this.client.chat.completions.create({
       model,

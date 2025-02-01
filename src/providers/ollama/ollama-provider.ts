@@ -32,7 +32,7 @@ export class OllamaProvider implements LlmCoreProvider {
   ): Promise<LlmResponse> {
     const start = Date.now();
 
-    const temperature = config.temperature || undefined;
+    const temperature = config.temperature ?? undefined;
 
     const response = await ollama.chat({
       model,
@@ -103,7 +103,7 @@ export class OllamaProvider implements LlmCoreProvider {
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
     const start = Date.now();
 
-    const temperature = config.temperature || undefined;
+    const temperature = config.temperature ?? undefined;
 
     const stream = await ollama.chat({
       model,

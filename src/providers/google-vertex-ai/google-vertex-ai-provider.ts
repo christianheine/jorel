@@ -110,8 +110,8 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       model,
     });
 
-    const temperature = config.temperature || undefined;
-    const maxTokens = config.maxTokens || undefined;
+    const temperature = config.temperature ?? undefined;
+    const maxTokens = config.maxTokens ?? undefined;
 
     let response: GenerateContentResponse;
 
@@ -214,8 +214,8 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       model,
     });
 
-    const temperature = config.temperature || undefined;
-    const maxTokens = config.maxTokens || undefined;
+    const temperature = config.temperature ?? undefined;
+    const maxTokens = config.maxTokens ?? undefined;
 
     const response: StreamGenerateContentResult = await generativeModel.generateContentStream({
       contents: chatMessages,
