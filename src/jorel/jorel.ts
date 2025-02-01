@@ -30,7 +30,7 @@ import {
   OpenAIConfig,
   OpenAIProvider,
 } from "../providers";
-import { LLmToolContextSegment, LlmToolKit } from "../tools";
+import { LlmTool, LlmToolConfiguration, LLmToolContextSegment, LlmToolKit } from "../tools";
 import { JorElCoreStore } from "./jorel.core";
 import { JorElAgentManager } from "./jorel.team";
 import { Nullable } from "../shared";
@@ -53,15 +53,24 @@ export interface JorElCoreGenerationConfig {
   temperature?: Nullable<number>;
 }
 
-export interface JorElAskGenerationConfig extends JorElCoreGenerationConfig {
+export interface JorElGenerationConfigWithTools extends JorElCoreGenerationConfig {
   model?: string;
   systemMessage?: string;
   documentSystemMessage?: string;
   documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection;
+  tools?: LlmToolKit;
+  toolChoice?: LlmToolChoice;
+  maxAttempts?: number;
+  context?: LLmToolContextSegment;
+  secureContext?: LLmToolContextSegment;
 }
 
-export interface JorElAskGenerationConfigWithTools extends JorElAskGenerationConfig {
-  tools?: LlmToolKit;
+export interface JorElAskGenerationConfigWithTools extends JorElCoreGenerationConfig {
+  model?: string;
+  systemMessage?: string;
+  documentSystemMessage?: string;
+  documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection;
+  tools?: LlmToolKit | (LlmTool | LlmToolConfiguration)[];
   toolChoice?: LlmToolChoice;
   maxAttempts?: number;
   context?: LLmToolContextSegment;
@@ -202,7 +211,7 @@ export class JorEl {
    * Get the default temperature for all requests
    */
   public get temperature(): Nullable<number> | undefined {
-    return this._core.defaultConfig.temperature
+    return this._core.defaultConfig.temperature;
   }
 
   /**
@@ -252,7 +261,7 @@ export class JorEl {
    */
   async generate(
     messages: CoreLlmMessage[],
-    config: JorElAskGenerationConfigWithTools = {},
+    config: JorElGenerationConfigWithTools = {},
     json?: boolean,
   ): Promise<JorElGenerationOutput> {
     return this._core.generate(messages, config, json);
@@ -278,7 +287,14 @@ export class JorEl {
   ): Promise<string | { response: string; meta: LlmAssistantMessageMeta; messages: CoreLlmMessage[] }> {
     const { output, messages } = await this._core.generateAndProcessTools(
       this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage),
-      config,
+      {
+        ...config,
+        tools: config.tools
+          ? config.tools instanceof LlmToolKit
+            ? config.tools
+            : new LlmToolKit(config.tools)
+          : undefined,
+      },
       false,
       true,
     );
@@ -307,7 +323,19 @@ export class JorEl {
     includeMeta = false,
   ): Promise<object | { response: object; meta: LlmAssistantMessageMeta; messages: CoreLlmMessage[] }> {
     const _messages = this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage);
-    const { output, messages } = await this._core.generateAndProcessTools(_messages, config, true, true);
+    const { output, messages } = await this._core.generateAndProcessTools(
+      _messages,
+      {
+        ...config,
+        tools: config.tools
+          ? config.tools instanceof LlmToolKit
+            ? config.tools
+            : new LlmToolKit(config.tools)
+          : undefined,
+      },
+      true,
+      true,
+    );
     const parsed = output.content ? LlmToolKit.deserialize(output.content) : {};
     return includeMeta ? { response: parsed, meta: output.meta, messages } : parsed;
   }
@@ -317,7 +345,7 @@ export class JorEl {
    * @param messages
    * @param config
    */
-  async *generateContentStream(messages: CoreLlmMessage[], config: JorElAskGenerationConfigWithTools = {}) {
+  async *generateContentStream(messages: CoreLlmMessage[], config: JorElGenerationConfigWithTools = {}) {
     yield* this._core.generateContentStream(messages, config);
   }
 
@@ -328,9 +356,17 @@ export class JorEl {
    */
   async *stream(task: JorElTaskInput, config: JorElAskGenerationConfigWithTools = {}) {
     const messages = this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage);
+    const _config = {
+      ...config,
+      tools: config.tools
+        ? config.tools instanceof LlmToolKit
+          ? config.tools
+          : new LlmToolKit(config.tools)
+        : undefined,
+    };
     const stream = config.tools
-      ? this._core.generateStreamAndProcessTools(messages, config) // Still experimental
-      : this._core.generateContentStream(messages, config);
+      ? this._core.generateStreamAndProcessTools(messages, _config)
+      : this._core.generateContentStream(messages, _config);
     for await (const chunk of stream) {
       if (chunk.content) yield chunk.content;
     }

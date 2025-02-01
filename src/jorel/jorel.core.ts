@@ -8,7 +8,7 @@ import {
   LlmStreamResponseWithToolCalls,
 } from "../providers";
 import { maskAll, MaybeUndefined, omit } from "../shared";
-import { JorElAskGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
+import { JorElGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
 import { JorElModelManager } from "./jorel.models";
 import { JorElProviderManager } from "./jorel.providers";
 
@@ -49,7 +49,7 @@ export class JorElCoreStore {
    */
   async generate(
     messages: CoreLlmMessage[],
-    config: Omit<JorElAskGenerationConfigWithTools, "systemMessage" | "documents"> = {},
+    config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
     json?: boolean,
   ): Promise<JorElGenerationOutput> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
@@ -92,7 +92,7 @@ export class JorElCoreStore {
    */
   async generateAndProcessTools(
     messages: CoreLlmMessage[],
-    config: Omit<JorElAskGenerationConfigWithTools, "systemMessage" | "documents"> = {},
+    config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
     json = false,
     autoApprove = false,
   ): Promise<{ output: JorElGenerationOutput; messages: CoreLlmMessage[] }> {
@@ -146,7 +146,7 @@ export class JorElCoreStore {
    */
   async *generateContentStream(
     messages: CoreLlmMessage[],
-    config: Omit<JorElAskGenerationConfigWithTools, "systemMessage" | "documents"> = {},
+    config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
@@ -187,7 +187,7 @@ export class JorElCoreStore {
    */
   async *generateStreamAndProcessTools(
     messages: CoreLlmMessage[],
-    config: Omit<JorElAskGenerationConfigWithTools, "systemMessage" | "documents"> = {},
+    config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
     autoApprove = false,
   ): AsyncGenerator<LlmStreamResponseChunk, void, undefined> {
     if (config.tools && config.tools.tools.some((t) => t.type !== "function")) {
