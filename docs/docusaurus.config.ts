@@ -7,8 +7,9 @@ const config: Config = {
   tagline: "The easiest way to use LLMs - from simple text generation to advanced agent systems",
   favicon: "img/favicon.ico",
 
-  url: "https://christianheine.github.io",
+  url: "https://christianheine.github.io/",
   baseUrl: "/jorel/",
+  trailingSlash: false,
 
   // GitHub pages deployment config.
   organizationName: "christianheine",
