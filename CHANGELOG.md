@@ -1,17 +1,23 @@
 # Changelog
 
-## 0.8.5
+## 0.9.0 (unreleased)
+
+- Further simplify how tools can be passed to the `ask`, `json` and `stream` methods
+- Add new method `streamWithMeta` to create streams with metadata (including intermediate messages during tool processing)
+- Improve examples
+
+## 0.8.5 (2025-02-01)
 
 - Add feature to easily load documents from local files
 - Improve support for models w/o temperature parameter (e.g., o3-mini)
 - Improve support for models w/o system message (e.g., o1-mini)
 - Add o3-mini to default models, and add example
 
-## 0.8.4
+## 0.8.4 (2025-01-23)
 
 - Future-proof embed signature and add documentation
 
-## 0.8.3 (2025-01-23)
+## 0.8.3 (2025-01-22)
 
 - Add helpers to generate system and user messages from an existing JorEl instance
 - Return previous messages (including tool messages which were internally generated) from the `ask` and `json` methods

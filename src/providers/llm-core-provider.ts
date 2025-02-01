@@ -208,6 +208,11 @@ export interface LlmStreamResponseWithToolCalls {
   meta: LlmAssistantMessageMeta;
 }
 
+export interface LlmStreamResponseMessages {
+  type: "messages";
+  messages: CoreLlmMessage[];
+}
+
 export interface LlmCoreProvider {
   readonly name: string;
 

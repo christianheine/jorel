@@ -24,6 +24,10 @@ import {
   LlmAssistantMessageWithToolCalls,
   LlmCoreProvider,
   LlmMessage,
+  LlmStreamResponse,
+  LlmStreamResponseChunk,
+  LlmStreamResponseMessages,
+  LlmStreamResponseWithToolCalls,
   LlmToolChoice,
   OllamaConfig,
   OllamaProvider,
@@ -354,7 +358,29 @@ export class JorEl {
    * @param task
    * @param config
    */
-  async *stream(task: JorElTaskInput, config: JorElAskGenerationConfigWithTools = {}) {
+  async *stream(
+    task: JorElTaskInput,
+    config: JorElAskGenerationConfigWithTools = {},
+  ): AsyncGenerator<string, void, unknown> {
+    const stream = this.streamWithMeta(task, config);
+    for await (const chunk of stream) {
+      if (chunk.type === "chunk" && chunk.content) yield chunk.content;
+    }
+  }
+
+  /**
+   * Generate a stream of response chunks for a given task with metadata
+   * @param task
+   * @param config
+   */
+  async *streamWithMeta(
+    task: JorElTaskInput,
+    config: JorElAskGenerationConfigWithTools = {},
+  ): AsyncGenerator<
+    LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls | LlmStreamResponseMessages,
+    void,
+    unknown
+  > {
     const messages = this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage);
     const _config = {
       ...config,
@@ -364,11 +390,11 @@ export class JorEl {
           : new LlmToolKit(config.tools)
         : undefined,
     };
-    const stream = config.tools
-      ? this._core.generateStreamAndProcessTools(messages, _config)
-      : this._core.generateContentStream(messages, _config);
-    for await (const chunk of stream) {
-      if (chunk.content) yield chunk.content;
+    if (config.tools) {
+      yield* this._core.generateStreamAndProcessTools(messages, _config);
+    } else {
+      yield* this._core.generateContentStream(messages, _config);
+      yield { type: "messages", messages };
     }
   }
 

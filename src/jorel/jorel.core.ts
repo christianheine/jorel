@@ -5,6 +5,7 @@ import {
   InitLlmGenerationConfig,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseMessages,
   LlmStreamResponseWithToolCalls,
 } from "../providers";
 import { maskAll, MaybeUndefined, omit } from "../shared";
@@ -189,16 +190,20 @@ export class JorElCoreStore {
     messages: CoreLlmMessage[],
     config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
     autoApprove = false,
-  ): AsyncGenerator<LlmStreamResponseChunk, void, undefined> {
+  ): AsyncGenerator<
+    LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls | LlmStreamResponseMessages,
+    void,
+    unknown
+  > {
     if (config.tools && config.tools.tools.some((t) => t.type !== "function")) {
       throw new Error("Only tools with a function executor can be used in this context");
     }
 
     const maxAttempts = config.maxAttempts || (config.tools ? 3 : 1);
+    let response: MaybeUndefined<LlmStreamResponse | LlmStreamResponseWithToolCalls> = undefined;
     for (let i = 0; i < maxAttempts; i++) {
       const stream = this.generateContentStream(messages, config);
 
-      let response: MaybeUndefined<LlmStreamResponse | LlmStreamResponseWithToolCalls> = undefined;
       for await (const chunk of stream) {
         if (chunk.type === "chunk") {
           yield chunk;
@@ -223,6 +228,13 @@ export class JorElCoreStore {
 
       messages.push(generateAssistantMessage(response.content, response.toolCalls));
     }
+
+    if (response) yield response;
+
+    yield {
+      type: "messages",
+      messages,
+    };
   }
 
   /**
