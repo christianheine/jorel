@@ -9,13 +9,13 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
 
-  // When requesting metadata (third function parameter), the response will include additional information about the request
+  // When requesting metadata, the JorEl will return additional information
   const { response, meta, messages } = await jorEl.ask(
     "What are the capitals of France and Germany?",
     {
       systemMessage: "Answer as succinctly as possible",
     },
-    true,
+    true, // Request metadata
   );
 
   console.log(response);
@@ -25,6 +25,7 @@ const main = async () => {
   // {
   //   model: 'gpt-4o-mini',
   //   provider: 'openai',
+  //   temperature: 0,
   //   durationMs: 757,
   //   inputTokens: 26,
   //   outputTokens: 16

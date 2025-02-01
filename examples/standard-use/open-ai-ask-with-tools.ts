@@ -8,8 +8,9 @@ import { getWeather } from "../_utilities/get-weather";
 config({ path: "../../.env" });
 
 const main = async () => {
-  const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
+  const jorEl = new JorEl({ openAI: true, logger: "console", logLevel: 'silly' }); // Uses process.env.OPENAI_API_KEY
 
+  // Defining a toolkit is optional in this scenario, but useful for organizing and reusing tools
   const tools = new LlmToolKit([
     {
       name: "get_stock_data",

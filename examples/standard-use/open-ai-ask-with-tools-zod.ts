@@ -1,65 +1,69 @@
 #!/usr/bin/env ts-node
 
 import { config } from "dotenv";
-import { JorEl, LlmToolKit } from "../../src";
+import { JorEl } from "../../src";
 import { getStockValue } from "../_utilities/get-stock-value";
 import { z } from "zod";
 
 config({ path: "../../.env" });
 
 const main = async () => {
+
+  // Create instance with pre-initialized OpenAI provider (and default models)
   const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
 
-  const tools = new LlmToolKit([
-    {
-      name: "get_stock_data",
-      description: "Get stock data for a given ticker symbol (previous day)",
-      executor: getStockValue, // Returns random data
-      params: z.object({ tickerSymbol: z.string() }),
-    },
-  ]);
-
+  // Generate a response with tools
   const { response, meta, messages } = await jorEl.ask(
     "What is the current stock price for Apple?",
-    { tools },
-    true);
+    {
+      tools: [
+        {
+          name: "get_stock_data",
+          description: "Get stock data for a given ticker symbol (previous day)",
+          executor: getStockValue,
+          params: z.object({ tickerSymbol: z.string() }),
+        },
+      ],
+    },
+    true,
+  );
 
   console.log(response);
-  // The current stock price for Apple (AAPL) is $445.23.
+  // The current stock price for Apple (AAPL) is $237.59.
 
   console.log(meta);
   // {
   //   model: 'gpt-4o-mini',
   //   provider: 'openai',
-  //   temperature: undefined,
-  //   durationMs: 1804,
-  //   inputTokens: 134,
+  //   temperature: 0,
+  //   durationMs: 962,
+  //   inputTokens: 125,
   //   outputTokens: 18
   // }
 
   console.dir(messages, { depth: null });
   // [
   //   {
-  //     id: '827d5c2a-cce4-4f67-916d-51232e139a7a',
+  //     id: '698d590f-a791-4235-a10a-d94265c381b8',
   //     role: 'system',
   //     content: 'You are a helpful assistant.',
-  //     createdAt: 1738361692615
+  //     createdAt: 1738366791021
   //   },
   //   {
-  //     id: 'd8a55c59-7371-44a8-8add-d5e528e83a1b',
+  //     id: 'd3c7cef4-3945-4b70-9ec6-07d4d89b62fc',
   //     role: 'user',
   //     content: 'What is the current stock price for Apple?',
-  //     createdAt: 1738361692615
+  //     createdAt: 1738366791021
   //   },
   //   {
-  //     id: '339350fb-ccea-40dd-9837-b6f346b016ae',
+  //     id: 'b24bb898-10c7-49e6-9ed4-23bd81181a68',
   //     role: 'assistant_with_tools',
   //     content: null,
   //     toolCalls: [
   //       {
-  //         id: '62c5434e-1c12-4904-a0a2-cb196cbe33bc',
+  //         id: '5e473d40-8ed7-4dd5-8cdb-e69f22cf9d5f',
   //         request: {
-  //           id: 'call_QCsco1QYILSpazNcUWVykYAr',
+  //           id: 'call_SbnVmztcNvjMIox749NjOY2w',
   //           function: {
   //             name: 'get_stock_data',
   //             arguments: { tickerSymbol: 'AAPL' }
@@ -68,16 +72,15 @@ const main = async () => {
   //         approvalState: 'noApprovalRequired',
   //         executionState: 'completed',
   //         result: {
-  //           date: '2025-01-30',
-  //           tickerSymbol: 'AAPL',
-  //           open: 436.21986165374426,
-  //           close: 445.2300153342376,
-  //           volume: 1000000
+  //           symbol: 'AAPL',
+  //           open: 238.665,
+  //           close: 237.59,
+  //           volume: 53505269
   //         },
   //         error: null
   //       }
   //     ],
-  //     createdAt: 1738361693962
+  //     createdAt: 1738366793417
   //   }
   // ]
 };

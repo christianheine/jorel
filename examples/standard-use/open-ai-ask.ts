@@ -9,9 +9,10 @@ const main = async () => {
   // Create instance with pre-initialized OpenAI provider (and default models)
   const jorEl = new JorEl({
     openAI: { apiKey: process.env.OPENAI_API_KEY },
+    systemMessage: "Answer as few words as possible",
   });
 
-  const response = await jorEl.ask("What is the capital of France, in one word?");
+  const response = await jorEl.ask("What is the capital of France");
 
   console.log(response);
   // Paris

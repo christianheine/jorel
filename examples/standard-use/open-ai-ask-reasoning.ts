@@ -14,24 +14,12 @@ const main = async () => {
   // Will return a string
   const response = await jorEl.ask("How many r's are in `strawberry`?", {
     model: "o1-mini",
-    systemMessage: "", // o1-mini doesn't support system messages, so we need to pass an empty string
+    systemMessage: "", // o1-mini doesn't support system messages, so we pass an empty string
   });
 
   console.log(response);
   // The word **"strawberry"** contains **three** letter **"r"**s. Here's the breakdown:
-  //
-  // - **s**
-  // - **t**
-  // - **r**
-  // - **a**
-  // - **w**
-  // - **b**
-  // - **e**
-  // - **r**
-  // - **r**
-  // - **y**
-  //
-  // So, the **"r"** appears three times in "strawberry."
+  // ...
 };
 
 void main();
