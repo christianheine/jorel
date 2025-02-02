@@ -22,7 +22,7 @@ The full documentation is available at [https://christianheine.github.io/jorel/]
 - **Tool Integration**: First-class support for function calling and external tools
 - **Document Grounding**: Easy integration of external documents for context
 - **Agent Framework**: Simple but powerful system for complex task processing
-- **Type Safety**: Full TypeScript support with type inference
+- **Type Safety**: Fully written in TypeScript
 
 ## Why JorEl?
 
@@ -110,7 +110,7 @@ Allows to pass images to the model.
 Allows to pass documents to the model. This helps with context and grounding.
 
 ```typescript
-const companyProfile = await aDocument.fromFile("company-profile.txt");
+const companyProfile = await LlmDocument.fromFile("company-profile.txt");
 const response = await jorEl.ask("What are the products of this company?", {
   documents: [companyProfile]
 });
@@ -193,14 +193,14 @@ const weatherAgent = jorel.team.addAgent({
 
 // Create and execute a task
 const task = await jorel.team.createTask("What's the weather in Sydney?");
-const result = await jorel.team.executeTask(task, {
+const taskExecution = await jorel.team.executeTask(task, {
   limits: {
     maxIterations: 10,
     maxGenerations: 6
   }
 });
 
-console.log(result.result);
+console.log(taskExecution.result);
 // {
 //   "city": "Sydney",
 //   "temperature": 22,
@@ -224,12 +224,6 @@ mainAgent.addDelegate({
   systemMessageTemplate: "You are a weather specialist.",
   allowedTools: ["get_weather"]
 });
-
-// The main agent will automatically delegate weather-related queries
-const response = await jorel.ask(
-  "What's the weather like in Sydney and what should I wear?",
-  { agent: "main_agent" }
-);
 ```
 
 ### Provider Support
