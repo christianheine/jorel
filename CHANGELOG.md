@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.0 (unreleased)
+## 0.9.0 (2025-02-02)
 
 - Further simplify how tools can be passed to the `ask`, `json` and `stream` methods
 - Add new method `streamWithMeta` to create streams with metadata (including intermediate messages during tool processing)
