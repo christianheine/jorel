@@ -1,4 +1,5 @@
 import { LlmDocument } from "../../documents";
+import fs from "fs";
 
 describe("LlmDocument", () => {
   describe("constructor", () => {
@@ -93,6 +94,76 @@ describe("LlmDocument", () => {
         source: "test",
         attributes: { key: "value" },
       });
+    });
+  });
+
+  describe("fromLocalFile", () => {
+    it("should create a document from a markdown file", async () => {
+      const doc = await LlmDocument.fromLocalFile("src/__tests__/documents/testfile.md");
+
+      expect(doc.id).toBeDefined();
+      expect(doc.type).toBe("markdown");
+      expect(doc.title).toBe("testfile.md");
+      expect(doc.content).toBe("# headline\n\nSome content");
+      expect(doc.source).toBe("src/__tests__/documents/testfile.md");
+    });
+
+    it("should create a document from a text file", async () => {
+      const doc = await LlmDocument.fromLocalFile("src/__tests__/documents/testfile.txt");
+
+      expect(doc.id).toBeDefined();
+      expect(doc.type).toBe("text");
+      expect(doc.title).toBe("testfile.txt");
+      expect(doc.content).toBe("Some content");
+      expect(doc.source).toBe("src/__tests__/documents/testfile.txt");
+    });
+
+    it("should respect provided metadata when creating from file", async () => {
+      const doc = await LlmDocument.fromLocalFile("src/__tests__/documents/testfile.txt", {
+        id: "custom-id",
+        type: "text",
+        title: "Custom Title",
+      });
+
+      expect(doc.id).toBe("custom-id");
+      expect(doc.type).toBe("text");
+      expect(doc.title).toBe("Custom Title");
+      expect(doc.content).toBe("Some content");
+    });
+  });
+
+  describe("writeContentToLocalFile", () => {
+    it("should write document content to a file", async () => {
+      const tempPath = "src/__tests__/documents/temp-test-file.txt";
+      const doc = new LlmDocument({
+        title: "Test Write",
+        content: "Content to write",
+      });
+
+      await doc.writeContentToLocalFile(tempPath);
+      
+      const written = await fs.promises.readFile(tempPath, "utf-8");
+      expect(written).toBe("Content to write");
+      
+      // Cleanup
+      await fs.promises.unlink(tempPath);
+    });
+  });
+
+  describe("md", () => {
+    it("should create a markdown document with the static method", () => {
+      const doc = LlmDocument.md({
+        id: "md-123",
+        title: "Markdown Doc",
+        content: "# Markdown content",
+        source: "test",
+      });
+
+      expect(doc.id).toBe("md-123");
+      expect(doc.type).toBe("markdown");
+      expect(doc.title).toBe("Markdown Doc");
+      expect(doc.content).toBe("# Markdown content");
+      expect(doc.source).toBe("test");
     });
   });
 });
