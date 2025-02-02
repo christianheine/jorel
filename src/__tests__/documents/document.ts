@@ -1,5 +1,5 @@
 import { LlmDocument } from "../../documents";
-import fs from "fs";
+import * as fs from "fs";
 
 describe("LlmDocument", () => {
   describe("constructor", () => {
@@ -97,9 +97,9 @@ describe("LlmDocument", () => {
     });
   });
 
-  describe("fromLocalFile", () => {
+  describe("fromFile", () => {
     it("should create a document from a markdown file", async () => {
-      const doc = await LlmDocument.fromLocalFile("src/__tests__/documents/testfile.md");
+      const doc = await LlmDocument.fromFile("src/__tests__/documents/testfile.md");
 
       expect(doc.id).toBeDefined();
       expect(doc.type).toBe("markdown");
@@ -109,7 +109,7 @@ describe("LlmDocument", () => {
     });
 
     it("should create a document from a text file", async () => {
-      const doc = await LlmDocument.fromLocalFile("src/__tests__/documents/testfile.txt");
+      const doc = await LlmDocument.fromFile("src/__tests__/documents/testfile.txt");
 
       expect(doc.id).toBeDefined();
       expect(doc.type).toBe("text");
@@ -119,7 +119,7 @@ describe("LlmDocument", () => {
     });
 
     it("should respect provided metadata when creating from file", async () => {
-      const doc = await LlmDocument.fromLocalFile("src/__tests__/documents/testfile.txt", {
+      const doc = await LlmDocument.fromFile("src/__tests__/documents/testfile.txt", {
         id: "custom-id",
         type: "text",
         title: "Custom Title",
@@ -132,6 +132,63 @@ describe("LlmDocument", () => {
     });
   });
 
+  describe("fromFiles", () => {
+    it("should create a list of documents from multiple files", async () => {
+      const docs = await LlmDocument.fromFiles([
+        "src/__tests__/documents/testfile.md",
+        "src/__tests__/documents/testfile-2.md",
+      ]);
+
+      expect(docs).toHaveLength(2);
+
+      expect(docs[0].title).toBe("testfile.md");
+      expect(docs[0].content).toBe("# headline\n\nSome content");
+
+      expect(docs[1].title).toBe("testfile-2.md");
+      expect(docs[1].content).toBe("# headline 2\n\nMore content");
+    });
+
+    it("should respect provided metadata when creating from files", async () => {
+      const docs = await LlmDocument.fromFiles(
+        ["src/__tests__/documents/testfile.md", "src/__tests__/documents/testfile-2.md"],
+        { type: "text", title: "Custom Title" },
+      );
+
+      expect(docs[0].type).toBe("text");
+      expect(docs[0].title).toBe("Custom Title 1");
+      expect(docs[0].content).toBe("# headline\n\nSome content");
+
+      expect(docs[1].type).toBe("text");
+      expect(docs[1].title).toBe("Custom Title 2");
+      expect(docs[1].content).toBe("# headline 2\n\nMore content");
+    });
+  });
+
+  describe("fromUrl", () => {
+    it("should create a document from a URL", async () => {
+      const doc = await LlmDocument.fromUrl("https://example.com");
+
+      expect(doc.id).toBeDefined();
+      expect(doc.type).toBe("text");
+      expect(doc.title).toBe("https://example.com");
+      expect(doc.content).toContain("Example Domain");
+      expect(doc.source).toBe("https://example.com");
+    });
+
+    it("should respect provided metadata when creating from URL", async () => {
+      const doc = await LlmDocument.fromUrl("https://example.com", {
+        id: "custom-id",
+        type: "markdown",
+        title: "Custom Title",
+      });
+
+      expect(doc.id).toBe("custom-id");
+      expect(doc.type).toBe("markdown");
+      expect(doc.title).toBe("Custom Title");
+      expect(doc.content).toContain("Example Domain");
+    });
+  });
+
   describe("writeContentToLocalFile", () => {
     it("should write document content to a file", async () => {
       const tempPath = "src/__tests__/documents/temp-test-file.txt";
@@ -141,10 +198,10 @@ describe("LlmDocument", () => {
       });
 
       await doc.writeContentToLocalFile(tempPath);
-      
+
       const written = await fs.promises.readFile(tempPath, "utf-8");
       expect(written).toBe("Content to write");
-      
+
       // Cleanup
       await fs.promises.unlink(tempPath);
     });

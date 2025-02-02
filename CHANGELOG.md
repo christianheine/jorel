@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1 (unreleased)
+
+- Allow documents to be instantiated from a url, a list of urls, or a list of file paths 
+- Allow images to be instantiated from a list of files or urls
+- Improve error handling for empty tasks
+
 ## 0.9.0 (2025-02-02)
 
 - Further simplify how tools can be passed to the `ask`, `json` and `stream` methods

@@ -11,23 +11,19 @@ JorEl allows you to provide context documents to inform the LLM's responses. Doc
 Here's a basic example of using documents with JorEl:
 
 ```typescript
-import { JorEl } from 'jorel';
+import { JorEl } from "jorel";
 
-const jorEl = new JorEl({
-  openAI: true,
+const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
+
+// Load document from local documentation files
+const jorElIntro = await LlmDocument.fromFile("../../docs/docs/intro.md");
+const jorElQuickStart = await LlmDocument.fromFile("../../docs/docs/quick-start.md");
+
+// Generate the response with the documents as context
+const response = await jorEl.ask("Describe the main features of JorEl.", {
+  documents: [jorElIntro, jorElQuickStart],
+  systemMessage: "Be succinct"
 });
-
-const response = await jorEl.ask(
-  "What is the best company for sustainable packaging?",
-  {
-    documents: [{
-      title: "Company Profile",
-      content: "PackMojo is a leading provider of custom printed packaging solutions. " +
-        "They offer sustainable packaging options including biodegradable materials.",
-      source: "https://packmojo.com",
-    }],
-  }
-);
 
 console.log(response);
 ```
@@ -41,7 +37,7 @@ The simplest way to create a document is to pass an object with `title` and `con
 ```typescript
 const document = {
   title: "Company Profile",
-  content: "PackMojo is a leading provider...",
+  content: "Our company is a leading provider of...",
 };
 ```
 
@@ -54,8 +50,8 @@ const document = {
   id: "doc-001",           // Optional: Unique identifier
   type: "article",         // Optional: Document type (default: "text")
   title: "Company Profile",
-  content: "PackMojo is...",
-  source: "https://packmojo.com",  // Optional: Source URL or reference
+  content: "Our company is a leading provider of...",
+  source: "https://yourcompany.com",  // Optional: Source URL or reference
   attributes: {            // Optional: Additional metadata
     author: "John Doe",
     date: "2024-03-20",
@@ -74,13 +70,13 @@ import { LlmDocument } from 'jorel';
 // Create using constructor
 const doc1 = new LlmDocument({
   title: "Company Profile",
-  content: "PackMojo is...",
+  content: "Our company makes...",
 });
 
 // Create using static text method
 const doc2 = LlmDocument.text("doc-002", {
   title: "Product Catalog",
-  content: "Our sustainable products...",
+  content: "Our products...",
 });
 ```
 

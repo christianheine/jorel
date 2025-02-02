@@ -85,6 +85,22 @@ describe("ImageContent", () => {
     });
   });
 
+  describe("fromFiles", () => {
+    it("should create an array of ImageContent instances from an array of file paths", async () => {
+      const filePaths = ["/path/to/image1.png", "/path/to/image2.png"];
+      const buffer = Buffer.from("file data");
+      const mimeType = "image/png";
+      mockedFs.readFile.mockResolvedValue(buffer);
+      mockedFromBuffer.mockResolvedValue({ mime: mimeType, ext: "png" });
+
+      const imageContents = await ImageContent.fromFiles(filePaths, mimeType);
+      expect(imageContents).toHaveLength(2);
+      imageContents.forEach((imageContent) => {
+        expect(imageContent).toBeInstanceOf(ImageContent);
+      });
+    });
+  });
+
   describe("toBuffer", () => {
     it("should return the image as a buffer", async () => {
       const buffer = Buffer.from("file data");

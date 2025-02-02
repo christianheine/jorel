@@ -129,20 +129,18 @@ console.log(response);
 You can provide context documents to inform the LLM's response:
 
 ```typescript
-const response = await jorEl.ask("What is the best company for sustainable custom packaging?", {
-  documents: [
-    {
-      title: "Company Profile",
-      content: "PackMojo is a leading provider of custom printed packaging solutions. " +
-        "They offer a wide range of sustainable packaging options, " +
-        "including biodegradable materials and recycled content, and soy-based inks.",
-      source: "https://packmojo.com",
-    },
-  ],
+// Load document from local documentation files
+const jorElIntro = await LlmDocument.fromFile("../../docs/docs/intro.md");
+const jorElQuickStart = await LlmDocument.fromFile("../../docs/docs/quick-start.md");
+
+// Generate the response with the documents as context
+const response = await jorEl.ask("Describe the main features of JorEl.", {
+  documents: [jorElIntro, jorElQuickStart],
+  systemMessage: "Be succinct"
 });
 
 console.log(response);
-// [PackMojo](https://packmojo.com) is an excellent choice for sustainable custom packaging.
+// JorEl is a powerful TypeScript library that provides a unified interface for working with multiple Large Language Models (LLMs).
 ```
 
 ### Using Tools

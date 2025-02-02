@@ -11,8 +11,8 @@ const main = async () => {
   const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
 
   // Load document from local documentation files
-  const jorElIntro = await LlmDocument.fromLocalFile("../../docs/docs/intro.md");
-  const jorElQuickStart = await LlmDocument.fromLocalFile("../../docs/docs/quick-start.md");
+  const jorElIntro = await LlmDocument.fromFile("../../docs/docs/intro.md");
+  const jorElQuickStart = await LlmDocument.fromFile("../../docs/docs/quick-start.md");
 
   // Generate the response with the documents as context
   const response = await jorEl.ask("Describe the main features of JorEl.", {

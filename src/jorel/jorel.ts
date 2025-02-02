@@ -443,6 +443,15 @@ export class JorEl {
     documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection,
     documentSystemMessage?: string,
   ): LlmMessage[] {
+    if (Array.isArray(content)) {
+      if (content.length === 0) {
+        throw new Error("The task input must not be an empty array.");
+      }
+    } else {
+      if (!content) {
+        throw new Error("The task input must not be empty.");
+      }
+    }
     const _userMessage = this.generateUserMessage(content);
     if (systemMessage !== "" && (systemMessage || this.systemMessage)) {
       // Empty string overrides default to skip system message

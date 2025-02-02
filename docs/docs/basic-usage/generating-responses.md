@@ -128,15 +128,14 @@ jorEl.models.setDefault("claude-3-sonnet-20240229"); // For Anthropic
 You can provide context documents to inform the LLM's responses. While you could also just pass documents into the system or user message, documents provide a more structured way to pass on information.
 
 ```typescript
-const response = await jorEl.ask("What is the best company for sustainable packaging?", {
-  documents: [
-    {
-      title: "Company Profile",
-      content: "PackMojo is a leading provider of custom printed packaging solutions. " +
-        "They offer sustainable packaging options including biodegradable materials.",
-      source: "https://packmojo.com",
-    },
-  ]
+// Load document from local documentation files
+const jorElIntro = await LlmDocument.fromFile("../../docs/docs/intro.md");
+const jorElQuickStart = await LlmDocument.fromFile("../../docs/docs/quick-start.md");
+
+// Generate the response with the documents as context
+const response = await jorEl.ask("Describe the main features of JorEl.", {
+  documents: [jorElIntro, jorElQuickStart],
+  systemMessage: "Be succinct"
 });
 ```
 

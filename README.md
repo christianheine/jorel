@@ -94,15 +94,15 @@ for await (const chunk of stream) {
 Allows to pass images to the model.
 
 ```typescript
-  // Load image
-  const localImage = await ImageContent.fromFile("./image.png");
+// Load image
+const localImage = await ImageContent.fromFile("./image.png");
 
-  // Pass image along with the question
-  const response = await jorEl.ask([
-    "Can you describe what is in this image?",
-    localImage
-  ]);
-// The image shows a cute cat (or whatever is in the image)
+// Pass image along with the question
+const response = await jorEl.ask([
+  "Can you describe what is in this image?",
+  localImage
+]);
+// The image shows a cute cat sitting on a chair.
 ```
 
 #### 5. **Document Context**

@@ -69,6 +69,14 @@ export class ImageContent {
   }
 
   /**
+   * Instantiates an array of images from an array of URLs
+   * @param urls Array of URLs
+   */
+  static async fromUrls(urls: string[]): Promise<ImageContent[]> {
+    return Promise.all(urls.map((url) => ImageContent.fromUrl(url)));
+  }
+
+  /**
    * Instantiates an image from an existing buffer
    * @param buffer Buffer containing the image data
    * @param mimeType (optional) MIME type of the image
@@ -96,6 +104,15 @@ export class ImageContent {
       const message = e instanceof Error ? e.message : typeof e === "string" ? e : "Unknown error";
       throw new Error(`Failed to read file: ${filePath}, error: ${message}`);
     }
+  }
+
+  /**
+   * Instantiates an array of images from an array of file paths
+   * @param files Array of file paths
+   * @param mimeType (optional) MIME type of the images
+   */
+  static async fromFiles(files: string[], mimeType?: string): Promise<ImageContent[]> {
+    return Promise.all(files.map((file) => ImageContent.fromFile(file, mimeType)));
   }
 
   /**
@@ -173,5 +190,22 @@ export class ImageContent {
       data: `data:${mimeType};base64,${data}`,
       mimeType,
     };
+  }
+
+  /**
+   * Returns a string representation of the ImageContent instance
+   * @returns A string describing the image source
+   */
+  toString(): string {
+    switch (this._source.type) {
+      case "buffer":
+        return `ImageContent (buffer, MIME type: ${this._source.mimeType}, ${this._source.buffer.length} bytes)`;
+      case "base64":
+        return `ImageContent (base64, MIME type: ${this._source.mimeType}, ${this._source.data.length} bytes)`;
+      case "url":
+        return `ImageContent (URL: ${this._source.url}, MIME type: ${this._source.mimeType})`;
+      default:
+        return "ImageContent (unknown source)";
+    }
   }
 }

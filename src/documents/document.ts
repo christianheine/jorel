@@ -56,9 +56,22 @@ export class LlmDocument {
   }
 
   /**
+   * @deprecated Use `fromFile` instead
+   */
+  static async fromLocalFile(
+    path: string,
+    meta: Partial<Pick<LlmDocument, "type" | "title" | "id">> = {},
+  ): Promise<LlmDocument> {
+    return LlmDocument.fromFile(path, meta);
+  }
+
+  /**
    * Create a new document from a local file
    */
-  static async fromLocalFile(path: string, meta: Partial<Pick<LlmDocument, 'type' | 'title' | 'id'>> = {}): Promise<LlmDocument> {
+  static async fromFile(
+    path: string,
+    meta: Partial<Pick<LlmDocument, "type" | "title" | "id">> = {},
+  ): Promise<LlmDocument> {
     const content = await fs.promises.readFile(path, "utf-8");
     return new LlmDocument({
       id: meta.id || generateUniqueId(),
@@ -67,6 +80,58 @@ export class LlmDocument {
       content,
       source: path,
     });
+  }
+
+  /**
+   * Create a list of documents from local files
+   */
+  static async fromFiles(
+    paths: string[],
+    meta: Partial<Pick<LlmDocument, "type" | "title">> = {},
+  ): Promise<LlmDocument[]> {
+    return Promise.all(
+      paths.map((path, index) =>
+        LlmDocument.fromFile(path, {
+          ...meta,
+          title: meta.title ? `${meta.title} ${index + 1}` : undefined,
+        }),
+      ),
+    );
+  }
+
+  /**
+   * Create a new document from a URL
+   */
+  static async fromUrl(
+    url: string,
+    meta: Partial<Pick<LlmDocument, "type" | "title" | "id">> = {},
+  ): Promise<LlmDocument> {
+    const response = await fetch(url);
+    const content = await response.text();
+    return new LlmDocument({
+      id: meta.id || generateUniqueId(),
+      type: meta.type || "text",
+      title: meta.title || url,
+      content,
+      source: url,
+    });
+  }
+
+  /**
+   * Create a list of documents from URLs
+   */
+  static async fromUrls(
+    urls: string[],
+    meta: Partial<Pick<LlmDocument, "type" | "title">> = {},
+  ): Promise<LlmDocument[]> {
+    return Promise.all(
+      urls.map((url, index) =>
+        LlmDocument.fromUrl(url, {
+          ...meta,
+          title: meta.title ? `${meta.title} ${index + 1}` : undefined,
+        }),
+      ),
+    );
   }
 
   /**
