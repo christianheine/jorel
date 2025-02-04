@@ -41,6 +41,27 @@ Install JorEl via npm or yarn:
 npm install jorel
 ```
 
+### Starter Repository
+
+To get started quickly, you can also use the [JorEl Starter](https://github.com/christianheine/jorel-starter) repository. It includes pre-configured TypeScript, ESLint, and Prettier settings, 
+along with commonly used utilities like zod and dotenv.
+
+Either clone the repository or use `degit` to create a new project:
+
+```bash
+npx degit christianheine/jorel-starter my-jorel-project
+cd my-jorel-project
+npm install
+```
+
+Then just rename the `.env.example` file to `.env` and add your API keys.
+
+To run the example, use:
+
+```bash
+npm run start
+```
+
 ### Quick start
 
 ```typescript
