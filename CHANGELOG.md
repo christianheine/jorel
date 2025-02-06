@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.9.1 (unreleased)
+## 0.9.2 (2025-02-06)
+
+- Fix issue when approving all tool calls at once (w/o passing any id)
+
+## 0.9.1 (2025-02-02)
 
 - Allow documents to be instantiated from a url, a list of urls, or a list of file paths 
 - Allow images to be instantiated from a list of files or urls
