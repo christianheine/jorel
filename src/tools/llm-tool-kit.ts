@@ -339,7 +339,7 @@ export class LlmToolKit {
     approvalState: "approved" | "rejected",
     idOrIds?: string | string[],
   ): T {
-    const rejectedIds = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+    const rejectedIds = idOrIds ? Array.isArray(idOrIds) ? idOrIds : [idOrIds] : null;
     const toolCalls = input.toolCalls.map((call) => {
       if (call.approvalState === "requiresApproval" && (!rejectedIds || rejectedIds.includes(call.request.id))) {
         return { ...call, approvalState };
