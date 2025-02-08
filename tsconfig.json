@@ -3,15 +3,11 @@
     "target": "ES2020",
     "module": "CommonJS",
     "declaration": true,
+    "removeComments": false,
+    "stripInternal": true,
     "outDir": "./dist",
     "strict": true
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/__tests__/**/*"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/__tests__/**/*"]
 }

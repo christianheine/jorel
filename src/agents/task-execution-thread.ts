@@ -1,5 +1,11 @@
 import { Nullable } from "../shared";
-import { LlmAssistantMessage, LlmAssistantMessageWithToolCalls, LlmToolCall, LlmToolCallApprovalState, LlmUserMessage } from "../providers";
+import {
+  LlmAssistantMessage,
+  LlmAssistantMessageWithToolCalls,
+  LlmToolCall,
+  LlmToolCallApprovalState,
+  LlmUserMessage,
+} from "../providers";
 import { JorElAgentManager } from "../jorel/jorel.team";
 import { LlmAgent } from "./agent";
 import { TaskExecutionThreadEvent } from "./task-execution-thread-event";
@@ -27,6 +33,7 @@ export class TaskExecutionThread {
   readonly events: TaskExecutionThreadEvent[];
   modified: boolean;
 
+  /** @internal */
   private readonly jorEl: JorElAgentManager;
 
   /**
@@ -101,10 +108,12 @@ export class TaskExecutionThread {
     const toolCalls: (LlmToolCall & { messageId: string; threadId: string })[] = [];
     for (const message of this.messages) {
       if (message.role === "assistant_with_tools") {
-        toolCalls.push(...message.toolCalls.map((toolCall) => ({ ...toolCall, messageId: message.id, threadId: this.id })));
+        toolCalls.push(
+          ...message.toolCalls.map((toolCall) => ({ ...toolCall, messageId: message.id, threadId: this.id })),
+        );
       }
     }
-    return toolCalls
+    return toolCalls;
   }
 
   /**
@@ -113,7 +122,11 @@ export class TaskExecutionThread {
    * @param toolCallIds
    * @param approvalState
    */
-  public approveOrRejectToolCalls(messageId: string, toolCallIds: string[], approvalState: LlmToolCallApprovalState): void {
+  public approveOrRejectToolCalls(
+    messageId: string,
+    toolCallIds: string[],
+    approvalState: LlmToolCallApprovalState,
+  ): void {
     let modified = false;
     this.messages.forEach((message) => {
       if (message.role === "assistant_with_tools" && message.id === messageId) {

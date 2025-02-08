@@ -49,7 +49,7 @@ export class MistralProvider implements LlmCoreProvider {
 
     const response = await this.client.chat.complete({
       model,
-      messages: (await convertLlmMessagesToMistralMessages(messages)),
+      messages: await convertLlmMessagesToMistralMessages(messages),
       temperature,
       responseFormat: config.json ? { type: "json_object" } : { type: "text" },
       maxTokens: config.maxTokens,
@@ -136,7 +136,7 @@ export class MistralProvider implements LlmCoreProvider {
 
     const response = await this.client.chat.stream({
       model,
-      messages: (await convertLlmMessagesToMistralMessages(messages)),
+      messages: await convertLlmMessagesToMistralMessages(messages),
       temperature,
       responseFormat: config.json ? { type: "json_object" } : { type: "text" },
       maxTokens: config.maxTokens,

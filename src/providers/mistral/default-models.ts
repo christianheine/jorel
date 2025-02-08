@@ -9,7 +9,9 @@ export const defaultMistralAiModels: string[] = [
 export const defaultMistralAiEmbeddingModels: {
   model: string;
   dimensions: number;
-}[] = [{
-  model: "mistral-embed",
-  dimensions: 1024,
-}];
+}[] = [
+  {
+    model: "mistral-embed",
+    dimensions: 1024,
+  },
+];

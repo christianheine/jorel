@@ -32,7 +32,10 @@ export class LlmTool {
   public readonly description: string;
   public requiresConfirmation;
 
+  /** @internal */
   private readonly params: MaybeUndefined<LlmFunctionParameters>;
+
+  /** @internal */
   private readonly executor: MaybeUndefined<LlmToolExecutor | "transfer" | "subTask">;
 
   constructor(config: LlmToolConfiguration) {
@@ -94,7 +97,6 @@ export class LlmTool {
   /**
    * Internal helper to validate and normalize parameters
    * @param params
-   * @private
    */
   private validateParams(params: Partial<LlmFunctionParameters>): LlmFunctionParameters {
     const { type, properties, items, required, additionalProperties, ...rest } = params ?? {};

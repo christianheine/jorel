@@ -72,6 +72,7 @@ export class TaskExecution implements TaskExecutionDefinition {
     generations: number;
     delegations: number;
   };
+  /** @internal */
   private readonly jorEl: JorElAgentManager;
 
   /**
@@ -109,6 +110,7 @@ export class TaskExecution implements TaskExecutionDefinition {
     this._haltReason = data.haltReason;
   }
 
+  /** @internal */
   private _status: TaskExecutionStatus;
 
   /**
@@ -131,6 +133,7 @@ export class TaskExecution implements TaskExecutionDefinition {
     }
   }
 
+  /** @internal */
   private _activeThreadId: string;
 
   /**
@@ -148,6 +151,7 @@ export class TaskExecution implements TaskExecutionDefinition {
     this._modified = true;
   }
 
+  /** @internal */
   private _modified: boolean = false;
 
   /**
@@ -164,6 +168,7 @@ export class TaskExecution implements TaskExecutionDefinition {
     this._modified = modified;
   }
 
+  /** @internal */
   private _haltReason: Nullable<TaskExecutionHaltingReason>;
 
   /**

@@ -68,7 +68,7 @@ export const convertLlmMessagesToMistralMessages = async (
 /** Convert user message content to Mistral format */
 async function convertUserMessage(
   message: Extract<CoreLlmMessage, { role: "user" }>,
-  detail?: "low" | "high"
+  detail?: "low" | "high",
 ): Promise<ChatCompletionRequest["messages"][number]> {
   if (typeof message.content === "string") {
     return {
@@ -88,25 +88,26 @@ async function convertUserMessage(
 
     if (typeof _content === "string") {
       content.push({ type: "text", text: _content });
-    } else switch (_content.type) {
-      case "text":
-        content.push({ type: "text", text: _content.text });
-        break;
-      case "imageUrl":
-        content.push({
-          type: "image_url",
-          imageUrl: { url: _content.url, detail },
-        });
-        break;
-      case "imageData":
-        content.push({
-          type: "image_url",
-          imageUrl: { url: _content.data, detail },
-        });
-        break;
-      default:
-        throw new Error(`Unsupported content type: ${(_content as any).type}`);
-    }
+    } else
+      switch (_content.type) {
+        case "text":
+          content.push({ type: "text", text: _content.text });
+          break;
+        case "imageUrl":
+          content.push({
+            type: "image_url",
+            imageUrl: { url: _content.url, detail },
+          });
+          break;
+        case "imageData":
+          content.push({
+            type: "image_url",
+            imageUrl: { url: _content.data, detail },
+          });
+          break;
+        default:
+          throw new Error(`Unsupported content type: ${(_content as any).type}`);
+      }
   }
 
   return { role: "user", content };

@@ -96,11 +96,25 @@ export type JorElGenerationOutput = (LlmAssistantMessage | LlmAssistantMessageWi
  * Jor-El: Singular interface for managing multiple LLM providers and models
  */
 export class JorEl {
-  /** System message use for all requests by default (unless specified per request) */
+  /**
+   * System message use for all requests by default (unless specified per request)
+   */
   public systemMessage;
+
+  /**
+   * Agent related functionality
+   */
   public readonly team: JorElAgentManager;
+
+  /**
+   * Core store for managing providers
+   * @internal
+   */
   private readonly _core: JorElCoreStore;
-  /** Public methods for managing models */
+
+  /**
+   * Public methods for managing models
+   */
   public readonly models = {
     list: () => this._core.modelManager.listModels(),
     register: (params: { model: string; provider: string; setAsDefault?: boolean }) => {
@@ -124,7 +138,10 @@ export class JorEl {
       list: () => this._core.modelManager.listEmbeddingModels(),
     },
   };
-  /** Public methods for managing providers */
+
+  /**
+   * Public methods for managing providers
+   */
   public readonly providers = {
     list: () => this._core.providerManager.listProviders(),
     registerCustom: (provider: string, coreProvider: LlmCoreProvider) =>
@@ -198,17 +215,18 @@ export class JorEl {
   };
 
   /**
-   * Create a new Jor-El instance
-   * @param config
-   * @param config.anthropic Anthropic configuration (optional)
-   * @param config.grok Grok configuration (optional)
-   * @param config.groq Groq configuration (optional)
-   * @param config.vertexAi Google Vertex AI configuration (optional)
-   * @param config.ollama Ollama configuration (optional)
-   * @param config.openAI OpenAI configuration (optional)
-   * @param config.systemMessage System message to include in all requests (optional)
-   * @param config.documentSystemMessage System message to include in all requests with documents (optional)
-   * @param config.temperature Default temperature for all requests (optional)
+   * Create a new Jor-El instance.
+   *
+   * @param config - The configuration for the Jor-El instance.
+   * @param config.anthropic - Anthropic configuration (optional).
+   * @param config.grok - Grok configuration (optional).
+   * @param config.groq - Groq configuration (optional).
+   * @param config.vertexAi - Google Vertex AI configuration (optional).
+   * @param config.ollama - Ollama configuration (optional).
+   * @param config.openAI - OpenAI configuration (optional).
+   * @param config.systemMessage - System message to include in all requests (optional).
+   * @param config.documentSystemMessage - System message to include in all requests with documents (optional).
+   * @param config.temperature - Default temperature for all requests (optional).
    */
   constructor(config: InitialConfig = {}) {
     this.systemMessage = config.systemMessage ?? "You are a helpful assistant.";
@@ -230,10 +248,11 @@ export class JorEl {
     if (config.openAI) this.providers.registerOpenAi(config.openAI === true ? undefined : config.openAI);
   }
 
+  /** @internal */
   private _documentSystemMessage;
 
   /**
-   * Get the default document system message for all requests (only used when documents are included)
+   * Default document system message for all requests (only used when documents are included)
    */
   public get documentSystemMessage(): string {
     return this._documentSystemMessage;
@@ -247,7 +266,7 @@ export class JorEl {
   }
 
   /**
-   * Get the default temperature for all requests
+   * Default temperature for all requests
    */
   public get temperature(): Nullable<number> | undefined {
     return this._core.defaultConfig.temperature;
@@ -261,7 +280,7 @@ export class JorEl {
   }
 
   /**
-   * Get the logger instance
+   * Logger instance
    */
   public get logger() {
     return this._core.logger;
@@ -275,7 +294,7 @@ export class JorEl {
   }
 
   /**
-   * Get the log level
+   * Log level
    */
   public get logLevel() {
     return this._core.logger.logLevel;
@@ -289,14 +308,15 @@ export class JorEl {
   }
 
   /**
-   * Generate a response for a given set of messages
-   * @param messages
-   * @param config
-   * @param config.model Model to use for this generation (optional)
-   * @param config.systemMessage System message to include in this request (optional)
-   * @param config.temperature Temperature for this request (optional)
-   * @param config.tools Tools to use for this request (optional)
-   * @param json
+   * Generate a response for a given set of messages.
+   *
+   * @param messages - The messages to generate a response for.
+   * @param config - The configuration for the generation.
+   * @param config.model - Model to use for this generation (optional).
+   * @param config.systemMessage - System message to include in this request (optional).
+   * @param config.temperature - Temperature for this request (optional).
+   * @param config.tools - Tools to use for this request (optional).
+   * @param json - Whether to return the response as JSON (optional).
    */
   async generate(
     messages: CoreLlmMessage[],
@@ -307,11 +327,12 @@ export class JorEl {
   }
 
   /**
-   * Generate a response for a given task
-   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects)
-   * @param config - Configuration for the specific generation
-   * @param includeMeta - Whether to include the metadata and all previous messages in the response
-   * @returns The text response, or an object with the response, metadata, and messages
+   * Generate a response for a given task.
+   *
+   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
+   * @param config - Configuration for the specific generation.
+   * @param includeMeta - Whether to include the metadata and all previous messages in the response.
+   * @returns The text response, or an object with the response, metadata, and messages.
    */
   async ask(task: JorElTaskInput, config?: JorElAskGenerationConfigWithTools, includeMeta?: false): Promise<string>;
   async ask(
@@ -343,12 +364,13 @@ export class JorEl {
   }
 
   /**
-   * Generate a JSON response for a given task
-   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects)
-   * @param config - Configuration for the specific generation
-   * @param includeMeta - Whether to include the metadata and all previous messages in the response
-   * @returns The JSON response, or an object with the response, metadata, and messages
-   * @throws Error - If the response is not valid JSON
+   * Generate a JSON response for a given task.
+   *
+   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
+   * @param config - Configuration for the specific generation.
+   * @param includeMeta - Whether to include the metadata and all previous messages in the response.
+   * @returns The JSON response, or an object with the response, metadata, and messages.
+   * @throws Error - If the response is not valid JSON.
    */
   async json(task: JorElTaskInput, config?: JorElAskGenerationConfigWithTools, includeMeta?: false): Promise<object>;
   async json(
@@ -380,18 +402,20 @@ export class JorEl {
   }
 
   /**
-   * Generate a stream of response chunks for a given set of messages
-   * @param messages
-   * @param config
+   * Generate a stream of response chunks for a given set of messages.
+   *
+   * @param messages - The messages to generate a response for.
+   * @param config - The configuration for the generation.
    */
   async *generateContentStream(messages: CoreLlmMessage[], config: JorElGenerationConfigWithTools = {}) {
     yield* this._core.generateContentStream(messages, config);
   }
 
   /**
-   * Generate a stream of response chunks for a given task
-   * @param task
-   * @param config
+   * Generate a stream of response chunks for a given task.
+   *
+   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
+   * @param config - Configuration for the specific generation.
    */
   async *stream(
     task: JorElTaskInput,
@@ -404,9 +428,10 @@ export class JorEl {
   }
 
   /**
-   * Generate a stream of response chunks for a given task with metadata
-   * @param task
-   * @param config
+   * Generate a stream of response chunks for a given task with metadata.
+   *
+   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
+   * @param config - Configuration for the specific generation.
    */
   async *streamWithMeta(
     task: JorElTaskInput,
@@ -434,20 +459,22 @@ export class JorEl {
   }
 
   /**
-   * Create an embedding for a given text
-   * @param text
-   * @param config
-   * @param config.model
+   * Create an embedding for a given text.
+   *
+   * @param text - The text to create an embedding for.
+   * @param config - The configuration for the embedding.
+   * @param config.model - The model to use for the embedding (optional).
    */
   async embed(text: string, config: { model?: string } = {}): Promise<number[]> {
     return this._core.generateEmbedding(text, config.model);
   }
 
   /**
-   * Generate a system message - optionally with a set of documents
-   * @param systemMessage
-   * @param documents
-   * @param documentSystemMessage
+   * Generate a system message - optionally with a set of documents.
+   *
+   * @param systemMessage - The system message to use.
+   * @param documents - The documents to include in the system message (optional).
+   * @param documentSystemMessage - The system message to use for documents (optional).
    */
   generateSystemMessage(
     systemMessage: string = "",
@@ -465,13 +492,23 @@ export class JorEl {
   }
 
   /**
-   * Generate a user message
-   * @param content
+   * Generate a user message.
+   *
+   * @param content - The content to include in the user message.
    */
   generateUserMessage(content: JorElTaskInput) {
     return generateUserMessage(content);
   }
 
+  /**
+   * Helper to generate messages for a given task input.
+   *
+   * @param content - The task input content (either a string or an array of strings and ImageContent objects).
+   * @param systemMessage - The system message to include (optional).
+   * @param documents - The documents to include in the system message (optional).
+   * @param documentSystemMessage - The system message to use for documents (optional).
+   * @internal
+   */
   private generateMessages(
     content: JorElTaskInput,
     systemMessage?: string,
@@ -503,6 +540,12 @@ export class JorEl {
     return [_userMessage];
   }
 
+  /**
+   * Helper to validate the document system message.
+   *
+   * @param documentSystemMessage - The document system message to validate.
+   * @internal
+   */
   private validateDocumentSystemMessage(documentSystemMessage: string) {
     if (!documentSystemMessage) return documentSystemMessage;
     if (documentSystemMessage.includes("{{documents}}")) return documentSystemMessage;

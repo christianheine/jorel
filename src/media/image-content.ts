@@ -28,6 +28,7 @@ type ImageSource = BufferImage | Base64Image | UrlImage;
  * created from a variety of sources, and can be passed directly to JorEl.
  */
 export class ImageContent {
+  /** @internal */
   private _source: ImageSource;
 
   constructor(source: ImageSource) {

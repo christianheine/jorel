@@ -1,6 +1,20 @@
 import { z } from "zod";
-import { LlmAgent, LlmAgentDefinition, TaskCreationError, TaskExecution, TaskExecutionDefinition, TaskExecutionEnvironment, TaskExecutionError, TaskExecutionThread } from "../agents";
-import { generateSystemMessage, generateUserMessage, LlmAssistantMessageWithToolCalls, LlmToolCall } from "../providers";
+import {
+  LlmAgent,
+  LlmAgentDefinition,
+  TaskCreationError,
+  TaskExecution,
+  TaskExecutionDefinition,
+  TaskExecutionEnvironment,
+  TaskExecutionError,
+  TaskExecutionThread,
+} from "../agents";
+import {
+  generateSystemMessage,
+  generateUserMessage,
+  LlmAssistantMessageWithToolCalls,
+  LlmToolCall,
+} from "../providers";
 import { generateUniqueId, Nullable } from "../shared";
 import { LlmTool, LlmToolConfiguration, LlmToolKit } from "../tools";
 import { JorElTaskInput } from "./jorel";
@@ -15,7 +29,11 @@ export class JorElAgentManager {
   public readonly transferToAgentToolName = "handover_to_agent";
   private readonly _agents: Map<string, LlmAgent> = new Map();
 
-  constructor(private _core: JorElCoreStore) {
+  /** @internal */
+  private _core: JorElCoreStore;
+
+  constructor(_core: JorElCoreStore) {
+    this._core = _core;
     this.tools = new LlmToolKit([
       {
         name: this.delegateToAgentToolName,
@@ -39,6 +57,7 @@ export class JorElAgentManager {
     ]);
   }
 
+  /** @internal */
   private _defaultAgentId: Nullable<string> = null;
 
   /**
@@ -265,7 +284,7 @@ export class JorElAgentManager {
    * Generate an assistant message (either in response to a user message or tool call results)
    * @param task
    * @param env
-   * @private
+   * @internal
    */
   private async generateAssistantMessage(task: TaskExecution, env?: TaskExecutionEnvironment): Promise<TaskExecution> {
     if (!task.activeThread.agent) throw new TaskExecutionError(`Agent ${task.activeThread.agentId} not found`, task.id);
@@ -309,7 +328,7 @@ export class JorElAgentManager {
   /**
    * Pass the result of an assistant message with tools back to the parent thread
    * @param task
-   * @private
+   * @internal
    */
   private async passAssistantResultToMainThread(task: TaskExecution): Promise<TaskExecution> {
     if (task.activeThread.isMain)
@@ -374,7 +393,7 @@ export class JorElAgentManager {
    * Process tool calls in the assistant_with_tools message
    * @param task
    * @param env
-   * @private
+   * @internal
    */
   private async processToolCalls(task: TaskExecution, env?: TaskExecutionEnvironment): Promise<TaskExecution> {
     const latestMessage = task.activeThread.latestMessage;

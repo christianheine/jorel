@@ -89,7 +89,6 @@ export class JorElCoreStore {
    * @param config
    * @param json
    * @param autoApprove
-   * @private
    */
   async generateAndProcessTools(
     messages: CoreLlmMessage[],

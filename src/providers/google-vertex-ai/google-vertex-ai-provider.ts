@@ -1,14 +1,4 @@
 import {
-  CoreLlmMessage,
-  generateAssistantMessage,
-  LlmCoreProvider,
-  LlmGenerationConfig,
-  LlmResponse,
-  LlmStreamResponse,
-  LlmStreamResponseChunk,
-  LlmToolCall,
-} from "../../providers";
-import {
   ClientError,
   Content,
   CountTokensResponse,
@@ -20,9 +10,19 @@ import {
   Tool,
   VertexAI,
 } from "@google-cloud/vertexai";
+import { FunctionDeclaration, FunctionDeclarationSchema } from "@google-cloud/vertexai/src/types/content";
+import {
+  CoreLlmMessage,
+  generateAssistantMessage,
+  LlmCoreProvider,
+  LlmGenerationConfig,
+  LlmResponse,
+  LlmStreamResponse,
+  LlmStreamResponseChunk,
+  LlmToolCall,
+} from "../../providers";
 import { generateRandomId, generateUniqueId, MaybeUndefined } from "../../shared";
 import { convertLlmMessagesToVertexAiMessages } from "./convert-llm-message";
-import { FunctionDeclaration, FunctionDeclarationSchema } from "@google-cloud/vertexai/src/types/content";
 
 const defaultSafetySettings = [
   {
@@ -47,7 +47,7 @@ const defaultSafetySettings = [
   },
 ];
 
-export { HarmCategory as VertexAiHarmCategory, HarmBlockThreshold as VertexAiHarmBlockThreshold };
+export { HarmBlockThreshold as VertexAiHarmBlockThreshold, HarmCategory as VertexAiHarmCategory };
 
 export interface GoogleVertexAiConfig {
   project?: string;
@@ -61,6 +61,8 @@ export interface GoogleVertexAiConfig {
 export class GoogleVertexAiProvider implements LlmCoreProvider {
   public readonly name;
   readonly client: VertexAI;
+
+  /** @internal */
   private readonly safetySettings: {
     category: HarmCategory;
     threshold: HarmBlockThreshold;

@@ -23,6 +23,7 @@ interface LlmDocumentCollectionConfig {
  */
 export class LlmDocumentCollection {
   public documentToTextTemplate: DocumentToTextTemplate;
+  /** @internal */
   private _documents: Map<string, LlmDocument>;
 
   constructor(documents: (LlmDocument | CreateLlmDocument)[] = [], config: LlmDocumentCollectionConfig = {}) {

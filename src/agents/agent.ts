@@ -42,9 +42,13 @@ export class LlmAgent {
   public documents: LlmDocumentCollection;
   public responseType: "text" | "json";
   public temperature: number;
+  /** @internal */
   private readonly _allowedTools: Set<string>;
+  /** @internal */
   private readonly _allowedDelegateAgentNames: Set<string>;
+  /** @internal */
   private readonly _allowedTransferAgentsNames: Set<string>;
+  /** @internal */
   private readonly jorEl: JorElAgentManager;
 
   /**
@@ -273,6 +277,7 @@ export class LlmAgent {
    * @param targetAgentName
    * @param type
    * @throws {AgentError} If the target agent name is empty, the agent is trying to delegate to itself, or the agent is not allowed to delegate to the target agent
+   * @internal
    */
   private validateDelegation(targetAgentName: string, type: "delegate" | "transfer"): void {
     if (!targetAgentName) {

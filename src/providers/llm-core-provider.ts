@@ -6,7 +6,7 @@ import { LoggerOption, LogLevel, LogService } from "../logger";
 export type LlmToolChoice = "none" | "auto" | "required" | string;
 
 interface CoreLlmGenerationConfig {
-  temperature?: Nullable<number>
+  temperature?: Nullable<number>;
   maxTokens?: number;
   json?: boolean;
   tools?: LlmToolKit;

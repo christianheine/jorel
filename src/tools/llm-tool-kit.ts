@@ -333,13 +333,14 @@ export class LlmToolKit {
 
   /**
    * Internal helper to approve or reject tool calls
+   * @internal
    */
   private approveOrRejectCalls<T extends { toolCalls: LlmToolCall[] }>(
     input: T,
     approvalState: "approved" | "rejected",
     idOrIds?: string | string[],
   ): T {
-    const rejectedIds = idOrIds ? Array.isArray(idOrIds) ? idOrIds : [idOrIds] : null;
+    const rejectedIds = idOrIds ? (Array.isArray(idOrIds) ? idOrIds : [idOrIds]) : null;
     const toolCalls = input.toolCalls.map((call) => {
       if (call.approvalState === "requiresApproval" && (!rejectedIds || rejectedIds.includes(call.request.id))) {
         return { ...call, approvalState };
