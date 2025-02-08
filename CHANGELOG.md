@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.3 (2025-02-08)
+
+- Add native support for Mistral AI
+- Fix an issue which may have caused generations to fail when using Groq
+- Add tool choice when generating streams with OpenAI provider
+- Revise/ extend default models for Vertex AI, including gemini-2.0-flash-001
+- Simplify model registration & expose underlying clients for native providers
+
 ## 0.9.2 (2025-02-06)
 
 - Fix issue when approving all tool calls at once (w/o passing any id)
