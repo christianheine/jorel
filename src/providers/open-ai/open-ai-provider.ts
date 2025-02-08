@@ -129,6 +129,16 @@ export class OpenAIProvider implements LlmCoreProvider {
       stream: true,
       tools: config.tools?.asLlmFunctions,
       parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
+      tool_choice:
+        config.toolChoice === "auto"
+          ? "auto"
+          : config.toolChoice === "required"
+            ? "required"
+            : config.toolChoice === "none"
+              ? "none"
+              : config.toolChoice
+                ? { type: "function", function: { name: config.toolChoice } }
+                : undefined,
       stream_options: {
         include_usage: true,
       },
