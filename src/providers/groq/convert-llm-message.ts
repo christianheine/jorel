@@ -12,9 +12,15 @@ export const convertLlmMessagesToGroqMessages = async (
 
   for (const message of messages) {
     if (message.role === "system") {
-      convertedMessages.push(message);
+      convertedMessages.push({
+        role: "system",
+        content: message.content,
+      });
     } else if (message.role === "assistant") {
-      convertedMessages.push(message);
+      convertedMessages.push({
+        role: "assistant",
+        content: message.content,
+      });
     } else if (message.role === "assistant_with_tools") {
       convertedMessages.push({
         role: "assistant",

@@ -12,7 +12,10 @@ export const convertLlmMessagesToOpenAiMessages = async (
 
   for (const message of messages) {
     if (message.role === "system") {
-      convertedMessages.push(message);
+      convertedMessages.push({
+        role: "system",
+        content: message.content,
+      });
     } else if (message.role === "assistant") {
       convertedMessages.push({
         role: "assistant",
