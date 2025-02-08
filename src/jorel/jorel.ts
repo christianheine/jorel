@@ -9,6 +9,8 @@ import {
   defaultAnthropicModels,
   defaultGrokModels,
   defaultGroqModels,
+  defaultMistralAiEmbeddingModels,
+  defaultMistralAiModels,
   defaultOpenAiEmbeddingModels,
   defaultOpenAiModels,
   defaultVertexAiModels,
@@ -29,6 +31,8 @@ import {
   LlmStreamResponseMessages,
   LlmStreamResponseWithToolCalls,
   LlmToolChoice,
+  MistralConfig,
+  MistralProvider,
   OllamaConfig,
   OllamaProvider,
   OpenAIConfig,
@@ -43,6 +47,7 @@ interface InitialConfig {
   anthropic?: AnthropicConfig | true;
   grok?: OpenAIConfig | true;
   groq?: GroqConfig | true;
+  mistral?: MistralConfig | true;
   ollama?: OllamaConfig | true;
   openAI?: OpenAIConfig | true;
   vertexAi?: GoogleVertexAiConfig | true;
@@ -143,6 +148,15 @@ export class JorEl {
         this.models.register({ model, provider: "groq" });
       }
     },
+    registerMistral: (config?: MistralConfig) => {
+      this._core.providerManager.registerProvider("mistral", new MistralProvider(config));
+      for (const model of defaultMistralAiModels) {
+        this.models.register({ model, provider: "mistral" });
+      }
+      for (const { model, dimensions } of defaultMistralAiEmbeddingModels) {
+        this.models.embeddings.register({ model, dimensions, provider: "mistral" });
+      }
+    },
     registerOllama: (config?: OllamaConfig) => {
       this._core.providerManager.registerProvider("ollama", new OllamaProvider(config));
     },
@@ -190,6 +204,7 @@ export class JorEl {
     if (config.anthropic) this.providers.registerAnthropic(config.anthropic === true ? undefined : config.anthropic);
     if (config.grok) this.providers.registerGrok(config.grok === true ? undefined : config.grok);
     if (config.groq) this.providers.registerGroq(config.groq === true ? undefined : config.groq);
+    if (config.mistral) this.providers.registerMistral(config.mistral === true ? undefined : config.mistral);
     if (config.vertexAi) this.providers.registerGoogleVertexAi(config.vertexAi === true ? undefined : config.vertexAi);
     if (config.ollama) this.providers.registerOllama(config.ollama === true ? undefined : config.ollama);
     if (config.openAI) this.providers.registerOpenAi(config.openAI === true ? undefined : config.openAI);
