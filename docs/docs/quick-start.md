@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Quick Start
 
-Get started with JorEl, a unified interface for multiple LLM providers including OpenAI, Anthropic, Groq, Grok, Google Vertex AI, and Ollama.
+Get started with JorEl, a unified interface for multiple LLM providers including OpenAI, Anthropic, Groq, Grok, Google Vertex AI, Mistral and Ollama.
 
 ## Installation
 
@@ -54,7 +54,8 @@ const jorEl = new JorEl({
   groq: true,       // Will use GROQ_API_KEY environment variable
   grok: true,       // Will use GROK_API_KEY environment variable
   vertexAI: true,   // Will use GCP_PROJECT, GCP_LOCATION, GOOGLE_APPLICATION_CREDENTIALS environment variables
-  ollama: true,     // No environment variables needed
+  mistral: true,    // Will use MISTRAL_API_KEY environment variable
+  ollama: true     // No environment variables needed
 });
 ```
 

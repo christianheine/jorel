@@ -256,6 +256,7 @@ JorEl supports multiple LLM providers out of the box:
 - Grok
 - Google Vertex AI
 - Ollama
+- Mistral
 
 Each provider can be configured during initialization or registered later:
 

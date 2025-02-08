@@ -31,7 +31,7 @@ export interface OpenAIConfig {
 /** Provides access to OpenAI and other compatible services */
 export class OpenAIProvider implements LlmCoreProvider {
   public readonly name;
-  private client: OpenAI;
+  readonly client: OpenAI;
 
   constructor({ apiKey, apiUrl, name }: OpenAIConfig = {}) {
     this.name = name || "openai";

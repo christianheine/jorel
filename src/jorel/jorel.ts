@@ -175,6 +175,26 @@ export class JorEl {
         this.models.register({ model, provider: "google-vertex-ai" });
       }
     },
+    openAi: {
+      addModel: (model: string) => this.models.register({ model, provider: "openai" }),
+      getClient: () => (this._core.providerManager.getProvider("openai") as OpenAIProvider).client,
+    },
+    grok: {
+      addModel: (model: string) => this.models.register({ model, provider: "grok" }),
+      getClient: () => (this._core.providerManager.getProvider("grok") as GrokProvider).client,
+    },
+    groq: {
+      addModel: (model: string) => this.models.register({ model, provider: "groq" }),
+      getClient: () => (this._core.providerManager.getProvider("groq") as GroqProvider).client,
+    },
+    mistral: {
+      addModel: (model: string) => this.models.register({ model, provider: "mistral" }),
+      getClient: () => (this._core.providerManager.getProvider("mistral") as MistralProvider).client,
+    },
+    vertexAi: {
+      addModel: (model: string) => this.models.register({ model, provider: "google-vertex-ai" }),
+      getClient: () => (this._core.providerManager.getProvider("google-vertex-ai") as GoogleVertexAiProvider).client,
+    },
   };
 
   /**

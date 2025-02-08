@@ -26,7 +26,7 @@ export interface AnthropicConfig {
 /** Provides access to OpenAI and other compatible services */
 export class AnthropicProvider implements LlmCoreProvider {
   public readonly name;
-  private readonly client: AnthropicBedrock | Anthropic;
+  readonly client: AnthropicBedrock | Anthropic;
 
   constructor({ apiKey, bedrock, name }: AnthropicConfig = {}) {
     this.name = name || "anthropic";

@@ -22,7 +22,7 @@ export interface GroqConfig {
 /** Provides access to Groq and other compatible services */
 export class GroqProvider implements LlmCoreProvider {
   public readonly name;
-  private client: Groq;
+  readonly client: Groq;
 
   constructor({ apiKey, apiUrl, name }: GroqConfig = {}) {
     this.name = name || "groq";

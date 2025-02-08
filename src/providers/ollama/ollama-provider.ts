@@ -1,4 +1,4 @@
-import ollama, { Tool } from "ollama";
+import ollama, { Ollama, Tool } from "ollama";
 
 import {
   CoreLlmMessage,
@@ -20,6 +20,10 @@ export interface OllamaConfig {
 /** Provides access to local Ollama server */
 export class OllamaProvider implements LlmCoreProvider {
   public readonly name;
+
+  get client(): Ollama {
+    return ollama;
+  }
 
   constructor({ name }: OllamaConfig = {}) {
     this.name = name || "ollama";

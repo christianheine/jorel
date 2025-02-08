@@ -60,7 +60,7 @@ export interface GoogleVertexAiConfig {
 /** Provides access to GoogleVertexAi and other compatible services */
 export class GoogleVertexAiProvider implements LlmCoreProvider {
   public readonly name;
-  private client: VertexAI;
+  readonly client: VertexAI;
   private readonly safetySettings: {
     category: HarmCategory;
     threshold: HarmBlockThreshold;
