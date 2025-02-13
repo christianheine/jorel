@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.4 (2025-02-13)
+
+- Stream tool use events (start & end) in JorEl.core.generateStreamAndProcessTools and JorEl.streamWithMeta 
+
 ## 0.9.3 (2025-02-08)
 
 - Add native support for Mistral AI

@@ -30,8 +30,9 @@ const main = async () => {
     if (chunk.type === "chunk") {
       process.stdout.write(chunk.content);
     } else {
-      process.stdout.write("\n\n" + chunk.type + ":\n");
+      process.stdout.write("\n" + chunk.type + ":\n");
       process.stdout.write(JSON.stringify(chunk, null, 2));
+      process.stdout.write("\n");
     }
   }
 

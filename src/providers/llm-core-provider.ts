@@ -213,6 +213,16 @@ export interface LlmStreamResponseMessages {
   messages: CoreLlmMessage[];
 }
 
+export interface LlmStreamToolCallStarted {
+  type: "toolCallStarted";
+  toolCall: LlmToolCall__Pending;
+}
+
+export interface LlmStreamToolCallCompleted {
+  type: "toolCallCompleted";
+  toolCall: LlmToolCall__Completed | LlmToolCall__Error;
+}
+
 export interface LlmCoreProvider {
   readonly name: string;
 
@@ -222,7 +232,15 @@ export interface LlmCoreProvider {
     model: string,
     messages: CoreLlmMessage[],
     config?: LlmGenerationConfig,
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown>;
+  ): AsyncGenerator<
+    | LlmStreamResponseChunk 
+    | LlmStreamResponse 
+    | LlmStreamResponseWithToolCalls 
+    | LlmStreamToolCallStarted 
+    | LlmStreamToolCallCompleted,
+    void,
+    unknown
+  >;
 
   getAvailableModels(): Promise<string[]>;
 

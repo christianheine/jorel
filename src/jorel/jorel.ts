@@ -30,6 +30,8 @@ import {
   LlmStreamResponseChunk,
   LlmStreamResponseMessages,
   LlmStreamResponseWithToolCalls,
+  LlmStreamToolCallCompleted,
+  LlmStreamToolCallStarted,
   LlmToolChoice,
   MistralConfig,
   MistralProvider,
@@ -437,7 +439,12 @@ export class JorEl {
     task: JorElTaskInput,
     config: JorElAskGenerationConfigWithTools = {},
   ): AsyncGenerator<
-    LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls | LlmStreamResponseMessages,
+    | LlmStreamResponseChunk 
+    | LlmStreamResponse 
+    | LlmStreamResponseWithToolCalls 
+    | LlmStreamResponseMessages
+    | LlmStreamToolCallStarted 
+    | LlmStreamToolCallCompleted,
     void,
     unknown
   > {

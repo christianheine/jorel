@@ -7,6 +7,8 @@ import {
   LlmStreamResponseChunk,
   LlmStreamResponseMessages,
   LlmStreamResponseWithToolCalls,
+  LlmStreamToolCallStarted,
+  LlmStreamToolCallCompleted,
 } from "../providers";
 import { maskAll, MaybeUndefined, omit } from "../shared";
 import { JorElGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
@@ -168,7 +170,10 @@ export class JorElCoreStore {
     });
 
     for await (const chunk of stream) {
-      yield chunk;
+      if (chunk.type === "toolCallStarted" || chunk.type === "toolCallCompleted") {
+      } else {
+        yield chunk;
+      }
 
       if (chunk.type === "response") {
         this.logger.debug("Core", "Finished generating response stream");
@@ -190,7 +195,12 @@ export class JorElCoreStore {
     config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
     autoApprove = false,
   ): AsyncGenerator<
-    LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls | LlmStreamResponseMessages,
+    | LlmStreamResponseChunk 
+    | LlmStreamResponse 
+    | LlmStreamResponseWithToolCalls 
+    | LlmStreamResponseMessages
+    | LlmStreamToolCallStarted 
+    | LlmStreamToolCallCompleted,
     void,
     unknown
   > {
@@ -218,10 +228,34 @@ export class JorElCoreStore {
 
       this.logger.debug("Core", "Processing tool calls");
 
+      // Emit tool call started events for each tool call
+      for (const toolCall of response.toolCalls) {
+        yield {
+          type: "toolCallStarted",
+          toolCall: {
+            id: toolCall.id,
+            executionState: "pending",
+            approvalState: toolCall.approvalState,
+            request: toolCall.request,
+            result: null
+          },
+        };
+      }
+
       response = await config.tools.processCalls(response, {
         context: config.context,
         secureContext: config.secureContext,
       });
+
+      // Emit tool call completed events for each tool call
+      for (const toolCall of response.toolCalls) {
+        if (toolCall.executionState === "completed" || toolCall.executionState === "error") {
+          yield {
+            type: "toolCallCompleted",
+            toolCall,
+          };
+        }
+      }
 
       this.logger.debug("Core", "Finished processing tool calls");
 
