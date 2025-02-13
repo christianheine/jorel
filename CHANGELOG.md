@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.5 (2025-02-14)
+
+- Freeze versions of dependencies
+
 ## 0.9.4 (2025-02-13)
 
 - Stream tool use events (start & end) in JorEl.core.generateStreamAndProcessTools and JorEl.streamWithMeta 
