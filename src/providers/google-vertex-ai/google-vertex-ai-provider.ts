@@ -2,6 +2,7 @@ import {
   ClientError,
   Content,
   CountTokensResponse,
+  FunctionCallingMode,
   GenerateContentResponse,
   GoogleApiError,
   HarmBlockThreshold,
@@ -137,6 +138,18 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
             maxOutputTokens: maxTokens,
             responseMimeType: config.json ? "application/json" : "text/plain",
           },
+          toolConfig: config.tools?.hasTools
+            ? {
+                functionCallingConfig: {
+                  mode:
+                    config.toolChoice === "none"
+                      ? FunctionCallingMode.NONE
+                      : config.toolChoice === "required"
+                        ? FunctionCallingMode.ANY
+                        : FunctionCallingMode.AUTO,
+                },
+              }
+            : undefined,
           safetySettings: this.safetySettings,
         })
       ).response;

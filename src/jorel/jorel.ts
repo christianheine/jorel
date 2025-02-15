@@ -62,6 +62,7 @@ interface InitialConfig {
 
 export interface JorElCoreGenerationConfig {
   temperature?: Nullable<number>;
+  maxTokens?: number
 }
 
 export interface JorElGenerationConfigWithTools extends JorElCoreGenerationConfig {

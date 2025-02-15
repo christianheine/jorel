@@ -171,6 +171,7 @@ export class JorElCoreStore {
 
     for await (const chunk of stream) {
       if (chunk.type === "toolCallStarted" || chunk.type === "toolCallCompleted") {
+        // Do nothing
       } else {
         yield chunk;
       }

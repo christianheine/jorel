@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.6 (2025-02-15)
+
+- Add support for max tokens in generations
+- Add support for tool-choice for Vertex AI (non-streaming)
+
 ## 0.9.5 (2025-02-14)
 
 - Freeze versions of dependencies
