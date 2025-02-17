@@ -13,6 +13,7 @@ import {
 } from "../../providers";
 import { convertLlmMessagesToOpenAiMessages } from "./convert-llm-message";
 import { LlmToolKit } from "../../tools";
+import { jsonResponseToOpenAi, toolChoiceToOpenAi } from "./convert-inputs";
 
 interface ToolCall {
   id: string;
@@ -54,19 +55,10 @@ export class OpenAIProvider implements LlmCoreProvider {
       model,
       messages: await convertLlmMessagesToOpenAiMessages(messages),
       temperature,
-      response_format: config.json ? { type: "json_object" } : { type: "text" },
+      response_format: jsonResponseToOpenAi(config.json, config.jsonDescription),
       max_tokens: config.maxTokens,
       parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
-      tool_choice:
-        config.toolChoice === "auto"
-          ? "auto"
-          : config.toolChoice === "required"
-            ? "required"
-            : config.toolChoice === "none"
-              ? "none"
-              : config.toolChoice
-                ? { type: "function", function: { name: config.toolChoice } }
-                : undefined,
+      tool_choice: toolChoiceToOpenAi(config.toolChoice),
       tools: config.tools?.asLlmFunctions,
     });
 
@@ -124,21 +116,12 @@ export class OpenAIProvider implements LlmCoreProvider {
       model,
       messages: await convertLlmMessagesToOpenAiMessages(messages),
       temperature,
-      response_format: config.json ? { type: "json_object" } : { type: "text" },
+      response_format: jsonResponseToOpenAi(config.json, config.jsonDescription),
       max_tokens: config.maxTokens,
       stream: true,
       tools: config.tools?.asLlmFunctions,
       parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
-      tool_choice:
-        config.toolChoice === "auto"
-          ? "auto"
-          : config.toolChoice === "required"
-            ? "required"
-            : config.toolChoice === "none"
-              ? "none"
-              : config.toolChoice
-                ? { type: "function", function: { name: config.toolChoice } }
-                : undefined,
+      tool_choice: toolChoiceToOpenAi(config.toolChoice),
       stream_options: {
         include_usage: true,
       },

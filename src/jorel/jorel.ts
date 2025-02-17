@@ -21,6 +21,7 @@ import {
   GrokProvider,
   GroqConfig,
   GroqProvider,
+  JsonSpecification,
   LlmAssistantMessage,
   LlmAssistantMessageMeta,
   LlmAssistantMessageWithToolCalls,
@@ -62,19 +63,7 @@ interface InitialConfig {
 
 export interface JorElCoreGenerationConfig {
   temperature?: Nullable<number>;
-  maxTokens?: number
-}
-
-export interface JorElGenerationConfigWithTools extends JorElCoreGenerationConfig {
-  model?: string;
-  systemMessage?: string;
-  documentSystemMessage?: string;
-  documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection;
-  tools?: LlmToolKit;
-  toolChoice?: LlmToolChoice;
-  maxAttempts?: number;
-  context?: LLmToolContextSegment;
-  secureContext?: LLmToolContextSegment;
+  maxTokens?: number;
 }
 
 export interface JorElAskGenerationConfigWithTools extends JorElCoreGenerationConfig {
@@ -87,6 +76,25 @@ export interface JorElAskGenerationConfigWithTools extends JorElCoreGenerationCo
   maxAttempts?: number;
   context?: LLmToolContextSegment;
   secureContext?: LLmToolContextSegment;
+}
+
+export interface JorElJsonGenerationConfigWithTools extends JorElAskGenerationConfigWithTools {
+  jsonSchema?: JsonSpecification;
+  jsonSchemaDescription?: string;
+}
+
+export interface JorElGenerationConfigWithTools extends JorElCoreGenerationConfig {
+  model?: string;
+  systemMessage?: string;
+  documentSystemMessage?: string;
+  documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection;
+  tools?: LlmToolKit;
+  toolChoice?: LlmToolChoice;
+  maxAttempts?: number;
+  context?: LLmToolContextSegment;
+  secureContext?: LLmToolContextSegment;
+  json?: boolean | JsonSpecification;
+  jsonDescription?: string;
 }
 
 export type JorElTaskInput = string | (string | ImageContent)[];
@@ -319,14 +327,12 @@ export class JorEl {
    * @param config.systemMessage - System message to include in this request (optional).
    * @param config.temperature - Temperature for this request (optional).
    * @param config.tools - Tools to use for this request (optional).
-   * @param json - Whether to return the response as JSON (optional).
    */
   async generate(
     messages: CoreLlmMessage[],
     config: JorElGenerationConfigWithTools = {},
-    json?: boolean,
   ): Promise<JorElGenerationOutput> {
-    return this._core.generate(messages, config, json);
+    return this._core.generate(messages, config);
   }
 
   /**
@@ -358,7 +364,6 @@ export class JorEl {
             : new LlmToolKit(config.tools)
           : undefined,
       },
-      false,
       true,
     );
     const response = output.content || "";
@@ -375,15 +380,15 @@ export class JorEl {
    * @returns The JSON response, or an object with the response, metadata, and messages.
    * @throws Error - If the response is not valid JSON.
    */
-  async json(task: JorElTaskInput, config?: JorElAskGenerationConfigWithTools, includeMeta?: false): Promise<object>;
+  async json(task: JorElTaskInput, config?: JorElJsonGenerationConfigWithTools, includeMeta?: false): Promise<object>;
   async json(
     task: JorElTaskInput,
-    config?: JorElAskGenerationConfigWithTools,
+    config?: JorElJsonGenerationConfigWithTools,
     includeMeta?: true,
   ): Promise<{ response: object; meta: LlmAssistantMessageMeta; messages: CoreLlmMessage[] }>;
   async json(
     task: JorElTaskInput,
-    config: JorElAskGenerationConfigWithTools = {},
+    config: JorElJsonGenerationConfigWithTools = {},
     includeMeta = false,
   ): Promise<object | { response: object; meta: LlmAssistantMessageMeta; messages: CoreLlmMessage[] }> {
     const _messages = this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage);
@@ -391,13 +396,13 @@ export class JorEl {
       _messages,
       {
         ...config,
+        json: config.jsonSchema || true,
         tools: config.tools
           ? config.tools instanceof LlmToolKit
             ? config.tools
             : new LlmToolKit(config.tools)
           : undefined,
       },
-      true,
       true,
     );
     const parsed = output.content ? LlmToolKit.deserialize(output.content) : {};
@@ -440,11 +445,11 @@ export class JorEl {
     task: JorElTaskInput,
     config: JorElAskGenerationConfigWithTools = {},
   ): AsyncGenerator<
-    | LlmStreamResponseChunk 
-    | LlmStreamResponse 
-    | LlmStreamResponseWithToolCalls 
+    | LlmStreamResponseChunk
+    | LlmStreamResponse
+    | LlmStreamResponseWithToolCalls
     | LlmStreamResponseMessages
-    | LlmStreamToolCallStarted 
+    | LlmStreamToolCallStarted
     | LlmStreamToolCallCompleted,
     void,
     unknown

@@ -10,6 +10,8 @@ import {
   LlmStreamResponseChunk,
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
+  toolChoiceToOpenAi,
+  jsonResponseToOpenAi,
 } from "../../providers";
 import { LlmToolKit } from "../../tools";
 import { convertLlmMessagesToMistralMessages } from "./convert-llm-message";
@@ -51,18 +53,9 @@ export class MistralProvider implements LlmCoreProvider {
       model,
       messages: await convertLlmMessagesToMistralMessages(messages),
       temperature,
-      responseFormat: config.json ? { type: "json_object" } : { type: "text" },
+      responseFormat: jsonResponseToOpenAi(config.json),
       maxTokens: config.maxTokens,
-      toolChoice:
-        config.toolChoice === "auto"
-          ? "auto"
-          : config.toolChoice === "required"
-            ? "required"
-            : config.toolChoice === "none"
-              ? "none"
-              : config.toolChoice
-                ? { type: "function", function: { name: config.toolChoice } }
-                : undefined,
+      toolChoice: toolChoiceToOpenAi(config.toolChoice),
       tools: config.tools?.asLlmFunctions?.map((f) => ({
         type: "function",
         function: {
@@ -138,7 +131,7 @@ export class MistralProvider implements LlmCoreProvider {
       model,
       messages: await convertLlmMessagesToMistralMessages(messages),
       temperature,
-      responseFormat: config.json ? { type: "json_object" } : { type: "text" },
+      responseFormat: jsonResponseToOpenAi(config.json),
       maxTokens: config.maxTokens,
       stream: true,
       tools: config.tools?.asLlmFunctions?.map((f) => ({
@@ -153,16 +146,7 @@ export class MistralProvider implements LlmCoreProvider {
           },
         },
       })),
-      toolChoice:
-        config.toolChoice === "auto"
-          ? "auto"
-          : config.toolChoice === "required"
-            ? "required"
-            : config.toolChoice === "none"
-              ? "none"
-              : config.toolChoice
-                ? { type: "function", function: { name: config.toolChoice } }
-                : undefined,
+      toolChoice: toolChoiceToOpenAi(config.toolChoice),
     });
 
     let inputTokens: MaybeUndefined<number>;

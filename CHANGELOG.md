@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.0 (wip)
+
+- Add support for passing JSON schema definitions for json outputs
+- [BREAKING] Move the final `json` boolean parameter from the end of the core.generate and core.generateAndProcessTools methods into the configuration
+
 ## 0.9.6 (2025-02-15)
 
 - Add support for max tokens in generations
@@ -11,7 +16,7 @@
 
 ## 0.9.4 (2025-02-13)
 
-- Stream tool use events (start & end) in JorEl.core.generateStreamAndProcessTools and JorEl.streamWithMeta 
+- Stream tool use events (start & end) in JorEl.core.generateStreamAndProcessTools and JorEl.streamWithMeta
 
 ## 0.9.3 (2025-02-08)
 
@@ -27,7 +32,7 @@
 
 ## 0.9.1 (2025-02-02)
 
-- Allow documents to be instantiated from a url, a list of urls, or a list of file paths 
+- Allow documents to be instantiated from a url, a list of urls, or a list of file paths
 - Allow images to be instantiated from a list of files or urls
 - Improve error handling for empty tasks
 

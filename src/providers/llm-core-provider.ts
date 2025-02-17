@@ -2,13 +2,17 @@ import { ImageContent } from "../media";
 import { Nullable } from "../shared";
 import { LLmToolContextSegment, LlmToolKit } from "../tools";
 import { LoggerOption, LogLevel, LogService } from "../logger";
+import { ZodObject } from "zod";
 
 export type LlmToolChoice = "none" | "auto" | "required" | string;
+
+export type JsonSpecification = ZodObject<any> | Record<string, unknown>;
 
 interface CoreLlmGenerationConfig {
   temperature?: Nullable<number>;
   maxTokens?: number;
-  json?: boolean;
+  json?: boolean | JsonSpecification;
+  jsonDescription?: string;
   tools?: LlmToolKit;
   toolChoice?: LlmToolChoice;
   logLevel?: LogLevel;
@@ -233,10 +237,10 @@ export interface LlmCoreProvider {
     messages: CoreLlmMessage[],
     config?: LlmGenerationConfig,
   ): AsyncGenerator<
-    | LlmStreamResponseChunk 
-    | LlmStreamResponse 
-    | LlmStreamResponseWithToolCalls 
-    | LlmStreamToolCallStarted 
+    | LlmStreamResponseChunk
+    | LlmStreamResponse
+    | LlmStreamResponseWithToolCalls
+    | LlmStreamToolCallStarted
     | LlmStreamToolCallCompleted,
     void,
     unknown

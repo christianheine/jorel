@@ -12,6 +12,8 @@ import {
 } from "../../providers";
 import { generateRandomId, generateUniqueId, MaybeUndefined } from "../../shared";
 import { convertLlmMessagesToOllamaMessages } from "./convert-llm-message";
+import { ZodObject } from "zod";
+import zodToJsonSchema from "zod-to-json-schema";
 
 export interface OllamaConfig {
   name?: string;
@@ -41,7 +43,13 @@ export class OllamaProvider implements LlmCoreProvider {
     const response = await ollama.chat({
       model,
       messages: await convertLlmMessagesToOllamaMessages(messages),
-      format: config.json ? "json" : undefined,
+      format: config.json
+        ? typeof config.json === "boolean"
+          ? "json"
+          : config.json instanceof ZodObject
+            ? zodToJsonSchema(config.json, { target: "openAi" })
+            : config.json
+        : undefined,
       tools: config.tools?.asLlmFunctions?.map(
         (f): Tool => ({
           type: "function",
@@ -113,7 +121,13 @@ export class OllamaProvider implements LlmCoreProvider {
       model,
       messages: await convertLlmMessagesToOllamaMessages(messages),
       stream: true,
-      format: config.json ? "json" : undefined,
+      format: config.json
+        ? typeof config.json === "boolean"
+          ? "json"
+          : config.json instanceof ZodObject
+            ? zodToJsonSchema(config.json, { target: "openAi" })
+            : config.json
+        : undefined,
       options: {
         temperature,
       },

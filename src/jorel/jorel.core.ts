@@ -7,8 +7,8 @@ import {
   LlmStreamResponseChunk,
   LlmStreamResponseMessages,
   LlmStreamResponseWithToolCalls,
-  LlmStreamToolCallStarted,
   LlmStreamToolCallCompleted,
+  LlmStreamToolCallStarted,
 } from "../providers";
 import { maskAll, MaybeUndefined, omit } from "../shared";
 import { JorElGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
@@ -48,12 +48,10 @@ export class JorElCoreStore {
    * @param config.systemMessage System message to include in this request (optional)
    * @param config.temperature Temperature for this request (optional)
    * @param config.tools Tools to use for this request (optional)
-   * @param json
    */
   async generate(
     messages: CoreLlmMessage[],
     config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
-    json?: boolean,
   ): Promise<JorElGenerationOutput> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
@@ -65,7 +63,6 @@ export class JorElCoreStore {
       model: modelEntry.model,
       provider: modelEntry.provider,
       messages,
-      json,
       ...omit(config, ["secureContext"]),
       secureContext: config.secureContext ? maskAll(config.secureContext) : undefined,
     });
@@ -73,7 +70,6 @@ export class JorElCoreStore {
       ...this.defaultConfig,
       ...config,
       logger: this.logger,
-      json,
     });
     this.logger.debug(
       "Core",
@@ -89,13 +85,11 @@ export class JorElCoreStore {
    * Internal method to generate a response and process tool calls until a final response is generated
    * @param messages
    * @param config
-   * @param json
    * @param autoApprove
    */
   async generateAndProcessTools(
     messages: CoreLlmMessage[],
     config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
-    json = false,
     autoApprove = false,
   ): Promise<{ output: JorElGenerationOutput; messages: CoreLlmMessage[] }> {
     const _messages = [...messages];
@@ -107,7 +101,7 @@ export class JorElCoreStore {
 
     let generation: MaybeUndefined<JorElGenerationOutput>;
     for (let i = 0; i < maxAttempts; i++) {
-      generation = await this.generate(_messages, config, json);
+      generation = await this.generate(_messages, config);
       if (generation.role === "assistant" || !config.tools) {
         break;
       } else {
@@ -196,11 +190,11 @@ export class JorElCoreStore {
     config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
     autoApprove = false,
   ): AsyncGenerator<
-    | LlmStreamResponseChunk 
-    | LlmStreamResponse 
-    | LlmStreamResponseWithToolCalls 
+    | LlmStreamResponseChunk
+    | LlmStreamResponse
+    | LlmStreamResponseWithToolCalls
     | LlmStreamResponseMessages
-    | LlmStreamToolCallStarted 
+    | LlmStreamToolCallStarted
     | LlmStreamToolCallCompleted,
     void,
     unknown
@@ -238,7 +232,7 @@ export class JorElCoreStore {
             executionState: "pending",
             approvalState: toolCall.approvalState,
             request: toolCall.request,
-            result: null
+            result: null,
           },
         };
       }

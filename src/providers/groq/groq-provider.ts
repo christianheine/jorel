@@ -8,6 +8,7 @@ import {
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmToolCall,
+  toolChoiceToOpenAi,
 } from "../../providers";
 import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
 import { convertLlmMessagesToGroqMessages } from "./convert-llm-message";
@@ -49,16 +50,7 @@ export class GroqProvider implements LlmCoreProvider {
       response_format: config.json ? { type: "json_object" } : { type: "text" },
       tools: config.tools?.asLlmFunctions,
       parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
-      tool_choice:
-        config.toolChoice === "auto"
-          ? "auto"
-          : config.toolChoice === "required"
-            ? "required"
-            : config.toolChoice === "none"
-              ? "none"
-              : config.toolChoice
-                ? { type: "function", function: { name: config.toolChoice } }
-                : undefined,
+      tool_choice: toolChoiceToOpenAi(config.toolChoice),
     });
 
     const durationMs = Date.now() - start;

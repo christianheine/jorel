@@ -22,8 +22,10 @@ import {
   LlmStreamResponseChunk,
   LlmToolCall,
 } from "../../providers";
-import { generateRandomId, generateUniqueId, MaybeUndefined } from "../../shared";
+import { generateRandomId, generateUniqueId, MaybeUndefined, omit } from "../../shared";
 import { convertLlmMessagesToVertexAiMessages } from "./convert-llm-message";
+import { ZodObject } from "zod";
+import zodToJsonSchema from "zod-to-json-schema";
 
 const defaultSafetySettings = [
   {
@@ -137,6 +139,12 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
             temperature,
             maxOutputTokens: maxTokens,
             responseMimeType: config.json ? "application/json" : "text/plain",
+            responseSchema:
+              config.json && typeof config.json !== "boolean"
+                ? config.json instanceof ZodObject
+                  ? omit(zodToJsonSchema(config.json, { target: "openAi" }), ["$schema"])
+                  : (config.json as any)
+                : undefined,
           },
           toolConfig: config.tools?.hasTools
             ? {
@@ -239,6 +247,12 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         temperature,
         maxOutputTokens: maxTokens,
         responseMimeType: config.json ? "application/json" : "text/plain",
+        responseSchema:
+          config.json && typeof config.json !== "boolean"
+            ? config.json instanceof ZodObject
+              ? zodToJsonSchema(config.json, { target: "openAi" })
+              : (config.json as any)
+            : undefined,
       },
       safetySettings: this.safetySettings,
     });

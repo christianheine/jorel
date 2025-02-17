@@ -13,8 +13,7 @@ const main = async () => {
     openAI: { apiKey: process.env.OPENAI_API_KEY },
     systemMessage:
       "You are an expert in finance & stocks. Return stock price and " +
-      "volume for a given ticker symbol as JSON " +
-      "{ticker, stockPrice, marketVolume}.",
+      "volume for a given ticker symbol as JSON",
   });
 
   const response = await jorEl.json(
@@ -27,10 +26,15 @@ const main = async () => {
         params: z.object({ tickerSymbol: z.string() }),
       },
     ],
+      jsonSchema: z.object({
+        ticker: z.string(),
+        stockPrice: z.number(),
+        marketVolume: z.number(),
+      }),
   });
 
   console.log(response);
-  // { ticker: 'AAPL', stockPrice: 237.59, marketVolume: 53505269 }
+  // { ticker: 'AAPL', stockPrice: 244.6, marketVolume: 38900219 }
 };
 
 void main();

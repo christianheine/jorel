@@ -301,8 +301,8 @@ export class JorElAgentManager {
         context: env?.context,
         secureContext: env?.secureContext,
         temperature: task.activeThread.agent.temperature ?? undefined,
+        json: task.activeThread.agent.responseType === "json",
       },
-      task.activeThread.agent.responseType === "json",
     );
 
     task.activeThread.addEvent({
