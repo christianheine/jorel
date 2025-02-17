@@ -7,19 +7,16 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    groq: { apiKey: process.env.GROQ_API_KEY },
-    systemMessage: "", // Important for this model to set this to an empty string
-  });
+  const jorEl = new JorEl({ grok: true });
 
   // Change to vision-capable model
-  jorEl.models.setDefault("llama-3.2-11b-vision-preview");
+  jorEl.models.setDefault("grok-2-vision-1212");
 
   // Load image
   const localImage = await ImageContent.fromFile("./image.png");
 
   // Pass image along with the question
-  const response = await jorEl.ask(["Can you describe what is in this image?", localImage]);
+  const response = await jorEl.text(["What is in this image?", localImage]);
 
   console.log(response);
 };

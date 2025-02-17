@@ -74,7 +74,7 @@ const jorel = new JorEl({ openAI: { apiKey: "your-openai-api-key" } });
 jorel.models.setDefault("gpt-4o-mini");
 
 // Generate a response for a text prompt, using the default model
-const response = await jorel.ask("What is the capital of Australia, in one word?");
+const response = await jorel.text("What is the capital of Australia, in one word?");
 
 console.log(response); // "Sydney"
 ```
@@ -86,7 +86,7 @@ This is the most basic usage of JorEl. It will use the default model and provide
 
 ```typescript
 const jorEl = new JorEl({ openAI: true }); // Uses OPENAI_API_KEY env variable
-const response = await jorEl.ask("What is the capital of France?");
+const response = await jorEl.text("What is the capital of France?");
 // Paris
 ```
 
@@ -119,7 +119,7 @@ Allows to pass images to the model.
 const localImage = await ImageContent.fromFile("./image.png");
 
 // Pass image along with the question
-const response = await jorEl.ask([
+const response = await jorEl.text([
   "Can you describe what is in this image?",
   localImage
 ]);
@@ -132,7 +132,7 @@ Allows to pass documents to the model. This helps with context and grounding.
 
 ```typescript
 const companyProfile = await LlmDocument.fromFile("company-profile.txt");
-const response = await jorEl.ask("What are the products of this company?", {
+const response = await jorEl.text("What are the products of this company?", {
   documents: [companyProfile]
 });
 // Response with companyProfile as context
@@ -145,7 +145,7 @@ Allows to pass tools to the model. Tools are functions that the model can call t
 ```typescript
 import { z } from "zod";
 
-const response = await jorEl.ask("What's the weather in Sydney?", {
+const response = await jorEl.text("What's the weather in Sydney?", {
   tools: [{
     name: "get_weather",
     description: "Get the current temperature and conditions for a city",
@@ -157,11 +157,11 @@ const response = await jorEl.ask("What's the weather in Sydney?", {
 
 #### 7. **Responses with metadata**
 
-Works with both `ask` and `json` and returns the response, metadata and messages, e.g. to store them in a database.
+Works with both `text` and `json` and returns the response, metadata and messages, e.g. to store them in a database.
 
 ```typescript
-const { response, meta, messages } = await jorEl.ask(
-  "What are the capitals of France and Germany?",
+const { response, meta, messages } = await jorEl.text(
+  "What is the capital or France?",
   {
     systemMessage: "Answer as succinctly as possible",
   },
@@ -169,7 +169,7 @@ const { response, meta, messages } = await jorEl.ask(
 );
 
 console.log(response);
-// "Paris and Berlin"
+// "Paris"
 
 console.log(meta);
 // {
@@ -183,6 +183,35 @@ console.log(meta);
 
 console.log(messages);
 // Array of system and user messages with timestamps
+```
+
+#### 8. Follow-up generation
+
+You can add the message history to a follow-up generation to use the previous messages for context.
+
+```typescript
+
+const { response, messages } = await jorEl.text(
+  "What is the capital of France",
+  {
+    systemMessage: "Answer as few words as possible",
+  },
+  true,
+);
+
+console.log(response);
+// Paris
+
+const followUpResponse = await jorEl.text('And Germany?', {
+  messageHistory: messages,
+  systemMessage: "Answer with additional details",
+})
+
+console.log(followUpResponse);
+// The capital of Germany is Berlin. Berlin is not only the largest city in Germany
+// but also a significant cultural, political, and historical center in Europe.
+// It is known for its rich history, vibrant arts scene, and landmarks such as the
+// Brandenburg Gate, the Berlin Wall, and Museum Island.
 ```
 
 ### Advanced Features

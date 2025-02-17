@@ -1,9 +1,12 @@
 # Changelog
 
-## 0.10.0 (wip)
+## 0.10.0 (2025-02-17)
 
-- Add support for passing JSON schema definitions for json outputs
 - [BREAKING] Move the final `json` boolean parameter from the end of the core.generate and core.generateAndProcessTools methods into the configuration
+- [BREAKING] Add latest user message to message history when using the `includeMeta` flag
+- [DEPRECATED] Rename `ask` to `text` which better reflects the nature of the method
+- Add support for passing JSON schema definitions for json outputs
+- Add support to pass the message history to the `text`, `json` and `stream`/`streamWithMeta` methods
 
 ## 0.9.6 (2025-02-15)
 

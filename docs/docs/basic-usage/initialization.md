@@ -40,14 +40,14 @@ The `JorEl` constructor takes an optional configuration object. The following op
     + Configuration for the Google Vertex AI provider.
     + You can set it to `true` to use the `GCP_PROJECT`,       `GCP_LOCATION`, and `GOOGLE_APPLICATION_CREDENTIALS` environment variables.
 * `systemMessage`
-    + The default system message to use for all requests using the `ask`,  `json` or `stream` methods.
+    + The default system message to use for all requests using the `text`,  `json` or `stream` methods.
     + Can be overridden on a per-request basis.
 * `documentSystemMessage`
 
-    + The default system message to use for all requests using the `ask`,  `json` or `stream` methods.
+    + The default system message to use for all requests using the `text`,  `json` or `stream` methods.
     + Can also be overridden on a per-request basis.
 * `temperature`
-    + The default temperature to use for all requests using the `ask`,  `json` or `stream` methods.
+    + The default temperature to use for all requests using the `text`,  `json` or `stream` methods.
     + Defaults to 0.
     + Set it to null, in order explicitly use not default temperature.
     + Can also be overridden on a per-request basis (including the null setting)

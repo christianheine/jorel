@@ -16,7 +16,7 @@ const main = async () => {
   jorEl.models.register({model: "deepseek-r1:8b", provider: "ollama"})
 
   // Will return a string
-  const response = await jorEl.ask("Write a basic webserver in Typescript (using Hono)", {
+  const response = await jorEl.text("Write a basic webserver in Typescript (using Hono)", {
     model: "deepseek-r1:8b"
   });
 

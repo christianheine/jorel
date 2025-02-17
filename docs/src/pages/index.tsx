@@ -50,7 +50,7 @@ function HomepageFeatures() {
 
 const jorEl = new JorEl({ openAI: true });
 
-const response = await jorEl.ask(
+const response = await jorEl.text(
   "What are the three laws of robotics?"
 );`,
     },
@@ -64,7 +64,7 @@ const jorEl = new JorEl({ openAI: true });
 // Load image from file or URL
 const image = await ImageContent.fromFile("./photo.jpg");
 
-const response = await jorEl.ask([
+const response = await jorEl.text([
   "What's in this image?", image
 ]);`,
     },
@@ -76,7 +76,7 @@ import { z } from 'zod';
 
 const jorEl = new JorEl({ openAI: true });
 
-const response = await jorEl.ask(
+const response = await jorEl.text(
   "Send a message to the team that JorEl was released",
   {
     tools: [{

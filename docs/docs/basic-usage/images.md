@@ -24,7 +24,7 @@ jorEl.models.setDefault("gpt-4o");
 const image = await ImageContent.fromFile("./image.png");
 
 // Ask about the image
-const response = await jorEl.ask([
+const response = await jorEl.text([
   "What is in this image?",
   image
 ]);
@@ -102,7 +102,7 @@ You can include multiple images in a single request:
 const image1 = await ImageContent.fromFile("./image1.jpg");
 const image2 = await ImageContent.fromFile("./image2.jpg");
 
-const response = await jorEl.ask([
+const response = await jorEl.text([
   "Compare these two images.",
   image1,
   image2
@@ -116,7 +116,7 @@ Images can be used alongside other JorEl features like tools and documents:
 ```typescript
 const image = await ImageContent.fromFile("./product.jpg");
 
-const response = await jorEl.ask(
+const response = await jorEl.text(
   [
     "What is the price of this product in USD and EUR?",
     image

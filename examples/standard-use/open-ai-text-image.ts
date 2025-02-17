@@ -7,18 +7,13 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    openAI: { apiKey: process.env.OPENAI_API_KEY },
-  });
+  const jorEl = new JorEl({ openAI: true });
 
   // Load image
   const localImage = await ImageContent.fromFile("./image.png");
 
   // Pass image along with the question
-  const response = await jorEl.ask([
-    "Can you describe what is in this image?",
-    localImage
-  ]);
+  const response = await jorEl.ask(["Can you describe what is in this image?", localImage]);
 
   console.log(response);
   // The image features a character wearing

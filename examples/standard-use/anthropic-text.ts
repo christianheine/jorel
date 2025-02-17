@@ -7,12 +7,10 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    anthropic: { apiKey: process.env.ANTHROPIC_API_KEY },
-  });
+  const jorEl = new JorEl({ anthropic: true });
 
   // Will return a string
-  const response = await jorEl.ask("What is the capital of France?");
+  const response = await jorEl.text("What is the capital of France?");
 
   console.log(response);
 };

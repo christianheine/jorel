@@ -61,24 +61,24 @@ const jorEl = new JorEl({
 
 ### Generating text
 
-The `ask` method is the simplest way to get responses from the LLM:
+The `text` method is the simplest way to get responses from the LLM:
 
 #### Basic usage
 
-When using the ask method without any additional configuration, JorEl will use the default model and provider, and return the response as a string.
+When using the text method without any additional configuration, JorEl will use the default model and provider, and return the response as a string.
 
 ```typescript
-const response = await jorEl.ask("What is the capital of France?");
+const response = await jorEl.text("What is the capital of France?");
 console.log(response);
 // Paris is the capital of France.
 ```
 
 #### Use with configuration
 
-When using the ask method with configuration, you can specify the model, temperature, system message, and other parameters. It will still return the response as a string.
+When using the text method with configuration, you can specify the model, temperature, system message, and other parameters. It will still return the response as a string.
 
 ```typescript
-const response = await jorEl.ask("What is the capital of France?", {
+const response = await jorEl.text("What is the capital of France?", {
   model: "gpt-4",
   temperature: 0,
   systemMessage: "Answer concisely",
@@ -89,10 +89,10 @@ console.log(response);
 
 #### Use with metadata
 
-When using the ask method with metadata, you can get additional information about the request and response.
+When using the text method with metadata, you can get additional information about the request and response.
 
 ```typescript
-const {response, meta} = await jorEl.ask("What is the capital of France?", {
+const {response, meta} = await jorEl.text("What is the capital of France?", {
     model: "gpt-4",
     systemMessage: "Answer concisely",
   },
@@ -110,7 +110,7 @@ console.log(meta);
 
 ### Generating JSON
 
-The `json` method is similar to `ask` but ensures the response is formatted as a JSON object:
+The `json` method is similar to `text` but ensures the response is formatted as a JSON object:
 
 ```typescript
 // Set a system message that encourages JSON formatting
@@ -135,7 +135,7 @@ const jorElIntro = await LlmDocument.fromFile("../../docs/docs/intro.md");
 const jorElQuickStart = await LlmDocument.fromFile("../../docs/docs/quick-start.md");
 
 // Generate the response with the documents as context
-const response = await jorEl.ask("Describe the main features of JorEl.", {
+const response = await jorEl.text("Describe the main features of JorEl.", {
   documents: [jorElIntro, jorElQuickStart],
   systemMessage: "Be succinct"
 });
@@ -151,7 +151,7 @@ JorEl makes it very easy to pass tools to the LLM, including schema setup via zo
 For many basic agentic use-case, this should be sufficient. For more advanced setups (e.g. with delegation or transfer), you can look into the JorEl.teams methods which allow you to specify agents and
 delegates.
 
-This works for both the `ask` and `json` methods.
+This works for both the `text` and `json` methods.
 
 ```typescript
 import {z} from "zod";
@@ -161,7 +161,7 @@ const getWeather = async ({city}: { city: string }) => {
   return {temperature: 22, conditions: "sunny"};
 };
 
-const response = await jorEl.ask("What's the weather in Sydney?", {
+const response = await jorEl.text("What's the weather in Sydney?", {
   tools: [{
     name: "get_weather",
     description: "Get the current weather for a city",
@@ -213,7 +213,7 @@ JorEl also supports creating embeddings. It will use the default embedding model
 const embedding = await jorEl.embed("What is the capital of France?");
 ```
 
-Similar to the ask method, you can pass a configuration object to the `embed` method. It currently only supports the `model` parameter.
+Similar to the text method, you can pass a configuration object to the `embed` method. It currently only supports the `model` parameter.
 
 ```typescript
 const embedding = await jorEl.embed("What is the capital of France?", {

@@ -6,7 +6,7 @@ import { JorEl, LlmDocument } from "../../src";
 config({ path: "../../.env" });
 
 const main = async () => {
-  // Create instance with pre-initialized OpenAI provider (and default models)
+  // Create instance
   const jorEl = new JorEl({ openAI: true });
 
   // Load documents from local documentation files
@@ -14,7 +14,7 @@ const main = async () => {
   const jorElQuickStart = await LlmDocument.fromFile("../../docs/docs/quick-start.md");
 
   // Generate the response
-  const { response, meta } = await jorEl.ask(
+  const { response, meta } = await jorEl.text(
     "Write a high-level social media marketing approach for making JorEl known to other developers",
     {
       model: "o3-mini",
@@ -41,7 +41,7 @@ const main = async () => {
   //    Use code snippets and examples (as seen in the quick start and intro documents)
   //    to illustrate real-world applications.
   //  - Video Tutorials & Webinars: Develop short tutorial videos or live sessions demonstrating setup,
-  //    using the ask/json/stream methods, and integrating with agent workflows.
+  //    using the text/json/stream methods, and integrating with agent workflows.
   //  - Case Studies and Demos: Share use cases that highlight how JorEl can simplify complex projects—such
   //    as handling multiple provider APIs or delegating tasks among agents.
   //

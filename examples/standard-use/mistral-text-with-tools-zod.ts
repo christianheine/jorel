@@ -8,12 +8,11 @@ import { z } from "zod";
 config({ path: "../../.env" });
 
 const main = async () => {
-
-  // Create instance with pre-initialized OpenAI provider (and default models)
-  const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
+  // Create instance
+  const jorEl = new JorEl({ mistral: true });
 
   // Generate a response with tools
-  const { response, meta, messages } = await jorEl.ask(
+  const { response, meta, messages } = await jorEl.text(
     "What is the current stock price for Apple?",
     {
       tools: [
@@ -29,41 +28,41 @@ const main = async () => {
   );
 
   console.log(response);
-  // The current stock price for Apple (AAPL) is $237.59.
+  // The current stock price for Apple (AAPL) is $233.22.
 
   console.log(meta);
   // {
-  //   model: 'gpt-4o-mini',
-  //   provider: 'openai',
+  //   model: 'mistral-large-latest',
+  //   provider: 'mistral',
   //   temperature: 0,
-  //   durationMs: 962,
-  //   inputTokens: 125,
-  //   outputTokens: 18
+  //   durationMs: 874,
+  //   inputTokens: 181,
+  //   outputTokens: 20
   // }
 
   console.dir(messages, { depth: null });
   // [
   //   {
-  //     id: '698d590f-a791-4235-a10a-d94265c381b8',
+  //     id: '15927912-9863-4005-a950-28da63dc1e24',
   //     role: 'system',
   //     content: 'You are a helpful assistant.',
-  //     createdAt: 1738366791021
+  //     createdAt: 1738919835344
   //   },
   //   {
-  //     id: 'd3c7cef4-3945-4b70-9ec6-07d4d89b62fc',
+  //     id: '2254bd4d-d02a-4093-99ff-accbe71241d8',
   //     role: 'user',
   //     content: 'What is the current stock price for Apple?',
-  //     createdAt: 1738366791021
+  //     createdAt: 1738919835344
   //   },
   //   {
-  //     id: 'b24bb898-10c7-49e6-9ed4-23bd81181a68',
+  //     id: '82034944-5da6-4c54-8234-61a681babd80',
   //     role: 'assistant_with_tools',
   //     content: null,
   //     toolCalls: [
   //       {
-  //         id: '5e473d40-8ed7-4dd5-8cdb-e69f22cf9d5f',
+  //         id: '476a69f6-3120-4b03-95c5-6beea8a9be0d',
   //         request: {
-  //           id: 'call_SbnVmztcNvjMIox749NjOY2w',
+  //           id: 'QppL6QxRJ',
   //           function: {
   //             name: 'get_stock_data',
   //             arguments: { tickerSymbol: 'AAPL' }
@@ -73,14 +72,14 @@ const main = async () => {
   //         executionState: 'completed',
   //         result: {
   //           symbol: 'AAPL',
-  //           open: 238.665,
-  //           close: 237.59,
-  //           volume: 53505269
+  //           open: 231.285,
+  //           close: 233.22,
+  //           volume: 28421367
   //         },
   //         error: null
   //       }
   //     ],
-  //     createdAt: 1738366793417
+  //     createdAt: 1738919837374
   //   }
   // ]
 };

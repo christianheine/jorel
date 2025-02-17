@@ -7,7 +7,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({ mistral: true }); // Uses process.env.MISTRAL_API_KEY
+  const jorEl = new JorEl({ mistral: true });
 
   jorEl.models.setDefault("pixtral-large-latest");
 
@@ -15,7 +15,7 @@ const main = async () => {
   const localImage = await ImageContent.fromFile("./image.png");
 
   // Pass image along with the question
-  const response = await jorEl.ask(["Can you describe what is in this image?", localImage]);
+  const response = await jorEl.text(["Can you describe what is in this image?", localImage]);
 
   console.log(response);
   // This image features a man in a futuristic, high-tech suit.

@@ -19,7 +19,7 @@ const jorEl = new JorEl({
 });
 
 // Define and use a tool
-const response = await jorEl.ask("What's the weather in Sydney?", {
+const response = await jorEl.text("What's the weather in Sydney?", {
   tools: [{
     name: "get_weather",
     description: "Get the current weather for a city",
@@ -116,7 +116,7 @@ const weatherTool = {
 ### Basic Usage
 
 ```typescript
-const response = await jorEl.ask("What's the weather like?", {
+const response = await jorEl.text("What's the weather like?", {
   tools: [weatherTool],
   context: { defaultCity: "Sydney" },     // Available to tools
   secureContext: { apiKey: "secret" },    // Available but not logged
@@ -128,7 +128,7 @@ const response = await jorEl.ask("What's the weather like?", {
 You can control how tools are used with `toolChoice` :
 
 ```typescript
-const response = await jorEl.ask("What's the weather?", {
+const response = await jorEl.text("What's the weather?", {
   tools: [weatherTool],
   toolChoice: "auto",      // Let the LLM decide (default)
   // toolChoice: "none",   // Disable tools
@@ -139,7 +139,7 @@ const response = await jorEl.ask("What's the weather?", {
 ### Multiple Tools
 
 ```typescript
-const response = await jorEl.ask("What's the weather and stock price?", {
+const response = await jorEl.text("What's the weather and stock price?", {
   tools: [{
     name: "get_weather",
     description: "Get weather data",
@@ -159,7 +159,7 @@ const response = await jorEl.ask("What's the weather and stock price?", {
 You can require approval before tools are executed:
 
 ```typescript
-const response = await jorEl.ask("Transfer $100 to Bob", {
+const response = await jorEl.text("Transfer $100 to Bob", {
   tools: [{
     name: "transfer_money",
     description: "Transfer money between accounts",
@@ -198,7 +198,7 @@ for await (const chunk of stream) {
 You can pass context to tools that isn't visible to the LLM:
 
 ```typescript
-const response = await jorEl.ask("What's the weather?", {
+const response = await jorEl.text("What's the weather?", {
   tools: [weatherTool],
   context: {
     userId: "123",
@@ -231,7 +231,7 @@ const weatherTool = {
 You can control how many times a tool can be attempted:
 
 ```typescript
-const response = await jorEl.ask("What's the weather?", {
+const response = await jorEl.text("What's the weather?", {
   tools: [weatherTool],
   maxAttempts: 3,  // Maximum attempts per tool call
 });

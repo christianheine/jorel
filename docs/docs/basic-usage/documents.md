@@ -20,7 +20,7 @@ const jorElIntro = await LlmDocument.fromFile("../../docs/docs/intro.md");
 const jorElQuickStart = await LlmDocument.fromFile("../../docs/docs/quick-start.md");
 
 // Generate the response with the documents as context
-const response = await jorEl.ask("Describe the main features of JorEl.", {
+const response = await jorEl.text("Describe the main features of JorEl.", {
   documents: [jorElIntro, jorElQuickStart],
   systemMessage: "Be succinct"
 });
@@ -89,7 +89,7 @@ Documents can be grouped into collections for better organization and control ov
 The simplest way to use a collection is to pass an array of documents:
 
 ```typescript
-const response = await jorEl.ask("What products are available?", {
+const response = await jorEl.text("What products are available?", {
   documents: [
     {
       title: "Product A",
@@ -202,7 +202,7 @@ const allDocs = collection.all;
 You can customize how documents are presented in the system message:
 
 ```typescript
-const response = await jorEl.ask("What products are available?", {
+const response = await jorEl.text("What products are available?", {
   documents: collection,
   documentSystemMessage: "Here are some relevant documents to consider: {{documents}}",
 });
@@ -213,7 +213,7 @@ const response = await jorEl.ask("What products are available?", {
 Documents can be used alongside other JorEl features:
 
 ```typescript
-const response = await jorEl.ask(
+const response = await jorEl.text(
   ["What is the price of this product?", image],
   {
     documents: [{

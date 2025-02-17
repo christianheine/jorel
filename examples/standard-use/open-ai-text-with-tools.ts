@@ -8,7 +8,7 @@ import { getWeather } from "../_utilities/get-weather";
 config({ path: "../../.env" });
 
 const main = async () => {
-  const jorEl = new JorEl({ openAI: true, logger: "console", logLevel: 'silly' }); // Uses process.env.OPENAI_API_KEY
+  const jorEl = new JorEl({ openAI: true, logger: "console", logLevel: "silly" });
 
   // Defining a toolkit is optional in this scenario, but useful for organizing and reusing tools
   const tools = new LlmToolKit([
@@ -38,7 +38,9 @@ const main = async () => {
     },
   ]);
 
-  const response = await jorEl.ask("What is the current stock price for Amazon, and the weather in Sydney?", { tools });
+  const response = await jorEl.text("What is the current stock price for Amazon, and the weather in Sydney?", {
+    tools,
+  });
 
   console.log(response);
   // The current stock price for Amazon (AMZN) is $224.19.

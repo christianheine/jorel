@@ -7,10 +7,10 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
+  const jorEl = new JorEl({ openAI: true });
 
   // When requesting metadata, the JorEl will return additional information
-  const { response, meta, messages } = await jorEl.ask(
+  const { response, meta, messages } = await jorEl.text(
     "What are the capitals of France and Germany?",
     {
       systemMessage: "Answer as succinctly as possible",

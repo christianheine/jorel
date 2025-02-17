@@ -7,12 +7,10 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    grok: { apiKey: process.env.GROK_API_KEY },
-  });
+  const jorEl = new JorEl({ vertexAi: true });
 
   // Will return a string
-  const response = await jorEl.ask("What is the capital of France?");
+  const response = await jorEl.text("What is the capital of France?");
 
   console.log(response);
 };

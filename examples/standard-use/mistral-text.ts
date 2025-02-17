@@ -8,15 +8,14 @@ config({ path: "../../.env" });
 const main = async () => {
   // Create instance
   const jorEl = new JorEl({
-    groq: { apiKey: process.env.GROQ_API_KEY },
+    mistral: true,
+    systemMessage: "Answer in as few words as possible",
   });
 
-  // Will return a string
-  const response = await jorEl.ask("What is the capital of France?", {
-    model: "llama-3.1-8b-instant",
-  });
+  const response = await jorEl.text("What is the capital of France?");
 
   console.log(response);
+  // Paris
 };
 
 void main();

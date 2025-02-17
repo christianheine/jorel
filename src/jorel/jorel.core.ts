@@ -51,7 +51,7 @@ export class JorElCoreStore {
    */
   async generate(
     messages: CoreLlmMessage[],
-    config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
+    config: JorElGenerationConfigWithTools = {},
   ): Promise<JorElGenerationOutput> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
@@ -89,7 +89,7 @@ export class JorElCoreStore {
    */
   async generateAndProcessTools(
     messages: CoreLlmMessage[],
-    config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
+    config: JorElGenerationConfigWithTools = {},
     autoApprove = false,
   ): Promise<{ output: JorElGenerationOutput; messages: CoreLlmMessage[] }> {
     const _messages = [...messages];
@@ -129,6 +129,8 @@ export class JorElCoreStore {
       throw new Error("Unable to generate a response");
     }
 
+    _messages.push(generateAssistantMessage(generation.content));
+
     return {
       output: generation,
       messages: _messages,
@@ -142,7 +144,7 @@ export class JorElCoreStore {
    */
   async *generateContentStream(
     messages: CoreLlmMessage[],
-    config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
+    config: JorElGenerationConfigWithTools = {},
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
@@ -187,7 +189,7 @@ export class JorElCoreStore {
    */
   async *generateStreamAndProcessTools(
     messages: CoreLlmMessage[],
-    config: Omit<JorElGenerationConfigWithTools, "systemMessage" | "documents"> = {},
+    config: JorElGenerationConfigWithTools = {},
     autoApprove = false,
   ): AsyncGenerator<
     | LlmStreamResponseChunk
@@ -257,7 +259,10 @@ export class JorElCoreStore {
       messages.push(generateAssistantMessage(response.content, response.toolCalls));
     }
 
-    if (response) yield response;
+    if (response) {
+      yield response;
+      messages.push(generateAssistantMessage(response.content));
+    }
 
     yield {
       type: "messages",

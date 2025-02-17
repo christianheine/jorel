@@ -26,7 +26,7 @@ const main = async () => {
   const localImage = await ImageContent.fromFile("./image.png");
 
   // Pass image along with the question
-  const response = await jorEl.ask(["What is in this image?", localImage]);
+  const response = await jorEl.text(["What is in this image?", localImage]);
 
   console.log(response);
 };

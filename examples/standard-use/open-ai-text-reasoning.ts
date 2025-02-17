@@ -7,12 +7,10 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    openAI: { apiKey: process.env.OPENAI_API_KEY },
-  });
+  const jorEl = new JorEl({ openAI: true });
 
   // Will return a string
-  const response = await jorEl.ask("How many r's are in `strawberry`?", {
+  const response = await jorEl.text("How many r's are in `strawberry`?", {
     model: "o1-mini",
     systemMessage: "", // o1-mini doesn't support system messages, so we pass an empty string
   });

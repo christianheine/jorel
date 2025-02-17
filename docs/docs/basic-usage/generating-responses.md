@@ -8,7 +8,7 @@ JorEl provides several methods for generating responses from LLMs. Let's explore
 
 ## Generating text responses
 
-The `ask` method is the simplest way to get responses from an LLM. It returns the response as a string.
+The `text` method is the simplest way to get responses from an LLM. It returns the response as a string.
 
 ### Basic usage
 
@@ -17,7 +17,7 @@ const jorEl = new JorEl({
   openAI: true, // Will use OPENAI_API_KEY environment variable
 });
 
-const response = await jorEl.ask("What is the capital of France?");
+const response = await jorEl.text("What is the capital of France?");
 console.log(response);
 // Paris is the capital of France.
 ```
@@ -27,7 +27,7 @@ console.log(response);
 You can customize the behavior for each individual request as well:
 
 ```typescript
-const response = await jorEl.ask("What is the capital of France?", {
+const response = await jorEl.text("What is the capital of France?", {
   model: "gpt-4",                           // Specify model
   temperature: 0,                           // Control randomness
   systemMessage: "Answer concisely",        // Override system message
@@ -40,10 +40,10 @@ See below for more details on all available configuration options.
 
 ### Retrieving metadata
 
-To get additional information about the request and response, you can pass `true` as the third argument to the `ask` method:
+To get additional information about the request and response, you can pass `true` as the third argument to the `text` method:
 
 ```typescript
-const {response, meta} = await jorEl.ask(
+const {response, meta, messages} = await jorEl.text(
   "What is the capital of France?",
   { model: "gpt-4" },
   true // Include metadata
@@ -58,6 +58,39 @@ console.log(meta);
 //   outputTokens: 16,
 // }
 ```
+
+### Passing the message history for follow-up questions
+
+Both `text`, `json` and `stream` support passing the message history. 
+
+This is useful for when you want to ask a follow-up question to a previous response. You can easily retrieve the message history from the response object when also requesting metadata. 
+
+Note that the system message from the message history is not used (unless you specifically set the system message to empty in the final request). This is mainly to allow for dedicated documents to be used for the follow-up question (which are internally added to the system message).
+
+```typescript
+const { response, messages } = await jorEl.text(
+    "What is the capital of France",
+    {
+      systemMessage: "Answer as few words as possible",
+    },
+    true,
+  );
+
+console.log(response);
+// Paris
+
+const followUpResponse = await jorEl.text('And Germany?', {
+  messageHistory: messages,
+  systemMessage: "Answer with additional details",
+})
+
+console.log(followUpResponse);
+// The capital of Germany is Berlin. Berlin is not only the largest city in Germany
+// but also a significant cultural, political, and historical center in Europe.
+// It is known for its rich history, vibrant arts scene, and landmarks such as the
+// Brandenburg Gate, the Berlin Wall, and Museum Island.
+```
+
 
 ## Generating JSON responses
 
@@ -76,7 +109,7 @@ console.log(response);
 // }
 ```
 
-It supports all the same configuration options as `ask` , and you can also get metadata from `json` :
+It supports all the same configuration options as `text` , and you can also get metadata from `json` :
 
 ```typescript
 const {response, meta} = await jorEl.json(
@@ -109,7 +142,7 @@ import { ImageContent } from 'jorel';
 const image = await ImageContent.fromFile("./image.png");
 
 // Pass image along with the question
-const response = await jorEl.ask([
+const response = await jorEl.text([
   "What is in this image?",
   image
 ]);
@@ -133,7 +166,7 @@ const jorElIntro = await LlmDocument.fromFile("../../docs/docs/intro.md");
 const jorElQuickStart = await LlmDocument.fromFile("../../docs/docs/quick-start.md");
 
 // Generate the response with the documents as context
-const response = await jorEl.ask("Describe the main features of JorEl.", {
+const response = await jorEl.text("Describe the main features of JorEl.", {
   documents: [jorElIntro, jorElQuickStart],
   systemMessage: "Be succinct"
 });
@@ -144,7 +177,7 @@ You can also customize how documents are presented to the LLM using `documentSys
 ```typescript
 jorEl.documentSystemMessage = "Here are some relevant documents to consider: {{documents}}";
 // Or per request:
-const response = await jorEl.ask("What is the best company...?", {
+const response = await jorEl.text("What is the best company...?", {
   documents: [...],
   documentSystemMessage: "Reference these sources: {{documents}}"
 });
@@ -159,7 +192,7 @@ Tools allow the LLM to perform actions or retrieve information during the conver
 ```typescript
 import { z } from "zod";
 
-const response = await jorEl.ask("What's the weather in Sydney?", {
+const response = await jorEl.text("What's the weather in Sydney?", {
   tools: [{
     name: "get_weather",
     description: "Get the current weather for a city",
@@ -200,7 +233,7 @@ For more complex tool usage, including chaining tools and handling errors, see t
 
 ## Configuration options
 
-When using `ask` , `json` , or `stream` , you can pass a configuration object with the following options:
+When using `text` , `json` , or `stream` , you can pass a configuration object with the following options:
 
 ```typescript
 interface GenerationConfig {
@@ -229,7 +262,7 @@ interface GenerationConfig {
 Example using multiple configuration options:
 
 ```typescript
-const response = await jorEl.ask("What's the weather like in Sydney?", {
+const response = await jorEl.text("What's the weather like in Sydney?", {
   model: "gpt-4",
   temperature: 0.7,
   systemMessage: "You are a weather expert. Be precise but conversational.",

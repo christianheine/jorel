@@ -20,7 +20,7 @@ There are three aspects to JorEl:
 3. At the lowest level is the provider layer. Providers essentially map each LLM providers unique message structure and API into a unified one. Usually, you won't have to interact with this layer
    directly, but it's there if you need it (e.g. to register custom providers that JorEl doesn't support yet).
 
-The best starting point are probably the `ask`, `json` and `stream` methods, which are the easiest ways to generate responses. The [Quick Start](/docs/quick-start) guide will show you how to use these
+The best starting point are probably the `text`, `json` and `stream` methods, which are the easiest ways to generate responses. The [Quick Start](/docs/quick-start) guide will show you how to use these
 methods.
 
 For more advanced task setups, you can use the `team` methods like `team.addAgent` or `team.createTask`, which allow you to specify tasks for agents and delegates. Each agent can have its own tools

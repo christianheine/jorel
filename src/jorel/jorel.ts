@@ -26,7 +26,6 @@ import {
   LlmAssistantMessageMeta,
   LlmAssistantMessageWithToolCalls,
   LlmCoreProvider,
-  LlmMessage,
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmStreamResponseMessages,
@@ -41,10 +40,10 @@ import {
   OpenAIConfig,
   OpenAIProvider,
 } from "../providers";
+import { Nullable } from "../shared";
 import { LlmTool, LlmToolConfiguration, LLmToolContextSegment, LlmToolKit } from "../tools";
 import { JorElCoreStore } from "./jorel.core";
 import { JorElAgentManager } from "./jorel.team";
-import { Nullable } from "../shared";
 
 interface InitialConfig {
   anthropic?: AnthropicConfig | true;
@@ -76,6 +75,7 @@ export interface JorElAskGenerationConfigWithTools extends JorElCoreGenerationCo
   maxAttempts?: number;
   context?: LLmToolContextSegment;
   secureContext?: LLmToolContextSegment;
+  messageHistory?: CoreLlmMessage[];
 }
 
 export interface JorElJsonGenerationConfigWithTools extends JorElAskGenerationConfigWithTools {
@@ -85,9 +85,6 @@ export interface JorElJsonGenerationConfigWithTools extends JorElAskGenerationCo
 
 export interface JorElGenerationConfigWithTools extends JorElCoreGenerationConfig {
   model?: string;
-  systemMessage?: string;
-  documentSystemMessage?: string;
-  documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection;
   tools?: LlmToolKit;
   toolChoice?: LlmToolChoice;
   maxAttempts?: number;
@@ -337,7 +334,7 @@ export class JorEl {
 
   /**
    * Generate a response for a given task.
-   *
+   * @deprecated Use `text` instead.
    * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
    * @param config - Configuration for the specific generation.
    * @param includeMeta - Whether to include the metadata and all previous messages in the response.
@@ -354,18 +351,40 @@ export class JorEl {
     config: JorElAskGenerationConfigWithTools = {},
     includeMeta = false,
   ): Promise<string | { response: string; meta: LlmAssistantMessageMeta; messages: CoreLlmMessage[] }> {
-    const { output, messages } = await this._core.generateAndProcessTools(
-      this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage),
-      {
-        ...config,
-        tools: config.tools
-          ? config.tools instanceof LlmToolKit
-            ? config.tools
-            : new LlmToolKit(config.tools)
-          : undefined,
-      },
-      true,
-    );
+    // @ts-expect-error ts(2769) - overloads
+    return this.text(task, config, includeMeta);
+  }
+
+  /**
+   * Generate a response for a given task.
+   *
+   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
+   * @param config - Configuration for the specific generation.
+   * @param includeMeta - Whether to include the metadata and all previous messages in the response.
+   * @returns The text response, or an object with the response, metadata, and messages.
+   */
+  async text(task: JorElTaskInput, config?: JorElAskGenerationConfigWithTools, includeMeta?: false): Promise<string>;
+  async text(
+    task: JorElTaskInput,
+    config?: JorElAskGenerationConfigWithTools,
+    includeMeta?: true,
+  ): Promise<{ response: string; meta: LlmAssistantMessageMeta; messages: CoreLlmMessage[] }>;
+  async text(
+    task: JorElTaskInput,
+    config: JorElAskGenerationConfigWithTools = {},
+    includeMeta = false,
+  ): Promise<string | { response: string; meta: LlmAssistantMessageMeta; messages: CoreLlmMessage[] }> {
+    const { systemMessage, documents, documentSystemMessage, messageHistory, ...coreConfig } = config;
+    const _messages = this.generateMessages(task, systemMessage, documents, documentSystemMessage, messageHistory);
+    const _config: JorElGenerationConfigWithTools = {
+      ...coreConfig,
+      tools: config.tools
+        ? config.tools instanceof LlmToolKit
+          ? config.tools
+          : new LlmToolKit(config.tools)
+        : undefined,
+    };
+    const { output, messages } = await this._core.generateAndProcessTools(_messages, _config);
     const response = output.content || "";
     const meta = output.meta;
     return includeMeta ? { response, meta, messages } : response;
@@ -391,20 +410,18 @@ export class JorEl {
     config: JorElJsonGenerationConfigWithTools = {},
     includeMeta = false,
   ): Promise<object | { response: object; meta: LlmAssistantMessageMeta; messages: CoreLlmMessage[] }> {
-    const _messages = this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage);
-    const { output, messages } = await this._core.generateAndProcessTools(
-      _messages,
-      {
-        ...config,
-        json: config.jsonSchema || true,
-        tools: config.tools
-          ? config.tools instanceof LlmToolKit
-            ? config.tools
-            : new LlmToolKit(config.tools)
-          : undefined,
-      },
-      true,
-    );
+    const { systemMessage, documents, documentSystemMessage, messageHistory, ...coreConfig } = config;
+    const _messages = this.generateMessages(task, systemMessage, documents, documentSystemMessage, messageHistory);
+    const _config: JorElGenerationConfigWithTools = {
+      ...coreConfig,
+      json: config.jsonSchema || true,
+      tools: config.tools
+        ? config.tools instanceof LlmToolKit
+          ? config.tools
+          : new LlmToolKit(config.tools)
+        : undefined,
+    };
+    const { output, messages } = await this._core.generateAndProcessTools(_messages, _config);
     const parsed = output.content ? LlmToolKit.deserialize(output.content) : {};
     return includeMeta ? { response: parsed, meta: output.meta, messages } : parsed;
   }
@@ -454,9 +471,10 @@ export class JorEl {
     void,
     unknown
   > {
-    const messages = this.generateMessages(task, config.systemMessage, config.documents, config.documentSystemMessage);
+    const { systemMessage, documents, documentSystemMessage, messageHistory, ...coreConfig } = config;
+    const messages = this.generateMessages(task, systemMessage, documents, documentSystemMessage, messageHistory);
     const _config = {
-      ...config,
+      ...coreConfig,
       tools: config.tools
         ? config.tools instanceof LlmToolKit
           ? config.tools
@@ -520,6 +538,8 @@ export class JorEl {
    * @param systemMessage - The system message to include (optional).
    * @param documents - The documents to include in the system message (optional).
    * @param documentSystemMessage - The system message to use for documents (optional).
+   * @param messageHistory - The message history to include (optional). If provided along with a dedicated system
+   * message, the system message inside the messages will be ignored.
    * @internal
    */
   private generateMessages(
@@ -527,7 +547,8 @@ export class JorEl {
     systemMessage?: string,
     documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection,
     documentSystemMessage?: string,
-  ): LlmMessage[] {
+    messageHistory: CoreLlmMessage[] = [],
+  ): CoreLlmMessage[] {
     if (Array.isArray(content)) {
       if (content.length === 0) {
         throw new Error("The task input must not be an empty array.");
@@ -537,11 +558,16 @@ export class JorEl {
         throw new Error("The task input must not be empty.");
       }
     }
+
     const _userMessage = this.generateUserMessage(content);
+
+    // Empty string overrides default to skip system message
     if (systemMessage !== "" && (systemMessage || this.systemMessage)) {
-      // Empty string overrides default to skip system message
+      if (messageHistory && messageHistory.some((m) => m.role === "system")) {
+        this._core.logger.info("JorEl", "Message history contains system messages. These will be ignored.");
+      }
       const _systemMessage = this.generateSystemMessage(systemMessage, { documents, documentSystemMessage });
-      return [_systemMessage, _userMessage];
+      return [_systemMessage, ...messageHistory.filter((m) => m.role !== "system"), _userMessage];
     } else {
       if (documents && documents.length > 0) {
         this.logger.warn(
@@ -550,7 +576,7 @@ export class JorEl {
         );
       }
     }
-    return [_userMessage];
+    return [...messageHistory, _userMessage];
   }
 
   /**
