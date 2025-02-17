@@ -7,11 +7,9 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    ollama: {},
-  });
+  const jorEl = new JorEl({ ollama: true });
 
-  // Register Ollama model
+  // Register Llama 3.2 model
   jorEl.models.register({
     model: "llama3.2",
     provider: "ollama",

@@ -7,9 +7,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    openAI: { apiKey: process.env.OPENAI_API_KEY },
-  });
+  const jorEl = new JorEl({ openAI: true });
 
   // Optional: Set default model
   jorEl.models.setDefault("gpt-4o-mini");

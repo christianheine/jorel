@@ -9,7 +9,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create a JorEl instance
-  const jorEl = new JorEl({ openAI: true }); // Uses process.env.OPENAI_API_KEY
+  const jorEl = new JorEl({ openAI: true });
 
   // Create a toolkit with our getWeather tool
   const tools = new LlmToolKit([

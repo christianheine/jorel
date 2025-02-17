@@ -6,7 +6,7 @@ import { JorEl } from "../../src";
 config({ path: "../../.env" });
 
 const main = async () => {
-  // Create instance with pre-initialized OpenAI provider
+  // Create instance
   const jorEl = new JorEl({ openAI: true });
 
   // Get the underlying OpenAI client

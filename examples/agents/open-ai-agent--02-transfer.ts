@@ -8,7 +8,11 @@ import { z } from "zod";
 config({ path: "../../.env" });
 
 const main = async () => {
-  const jorEl = new JorEl({ openAI: true, logger: "console", logLevel: "debug" });
+  const jorEl = new JorEl({
+    openAI: true,
+    logger: "console",
+    logLevel: "debug",
+  });
 
   jorEl.team.addTools([
     {

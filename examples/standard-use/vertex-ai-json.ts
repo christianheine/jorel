@@ -7,13 +7,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    vertexAi: {
-      location: process.env.GCP_LOCATION,
-      project: process.env.GCP_PROJECT,
-      keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-    },
-  });
+  const jorEl = new JorEl({ vertexAi: true });
 
   // Optional: Set system message
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snake_case for attributes!";

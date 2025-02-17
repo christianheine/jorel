@@ -7,13 +7,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    vertexAi: {
-      location: process.env.GCP_LOCATION,
-      project: process.env.GCP_PROJECT,
-      keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-    },
-  });
+  const jorEl = new JorEl({ vertexAi: true });
 
   // Will return a stream of strings
   const stream = jorEl.stream("Generate a merry Christmas song. 5 lines max.");

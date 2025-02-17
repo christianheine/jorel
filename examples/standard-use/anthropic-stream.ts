@@ -7,9 +7,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    anthropic: { apiKey: process.env.ANTHROPIC_API_KEY },
-  });
+  const jorEl = new JorEl({ anthropic: true });
 
   jorEl.systemMessage = "You are a master song writer. When asked for a song, return only the song lyrics.";
 

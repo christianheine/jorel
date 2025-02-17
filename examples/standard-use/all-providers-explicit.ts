@@ -8,6 +8,22 @@ config({ path: "../../.env" });
 const main = async () => {
   // Create instance
   const jorEl = new JorEl({
+    anthropic: {
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    },
+    grok: {
+      apiKey: process.env.GROK_API_KEY,
+    },
+    groq: {
+      apiKey: process.env.GROQ_API_KEY,
+    },
+    mistral: {
+      apiKey: process.env.MISTRAL_API_KEY,
+    },
+    ollama: {},
+    openAI: {
+      apiKey: process.env.OPENAI_API_KEY,
+    },
     vertexAi: {
       location: process.env.GCP_LOCATION,
       project: process.env.GCP_PROJECT,
@@ -16,7 +32,7 @@ const main = async () => {
   });
 
   // Will return a string
-  const response = await jorEl.ask("What is the capital of France?");
+  const response = await jorEl.text("What is the capital of France?");
 
   console.log(response);
 };

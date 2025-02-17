@@ -1,7 +1,7 @@
 #!/usr/bin/env ts-node
 
 import { config } from "dotenv";
-import { generateUserMessage, ImageContent, OpenAIProvider } from "../../src";
+import { OpenAIProvider } from "../../src";
 
 config({ path: "../../.env" });
 
@@ -10,7 +10,7 @@ const main = async () => {
 
   const models = await provider.getAvailableModels();
 
-  console.log(models.filter((model) => model.includes('o3')));
+  console.log(models.filter((model) => model.includes("o3")));
   //
   // const response = await provider.generateResponse(
   //   "gpt-4o-mini",

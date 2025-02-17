@@ -9,9 +9,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    openAI: { apiKey: process.env.OPENAI_API_KEY },
-  });
+  const jorEl = new JorEl({ openAI: true });
 
   // Will return a stream of chunks, and a response and messages object
   const stream = jorEl.streamWithMeta("What is the weather in Sydney?", {

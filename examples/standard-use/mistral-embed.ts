@@ -6,8 +6,8 @@ import { JorEl } from "../../src";
 config({ path: "../../.env" });
 
 const main = async () => {
-  // Create instance with pre-initialized OpenAI provider (and default models)
-  const jorEl = new JorEl({ mistral: true }); // Uses process.env.MISTRAL_API_KEY
+  // Create instance
+  const jorEl = new JorEl({ mistral: true });
 
   const response = await jorEl.embed("What is the capital of France?");
 

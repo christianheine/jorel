@@ -7,9 +7,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    grok: { apiKey: process.env.GROK_API_KEY },
-  });
+  const jorEl = new JorEl({ grok: true });
 
   // Optional: Set system message
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snake_case for attributes!";

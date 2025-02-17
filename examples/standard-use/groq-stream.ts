@@ -7,9 +7,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    groq: { apiKey: process.env.GROQ_API_KEY },
-  });
+  const jorEl = new JorEl({ groq: true });
 
   // Will return a stream of strings
   const stream = jorEl.stream("Generate a merry Christmas song. 5 lines max.");

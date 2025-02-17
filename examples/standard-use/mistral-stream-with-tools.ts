@@ -9,7 +9,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({ mistral: true }); // Uses process.env.MISTRAL_API_KEY
+  const jorEl = new JorEl({ mistral: true });
 
   // Will return a stream of strings
   const stream = jorEl.stream("What is the weather in Sydney?", {

@@ -7,9 +7,7 @@ config({ path: "../../.env" });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    anthropic: { apiKey: process.env.ANTHROPIC_API_KEY },
-  });
+  const jorEl = new JorEl({ anthropic: true });
 
   // Optional: Set system message
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snake_case for attributes!";

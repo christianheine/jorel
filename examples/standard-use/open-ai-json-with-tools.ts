@@ -10,14 +10,12 @@ config({ path: "../../.env" });
 const main = async () => {
   // Create instance
   const jorEl = new JorEl({
-    openAI: { apiKey: process.env.OPENAI_API_KEY },
+    openAI: true,
     systemMessage:
-      "You are an expert in finance & stocks. Return stock price and " +
-      "volume for a given ticker symbol as JSON",
+      "You are an expert in finance & stocks. Return stock price and " + "volume for a given ticker symbol as JSON",
   });
 
-  const response = await jorEl.json(
-    "What is the current stock price for Apple?", {
+  const response = await jorEl.json("What is the current stock price for Apple?", {
     tools: [
       {
         name: "get_stock_data",
@@ -26,11 +24,11 @@ const main = async () => {
         params: z.object({ tickerSymbol: z.string() }),
       },
     ],
-      jsonSchema: z.object({
-        ticker: z.string(),
-        stockPrice: z.number(),
-        marketVolume: z.number(),
-      }),
+    jsonSchema: z.object({
+      ticker: z.string(),
+      stockPrice: z.number(),
+      marketVolume: z.number(),
+    }),
   });
 
   console.log(response);
