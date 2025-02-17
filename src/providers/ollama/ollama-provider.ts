@@ -1,4 +1,4 @@
-import ollama, { Ollama, Tool } from "ollama";
+import ollama, { Ollama, ToolCall } from "ollama";
 
 import {
   CoreLlmMessage,
@@ -8,12 +8,12 @@ import {
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
 import { generateRandomId, generateUniqueId, MaybeUndefined } from "../../shared";
+import { jsonResponseToOllama, toolsToOllama } from "./convert-inputs";
 import { convertLlmMessagesToOllamaMessages } from "./convert-llm-message";
-import { ZodObject } from "zod";
-import zodToJsonSchema from "zod-to-json-schema";
 
 export interface OllamaConfig {
   name?: string;
@@ -43,27 +43,8 @@ export class OllamaProvider implements LlmCoreProvider {
     const response = await ollama.chat({
       model,
       messages: await convertLlmMessagesToOllamaMessages(messages),
-      format: config.json
-        ? typeof config.json === "boolean"
-          ? "json"
-          : config.json instanceof ZodObject
-            ? zodToJsonSchema(config.json, { target: "openAi" })
-            : config.json
-        : undefined,
-      tools: config.tools?.asLlmFunctions?.map(
-        (f): Tool => ({
-          type: "function",
-          function: {
-            name: f.function.name,
-            description: f.function.description,
-            parameters: {
-              type: f.function.parameters?.type ?? "object",
-              properties: f.function.parameters?.properties ?? ({} as Record<string, any>),
-              required: f.function.parameters?.required ?? [],
-            },
-          },
-        }),
-      ),
+      format: jsonResponseToOllama(config.json),
+      tools: toolsToOllama(config.tools),
       options: {
         temperature,
       },
@@ -111,8 +92,8 @@ export class OllamaProvider implements LlmCoreProvider {
   async *generateResponseStream(
     model: string,
     messages: CoreLlmMessage[],
-    config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
+    config: LlmGenerationConfig = {},
+  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const start = Date.now();
 
     const temperature = config.temperature ?? undefined;
@@ -121,17 +102,17 @@ export class OllamaProvider implements LlmCoreProvider {
       model,
       messages: await convertLlmMessagesToOllamaMessages(messages),
       stream: true,
-      format: config.json
-        ? typeof config.json === "boolean"
-          ? "json"
-          : config.json instanceof ZodObject
-            ? zodToJsonSchema(config.json, { target: "openAi" })
-            : config.json
-        : undefined,
+      format: jsonResponseToOllama(config.json),
+      tools: toolsToOllama(config.tools),
       options: {
         temperature,
       },
     });
+
+    const _toolCalls: ToolCall[] = [];
+
+    let inputTokens: MaybeUndefined<number> = undefined;
+    let outputTokens: MaybeUndefined<number> = undefined;
 
     let content = "";
     for await (const chunk of stream) {
@@ -140,28 +121,70 @@ export class OllamaProvider implements LlmCoreProvider {
         content += contentChunk;
         yield { type: "chunk", content: contentChunk };
       }
+
+      if (chunk.message.tool_calls) {
+        for (const toolCall of chunk.message.tool_calls) {
+          if (!_toolCalls.some((t) => t.function.name === toolCall.function.name)) {
+            _toolCalls.push(toolCall);
+          }
+        }
+      }
+
+      if (chunk.prompt_eval_count) {
+        inputTokens = (inputTokens ?? 0) + chunk.prompt_eval_count;
+      }
+
+      if (chunk.eval_count) {
+        outputTokens = (outputTokens ?? 0) + chunk.eval_count;
+      }
     }
 
     const durationMs = Date.now() - start;
 
-    const inputTokens = undefined;
-    const outputTokens = undefined;
-
     const provider = this.name;
 
-    yield {
-      type: "response",
-      role: "assistant",
-      content,
-      meta: {
-        model,
-        provider,
-        temperature,
-        durationMs,
-        inputTokens,
-        outputTokens,
-      },
+    const meta = {
+      model,
+      provider,
+      temperature,
+      durationMs,
+      inputTokens,
+      outputTokens,
     };
+
+    if (_toolCalls.length > 0) {
+      const toolCalls: LlmToolCall[] = _toolCalls.map((call) => ({
+        id: generateUniqueId(),
+        request: {
+          id: generateRandomId(),
+          function: {
+            name: call.function.name,
+            arguments: call.function.arguments,
+          },
+        },
+        approvalState: config.tools?.getTool(call.function.name)?.requiresConfirmation
+          ? "requiresApproval"
+          : "noApprovalRequired",
+        executionState: "pending",
+        result: null,
+        error: null,
+      }));
+
+      yield {
+        type: "response",
+        role: "assistant_with_tools",
+        content,
+        toolCalls: toolCalls,
+        meta,
+      };
+    } else {
+      yield {
+        type: "response",
+        role: "assistant",
+        content,
+        meta,
+      };
+    }
   }
 
   async getAvailableModels(): Promise<string[]> {

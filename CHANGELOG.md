@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.1 (wip)
+
+- Add support for tool-use when streaming with ollama
+
 ## 0.10.0 (2025-02-17)
 
 - [BREAKING] Move the final `json` boolean parameter from the end of the core.generate and core.generateAndProcessTools methods into the configuration
