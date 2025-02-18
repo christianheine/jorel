@@ -13,6 +13,7 @@
 - `generateUserMessage` is now async to allow for immediate ImageContent conversion (and future use-cases)
 - Add support for tool-use when generating streams with Ollama
 - Add support for tool-use when generating streams with Vertex AI
+- Add support for tool-use when generating streams with Anthropic
 - Fix issue when passing tool parameters from zod to Vertex AI
 
 ## 0.10.0 (2025-02-17)

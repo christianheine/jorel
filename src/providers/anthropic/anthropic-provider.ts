@@ -1,17 +1,19 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import {
-  LlmMessage,
   generateAssistantMessage,
   LlmCoreProvider,
   LlmGenerationConfig,
+  LlmMessage,
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
 import { convertLlmMessagesToAnthropicMessages } from "./convert-llm-message";
 import { generateUniqueId, MaybeUndefined } from "../../shared";
+import { LlmToolKit } from "../../tools";
 
 export interface AnthropicConfig {
   apiKey?: string;
@@ -162,8 +164,8 @@ export class AnthropicProvider implements LlmCoreProvider {
   async *generateResponseStream(
     model: string,
     messages: LlmMessage[],
-    config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
+    config: LlmGenerationConfig = {},
+  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const start = Date.now();
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToAnthropicMessages(messages);
@@ -177,6 +179,37 @@ export class AnthropicProvider implements LlmCoreProvider {
       max_tokens: config.maxTokens || 4096,
       system: systemMessage,
       stream: true,
+      tool_choice:
+        config.toolChoice === "none" || !config.tools || !config.tools.hasTools
+          ? undefined
+          : config.toolChoice === "any"
+            ? {
+                type: "auto",
+                disable_parallel_tool_use: config.tools?.allowParallelCalls,
+              }
+            : config.toolChoice === "required"
+              ? {
+                  type: "auto",
+                  disable_parallel_tool_use: config.tools?.allowParallelCalls,
+                }
+              : config.toolChoice
+                ? {
+                    type: "tool",
+                    name: config.toolChoice,
+                    disable_parallel_tool_use: config.tools?.allowParallelCalls,
+                  }
+                : undefined,
+      tools:
+        config.toolChoice === "none"
+          ? undefined
+          : config.tools?.asLlmFunctions?.map<Anthropic.Messages.Tool>((tool) => ({
+              name: tool.function.name,
+              input_schema: {
+                ...tool.function.parameters?.properties,
+                type: "object",
+              },
+              description: tool.function.description,
+            })),
     });
 
     let inputTokens = undefined;
@@ -184,15 +217,35 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     let content = "";
 
+    const _toolCalls: { [index: number]: Anthropic.Messages.ToolUseBlock & { arguments: string } } = {};
+
     for await (const chunk of responseStream) {
-      if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
-        content += chunk.delta.text;
-        yield { type: "chunk", content: chunk.delta.text };
+      if (chunk.type === "content_block_delta") {
+        if (chunk.delta.type === "text_delta") {
+          content += chunk.delta.text;
+          yield { type: "chunk", content: chunk.delta.text };
+        }
       }
+
       if (chunk.type === "message_start") {
         inputTokens = (inputTokens || 0) + chunk.message.usage.input_tokens;
         outputTokens = (outputTokens || 0) + chunk.message.usage.output_tokens;
       }
+
+      if (chunk.type === "content_block_start") {
+        if (chunk.content_block.type === "tool_use") {
+          _toolCalls[chunk.index] = { ...chunk.content_block, arguments: "" };
+        }
+      }
+
+      if (chunk.type === "content_block_delta") {
+        if (chunk.delta.type === "input_json_delta") {
+          const index = chunk.index;
+          const toolCall = _toolCalls[index];
+          toolCall.arguments += chunk.delta.partial_json;
+        }
+      }
+
       if (chunk.type === "message_delta") {
         outputTokens = (outputTokens || 0) + chunk.usage.output_tokens;
       }
@@ -202,19 +255,46 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const provider = this.name;
 
-    yield {
-      type: "response",
-      content,
-      role: "assistant",
-      meta: {
-        model,
-        provider,
-        durationMs,
-        temperature,
-        inputTokens,
-        outputTokens,
-      },
+    const meta = {
+      model,
+      provider,
+      temperature,
+      durationMs,
+      inputTokens,
+      outputTokens,
     };
+
+    const toolCalls: MaybeUndefined<LlmToolCall[]> = Object.values(_toolCalls).map((c) => ({
+      id: generateUniqueId(),
+      request: {
+        id: c.id,
+        function: {
+          name: c.name,
+          arguments: LlmToolKit.deserialize(c.arguments),
+        },
+      },
+      approvalState: config.tools?.getTool(c.name)?.requiresConfirmation ? "requiresApproval" : "noApprovalRequired",
+      executionState: "pending",
+      result: null,
+      error: null,
+    }));
+
+    if (toolCalls && toolCalls.length > 0) {
+      yield {
+        type: "response",
+        role: "assistant_with_tools",
+        content,
+        toolCalls,
+        meta,
+      };
+    } else {
+      yield {
+        type: "response",
+        role: "assistant",
+        content,
+        meta,
+      };
+    }
   }
 
   async getAvailableModels(): Promise<string[]> {
