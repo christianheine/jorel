@@ -2,7 +2,6 @@ import {
   ClientError,
   Content,
   CountTokensResponse,
-  FunctionCallingMode,
   GenerateContentResponse,
   GoogleApiError,
   HarmBlockThreshold,
@@ -12,20 +11,23 @@ import {
   VertexAI,
 } from "@google-cloud/vertexai";
 import { FunctionDeclaration, FunctionDeclarationSchema } from "@google-cloud/vertexai/src/types/content";
+import { ZodObject } from "zod";
+import zodToJsonSchema from "zod-to-json-schema";
 import {
-  LlmMessage,
   generateAssistantMessage,
   LlmCoreProvider,
   LlmGenerationConfig,
+  LlmMessage,
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseWithToolCalls,
   LlmToolCall,
+  toolChoiceToVertexAi,
 } from "../../providers";
 import { generateRandomId, generateUniqueId, MaybeUndefined, omit } from "../../shared";
 import { convertLlmMessagesToVertexAiMessages } from "./convert-llm-message";
-import { ZodObject } from "zod";
-import zodToJsonSchema from "zod-to-json-schema";
+import { ToolCall } from "ollama";
 
 const defaultSafetySettings = [
   {
@@ -130,7 +132,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
               {
                 name: f.function.name,
                 description: f.function.description,
-                parameters: f.function.parameters as unknown as FunctionDeclarationSchema,
+                parameters: f.function.parameters ? omit(f.function.parameters, ['$schema']) as unknown as FunctionDeclarationSchema : undefined,
               },
             ];
             return { functionDeclarations };
@@ -146,18 +148,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
                   : (config.json as any)
                 : undefined,
           },
-          toolConfig: config.tools?.hasTools
-            ? {
-                functionCallingConfig: {
-                  mode:
-                    config.toolChoice === "none"
-                      ? FunctionCallingMode.NONE
-                      : config.toolChoice === "required"
-                        ? FunctionCallingMode.ANY
-                        : FunctionCallingMode.AUTO,
-                },
-              }
-            : undefined,
+          toolConfig: toolChoiceToVertexAi(config.tools?.hasTools ?? false, config.toolChoice),
           safetySettings: this.safetySettings,
         })
       ).response;
@@ -227,8 +218,8 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
   async *generateResponseStream(
     model: string,
     messages: LlmMessage[],
-    config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
+    config: LlmGenerationConfig = {},
+  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const start = Date.now();
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToVertexAiMessages(messages);
@@ -243,6 +234,16 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     const response: StreamGenerateContentResult = await generativeModel.generateContentStream({
       contents: chatMessages,
       systemInstruction: systemMessage,
+      tools: config.tools?.asLlmFunctions?.map<Tool>((f) => {
+        const functionDeclarations: FunctionDeclaration[] = [
+          {
+            name: f.function.name,
+            description: f.function.description,
+            parameters: f.function.parameters ? omit(f.function.parameters, ['$schema']) as unknown as FunctionDeclarationSchema : undefined,
+          },
+        ];
+        return { functionDeclarations };
+      }),
       generationConfig: {
         temperature,
         maxOutputTokens: maxTokens,
@@ -254,17 +255,35 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
               : (config.json as any)
             : undefined,
       },
+      toolConfig: toolChoiceToVertexAi(config.tools?.hasTools ?? false, config.toolChoice),
       safetySettings: this.safetySettings,
     });
 
     const durationMs = Date.now() - start;
+
+    const _toolCalls: ToolCall[] = [];
 
     for await (const res of response.stream) {
       const content: Content =
         res.candidates && res.candidates.length > 0
           ? res.candidates[0].content
           : { role: "model", parts: [{ text: "" }] };
+
       if (content && content.parts && content.parts.length > 0) {
+        // Handle function calls in the stream
+        const functionCalls = content.parts.filter((p) => p.functionCall);
+        for (const part of functionCalls) {
+          if (part.functionCall) {
+            _toolCalls.push({
+              function: {
+                name: part.functionCall.name,
+                arguments: part.functionCall.args,
+              },
+            });
+          }
+        }
+
+        // Handle text content
         const textContent = content.parts.map((part) => ("text" in part ? part.text : "")).join("");
         if (textContent.length > 0) {
           yield { type: "chunk", content: textContent };
@@ -273,29 +292,60 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     }
 
     const r = await response.response;
-    const content: Content =
+    const rawContent: Content =
       r.candidates && r.candidates.length > 0 ? r.candidates[0].content : { role: "model", parts: [{ text: "" }] };
 
     const inputTokens = r.usageMetadata?.promptTokenCount;
     const outputTokens = r.usageMetadata?.candidatesTokenCount;
 
-    const contentText = content.parts.map((p) => p.text).join("");
+    const content = rawContent.parts.map((p) => p.text).join("");
 
     const provider = this.name;
 
-    yield {
-      type: "response",
-      role: "assistant",
-      content: contentText,
-      meta: {
-        model,
-        provider,
-        temperature,
-        durationMs,
-        inputTokens,
-        outputTokens,
-      },
+    const toolCalls: MaybeUndefined<LlmToolCall[]> = _toolCalls.map((call) => {
+      return {
+        id: generateUniqueId(),
+        request: {
+          id: generateRandomId(),
+          function: {
+            name: call.function.name,
+            arguments: call.function.arguments,
+          },
+        },
+        approvalState: config.tools?.getTool(call.function.name)?.requiresConfirmation
+          ? "requiresApproval"
+          : "noApprovalRequired",
+        executionState: "pending",
+        result: null,
+        error: null,
+      };
+    });
+
+    const meta = {
+      model,
+      provider,
+      temperature,
+      durationMs,
+      inputTokens,
+      outputTokens,
     };
+
+    if (toolCalls.length > 0) {
+      yield {
+        type: "response",
+        role: "assistant_with_tools",
+        content,
+        toolCalls,
+        meta,
+      };
+    } else {
+      yield {
+        type: "response",
+        role: "assistant",
+        content,
+        meta,
+      };
+    }
   }
 
   async getAvailableModels(): Promise<string[]> {

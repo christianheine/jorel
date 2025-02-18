@@ -11,7 +11,9 @@
   which is then included in the `LLmMessageImageUrlContent` or `LLmMessageImageDataUrlContent` objects. This can be useful
   when managing images outside the message history (e.g., in S3 or other cloud storage)
 - `generateUserMessage` is now async to allow for immediate ImageContent conversion (and future use-cases)
-- Add support for tool-use when streaming with ollama
+- Add support for tool-use when generating streams with Ollama
+- Add support for tool-use when generating streams with Vertex AI
+- Fix issue when passing tool parameters from zod to Vertex AI
 
 ## 0.10.0 (2025-02-17)
 
