@@ -1,13 +1,21 @@
-import { generateAssistantMessage, generateSystemMessage, generateUserMessage, LlmToolCall } from "../../providers";
+import {
+  generateAssistantMessage,
+  generateSystemMessage,
+  generateUserMessage,
+  LLmMessageTextContent,
+  LlmToolCall,
+} from "../../providers";
 import { LlmDocument, LlmDocumentCollection } from "../../documents";
 
 describe("generateUserMessage", () => {
-  it("should generate a user message with the given content", () => {
+  it("should generate a user message with the given content", async () => {
     const content = "Hello, world!";
-    const result = generateUserMessage(content);
+
+    const result = await generateUserMessage(content);
 
     expect(result.role).toBe("user");
-    expect(result.content).toBe(content);
+    expect(result.content[0].type).toBe("text");
+    expect((result.content[0] as unknown as LLmMessageTextContent).text).toBe(content);
     expect(result.id).toBeDefined();
     expect(result.createdAt).toBeDefined();
   });

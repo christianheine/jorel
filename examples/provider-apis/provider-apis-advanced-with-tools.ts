@@ -77,7 +77,7 @@ const main = async () => {
     [
       {
         role: "user",
-        content: "What's the current temperature in Sydney?",
+        content: [{ type: "text", text: "What's the current temperature in Sydney?" }],
       },
     ],
     {
@@ -145,7 +145,12 @@ const main = async () => {
       [
         {
           role: "user",
-          content: "What's the current temperature in Sydney?",
+          content: [
+            {
+              type: "text",
+              text: "What's the current temperature in Sydney?",
+            },
+          ],
         },
         response,
       ],

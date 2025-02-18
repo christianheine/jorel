@@ -1,6 +1,6 @@
 import { LogService } from "../logger";
 import {
-  CoreLlmMessage,
+  LlmMessage,
   generateAssistantMessage,
   InitLlmGenerationConfig,
   LlmStreamResponse,
@@ -50,7 +50,7 @@ export class JorElCoreStore {
    * @param config.tools Tools to use for this request (optional)
    */
   async generate(
-    messages: CoreLlmMessage[],
+    messages: LlmMessage[],
     config: JorElGenerationConfigWithTools = {},
   ): Promise<JorElGenerationOutput> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
@@ -88,10 +88,10 @@ export class JorElCoreStore {
    * @param autoApprove
    */
   async generateAndProcessTools(
-    messages: CoreLlmMessage[],
+    messages: LlmMessage[],
     config: JorElGenerationConfigWithTools = {},
     autoApprove = false,
-  ): Promise<{ output: JorElGenerationOutput; messages: CoreLlmMessage[] }> {
+  ): Promise<{ output: JorElGenerationOutput; messages: LlmMessage[] }> {
     const _messages = [...messages];
     if (config.tools && config.tools.tools.some((t) => t.type !== "function")) {
       throw new Error("Only tools with a function executor can be used in this context");
@@ -143,7 +143,7 @@ export class JorElCoreStore {
    * @param config
    */
   async *generateContentStream(
-    messages: CoreLlmMessage[],
+    messages: LlmMessage[],
     config: JorElGenerationConfigWithTools = {},
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
@@ -188,7 +188,7 @@ export class JorElCoreStore {
    * @param autoApprove
    */
   async *generateStreamAndProcessTools(
-    messages: CoreLlmMessage[],
+    messages: LlmMessage[],
     config: JorElGenerationConfigWithTools = {},
     autoApprove = false,
   ): AsyncGenerator<

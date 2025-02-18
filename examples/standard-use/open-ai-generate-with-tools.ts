@@ -25,7 +25,7 @@ const main = async () => {
     },
   ]);
 
-  const messages: LlmMessage[] = [generateUserMessage("What is the weather in Sydney?")];
+  const messages: LlmMessage[] = [await generateUserMessage("What is the weather in Sydney?")];
 
   const toolMessage: LlmMessage = await jorEl.generate(messages, { tools });
 

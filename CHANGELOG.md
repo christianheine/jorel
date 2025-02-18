@@ -1,12 +1,21 @@
 # Changelog
 
-## 0.10.1 (wip)
+## 0.11.0 (wip)
 
+- [BREAKING] LlmMessageContent (which is used in LlmUserMessage) has been simplified always to an array of
+  LLmMessageTextContent or LLmMessageImageUrlContent or LLmMessageImageDataUrlContent.
+  This won't affect the standard APIs (`text`, `json` and `stream` methods), but will affect calls to
+  some of the core methods (e.g., `generate`, `generateAndProcessTools`, `generateStreamAndProcessTools`)
+- CoreLlmMessages and LlmMessage types have been merged into LlmMessage types
+-  `ImageContent` now has an optional `metadata` property which can be used to pass additional information about the image,
+  which is then included in the `LLmMessageImageUrlContent` or `LLmMessageImageDataUrlContent` objects. This can be useful
+  when managing images outside the message history (e.g., in S3 or other cloud storage)
+- `generateUserMessage` is now async to allow for immediate ImageContent conversion (and future use-cases)
 - Add support for tool-use when streaming with ollama
 
 ## 0.10.0 (2025-02-17)
 
-- [BREAKING] Move the final `json` boolean parameter from the end of the core.generate and core.generateAndProcessTools methods into the configuration
+- [BREAKING] Move the final `json` boolean parameter from the end of the core.`generate` and core.`generateAndProcessTools` methods into the configuration
 - [BREAKING] Add latest user message to message history when using the `includeMeta` flag
 - [DEPRECATED] Rename `ask` to `text` which better reflects the nature of the method
 - Add support for passing JSON schema definitions for json outputs

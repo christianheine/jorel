@@ -375,7 +375,7 @@ export class JorElAgentManager {
       timestamp: new Date().getTime(),
       targetThreadId: parentThread.id,
       action: `Agent ${task.activeThread.agent.name} returned execution to agent ${parentThread.agent?.name ?? "unknown"} (${parentThread.isMain ? "Main" : "Sub"} thread)`,
-      messageId: latestMessage.id,
+      messageId: latestMessage.id ?? "-",
     });
 
     this._core.logger.info(
@@ -597,7 +597,7 @@ export class JorElAgentManager {
           {
             id: subThreadId,
             agentId: delegate.name,
-            messages: [generateUserMessage(taskDescription)],
+            messages: [await generateUserMessage(taskDescription)],
             parentThreadId: task.activeThread.id,
             parentToolCallId: toolCall.id,
             events: [],

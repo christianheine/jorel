@@ -4,17 +4,40 @@ import {
   LlmSystemMessage,
   LlmToolCall,
   LlmUserMessage,
+  LlmUserMessageContent,
 } from "./llm-core-provider";
 import { JorElTaskInput } from "../jorel";
 import { generateUniqueId, Nullable } from "../shared";
 import { LlmDocumentCollection } from "../documents";
 
-export const generateUserMessage = (content: JorElTaskInput): LlmUserMessage => ({
-  id: generateUniqueId(),
-  role: "user",
-  content,
-  createdAt: Date.now(),
-});
+export const generateUserMessage = async (taskInput: JorElTaskInput): Promise<LlmUserMessage> => {
+  const baseMessage: Omit<LlmUserMessage, "content"> = {
+    id: generateUniqueId(),
+    role: "user",
+    createdAt: Date.now(),
+  };
+
+  if (typeof taskInput === "string") {
+    return { ...baseMessage, content: [{ type: "text", text: taskInput }] };
+  }
+
+  const content: LlmUserMessageContent[] = [];
+
+  for (const input of taskInput) {
+    if (typeof input === "string") {
+      content.push({ type: "text", text: input });
+    } else {
+      content.push(await input.toMessageContent());
+    }
+  }
+
+  return {
+    id: generateUniqueId(),
+    role: "user",
+    content,
+    createdAt: Date.now(),
+  };
+};
 
 export const generateSystemMessage = (
   systemMessage: string,

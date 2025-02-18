@@ -1,6 +1,5 @@
-import { CoreLlmMessage } from "../../providers";
+import { LlmMessage } from "../../providers";
 import Anthropic from "@anthropic-ai/sdk";
-import { ImageContent } from "../../media";
 import { getBase64PartFromDataUrl } from "../../media/utils";
 import { LlmToolKit } from "../../tools";
 
@@ -18,7 +17,7 @@ const validateMediaType = (mediaType?: string): ValidMediaType => {
 
 /** Convert unified LLM messages to Anthropic messages */
 export const convertLlmMessagesToAnthropicMessages = async (
-  messages: CoreLlmMessage[],
+  messages: LlmMessage[],
 ): Promise<{
   systemMessage: string;
   chatMessages: Anthropic.MessageParam[];
@@ -79,48 +78,26 @@ export const convertLlmMessagesToAnthropicMessages = async (
         }
       }
     } else if (message.role === "user") {
-      if (typeof message.content === "string") {
-        convertedChatMessages.push({
-          role: "user",
-          content: message.content,
-        });
-      } else if (Array.isArray(message.content)) {
-        const content: Anthropic.ContentBlockParam[] = [];
-        for (const _content of message.content) {
-          if (_content instanceof ImageContent) {
-            const { data, mimeType } = await _content.toBase64();
-            content.push({
-              type: "image",
-              source: {
-                data,
-                media_type: validateMediaType(mimeType),
-                type: "base64",
-              },
-            });
-          } else if (typeof _content === "string") {
-            content.push({
-              type: "text",
-              text: _content,
-            });
-          } else if (_content.type === "text") {
-            content.push({
-              type: "text",
-              text: _content.text,
-            });
-          } else if (_content.type === "imageData") {
-            content.push({
-              type: "image",
-              source: {
-                data: getBase64PartFromDataUrl(_content.data),
-                media_type: validateMediaType(_content.mimeType),
-                type: "base64",
-              },
-            });
-          } else if (_content.type === "imageUrl") {
-            throw new Error(`Image URLs are currently not supported by Anthropic`);
-          } else {
-            throw new Error(`Unsupported content type`);
-          }
+      const content: Anthropic.ContentBlockParam[] = [];
+      for (const _content of message.content) {
+        if (_content.type === "text") {
+          content.push({
+            type: "text",
+            text: _content.text,
+          });
+        } else if (_content.type === "imageData") {
+          content.push({
+            type: "image",
+            source: {
+              data: getBase64PartFromDataUrl(_content.data),
+              media_type: validateMediaType(_content.mimeType),
+              type: "base64",
+            },
+          });
+        } else if (_content.type === "imageUrl") {
+          throw new Error(`Image URLs are currently not supported by Anthropic`);
+        } else {
+          throw new Error(`Unsupported content type`);
         }
 
         convertedChatMessages.push({

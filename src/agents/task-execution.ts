@@ -289,7 +289,7 @@ export class TaskExecution implements TaskExecutionDefinition {
    * @param agentId
    * @param jorEl
    */
-  static fromTask(task: JorElTaskInput, agentId: string, jorEl: JorElAgentManager): TaskExecution {
+  static async fromTask(task: JorElTaskInput, agentId: string, jorEl: JorElAgentManager): Promise<TaskExecution> {
     return new TaskExecution(
       {
         id: generateUniqueId(),
@@ -298,7 +298,7 @@ export class TaskExecution implements TaskExecutionDefinition {
           [__mainTaskExecutionThreadId]: {
             id: __mainTaskExecutionThreadId,
             agentId,
-            messages: [generateUserMessage(task)],
+            messages: [await generateUserMessage(task)],
             parentThreadId: null,
             parentToolCallId: null,
             events: [],
@@ -321,7 +321,7 @@ export class TaskExecution implements TaskExecutionDefinition {
    * Add a follow-up user message to the main thread
    * @param message
    */
-  addFollowUpUserMessage(message: string): TaskExecution {
+  async addFollowUpUserMessage(message: string): Promise<TaskExecution> {
     if (!this.activeThread.isMain) {
       throw new TaskExecutionError("Cannot add a message to a non-main thread", this.id);
     }
@@ -331,7 +331,7 @@ export class TaskExecution implements TaskExecutionDefinition {
 
     const task = this.copy;
 
-    task.activeThread.addMessage(generateUserMessage(message));
+    task.activeThread.addMessage(await generateUserMessage(message));
     task.status = "running";
 
     return task;

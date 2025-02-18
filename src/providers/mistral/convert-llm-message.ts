@@ -1,12 +1,11 @@
-import { CoreLlmMessage } from "../../providers";
-import { ImageContent } from "../../media";
+import { LlmMessage } from "../../providers";
 import { LlmToolKit } from "../../tools";
 import { ChatCompletionRequest } from "@mistralai/mistralai/models/components/chatcompletionrequest";
 import { ContentChunk } from "@mistralai/mistralai/models/components/contentchunk";
 
 /** Convert unified LLM messages to Mistral messages */
 export const convertLlmMessagesToMistralMessages = async (
-  messages: CoreLlmMessage[],
+  messages: LlmMessage[],
   detail?: "low" | "high",
 ): Promise<ChatCompletionRequest["messages"]> => {
   const convertedMessages: ChatCompletionRequest["messages"] = [];
@@ -67,16 +66,9 @@ export const convertLlmMessagesToMistralMessages = async (
 
 /** Convert user message content to Mistral format */
 async function convertUserMessage(
-  message: Extract<CoreLlmMessage, { role: "user" }>,
+  message: Extract<LlmMessage, { role: "user" }>,
   detail?: "low" | "high",
 ): Promise<ChatCompletionRequest["messages"][number]> {
-  if (typeof message.content === "string") {
-    return {
-      role: "user",
-      content: message.content,
-    };
-  }
-
   if (!Array.isArray(message.content)) {
     throw new Error("User message content must be string or array");
   }
@@ -84,30 +76,25 @@ async function convertUserMessage(
   const content: Array<ContentChunk> = [];
 
   for (const entry of message.content) {
-    const _content = entry instanceof ImageContent ? await entry.toMessageContent() : entry;
-
-    if (typeof _content === "string") {
-      content.push({ type: "text", text: _content });
-    } else
-      switch (_content.type) {
-        case "text":
-          content.push({ type: "text", text: _content.text });
-          break;
-        case "imageUrl":
-          content.push({
-            type: "image_url",
-            imageUrl: { url: _content.url, detail },
-          });
-          break;
-        case "imageData":
-          content.push({
-            type: "image_url",
-            imageUrl: { url: _content.data, detail },
-          });
-          break;
-        default:
-          throw new Error(`Unsupported content type: ${(_content as any).type}`);
-      }
+    switch (entry.type) {
+      case "text":
+        content.push({ type: "text", text: entry.text });
+        break;
+      case "imageUrl":
+        content.push({
+          type: "image_url",
+          imageUrl: { url: entry.url, detail },
+        });
+        break;
+      case "imageData":
+        content.push({
+          type: "image_url",
+          imageUrl: { url: entry.data, detail },
+        });
+        break;
+      default:
+        throw new Error(`Unsupported content type: ${(entry as any).type}`);
+    }
   }
 
   return { role: "user", content };

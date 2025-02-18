@@ -14,7 +14,7 @@ const main = async () => {
 
   const response = await provider.generateResponse(
     "claude-3-5-haiku-20241022",
-    [generateUserMessage("What is the capital of France?")],
+    [await generateUserMessage("What is the capital of France?")],
     { temperature: 0.1 },
   );
 
@@ -24,7 +24,7 @@ const main = async () => {
 
   const imageResponse = await provider.generateResponse(
     "claude-3-5-sonnet-20241022",
-    [{ role: "user", content: ["What is in this image?", image] }],
+    [{ role: "user", content: [{type: 'text', text: "What is in this image?"}, await image.toMessageContent()] }],
     { temperature: 0.1 },
   );
 
@@ -32,7 +32,7 @@ const main = async () => {
 
   const stream = provider.generateResponseStream(
     "claude-3-5-haiku-20241022",
-    [generateUserMessage("What is the capital of France?")],
+    [await generateUserMessage("What is the capital of France?")],
     { temperature: 0.1 },
   );
 

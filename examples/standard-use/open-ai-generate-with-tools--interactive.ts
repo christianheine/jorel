@@ -44,7 +44,7 @@ const main = async () => {
         return;
       }
 
-      messages.push(generateUserMessage(userInput));
+      messages.push(await generateUserMessage(userInput));
 
       try {
         let message: LlmMessage;

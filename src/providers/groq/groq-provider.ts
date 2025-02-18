@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 import {
-  CoreLlmMessage,
+  LlmMessage,
   generateAssistantMessage,
   LlmCoreProvider,
   LlmGenerationConfig,
@@ -35,7 +35,7 @@ export class GroqProvider implements LlmCoreProvider {
 
   async generateResponse(
     model: string,
-    messages: CoreLlmMessage[],
+    messages: LlmMessage[],
     config: LlmGenerationConfig = {},
   ): Promise<LlmResponse> {
     const start = Date.now();
@@ -94,7 +94,7 @@ export class GroqProvider implements LlmCoreProvider {
 
   async *generateResponseStream(
     model: string,
-    messages: CoreLlmMessage[],
+    messages: LlmMessage[],
     config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
     const start = Date.now();

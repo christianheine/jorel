@@ -1,11 +1,10 @@
-import { CoreLlmMessage } from "../../providers";
+import { LlmMessage } from "../../providers";
 import { ChatCompletionContentPart, ChatCompletionMessageParam } from "groq-sdk/resources/chat";
-import { ImageContent } from "../../media";
 import { LlmToolKit } from "../../tools";
 
 /** Convert unified LLM messages to Groq messages (ChatCompletionMessageParam) */
 export const convertLlmMessagesToGroqMessages = async (
-  messages: CoreLlmMessage[],
+  messages: LlmMessage[],
   detail?: "low" | "high",
 ): Promise<ChatCompletionMessageParam[]> => {
   const convertedMessages: ChatCompletionMessageParam[] = [];
@@ -50,52 +49,39 @@ export const convertLlmMessagesToGroqMessages = async (
         }
       }
     } else if (message.role === "user") {
-      if (typeof message.content === "string") {
-        convertedMessages.push({
-          role: message.role,
-          content: message.content,
-        });
-      } else if (Array.isArray(message.content)) {
-        const content: ChatCompletionContentPart[] = [];
+      const content: ChatCompletionContentPart[] = [];
 
-        for (const entry of message.content) {
-          const _content = entry instanceof ImageContent ? await entry.toMessageContent() : entry;
-          if (typeof _content === "string") {
-            content.push({
-              type: "text",
-              text: _content,
-            });
-          } else if (_content.type === "text") {
-            content.push({
-              type: "text",
-              text: _content.text,
-            });
-          } else if (_content.type === "imageUrl") {
-            content.push({
-              type: "image_url",
-              image_url: {
-                url: _content.url,
-                detail,
-              },
-            });
-          } else if (_content.type === "imageData") {
-            content.push({
-              type: "image_url",
-              image_url: {
-                url: _content.data,
-                detail,
-              },
-            });
-          } else {
-            throw new Error(`Unsupported content type`);
-          }
+      for (const _content of message.content) {
+        if (_content.type === "text") {
+          content.push({
+            type: "text",
+            text: _content.text,
+          });
+        } else if (_content.type === "imageUrl") {
+          content.push({
+            type: "image_url",
+            image_url: {
+              url: _content.url,
+              detail,
+            },
+          });
+        } else if (_content.type === "imageData") {
+          content.push({
+            type: "image_url",
+            image_url: {
+              url: _content.data,
+              detail,
+            },
+          });
+        } else {
+          throw new Error(`Unsupported content type`);
         }
-
-        convertedMessages.push({
-          role: message.role,
-          content,
-        });
       }
+
+      convertedMessages.push({
+        role: message.role,
+        content,
+      });
     }
   }
 

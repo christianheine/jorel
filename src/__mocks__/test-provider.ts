@@ -1,5 +1,5 @@
 import {
-  CoreLlmMessage,
+  LlmMessage,
   generateAssistantMessage,
   LlmCoreProvider,
   LlmGenerationConfig,
@@ -40,7 +40,7 @@ export class TestProvider implements LlmCoreProvider {
 
   async generateResponse(
     model: string,
-    messages: CoreLlmMessage[],
+    messages: LlmMessage[],
     config: LlmGenerationConfig = {},
   ): Promise<LlmResponse> {
     await this.delay();
@@ -97,7 +97,7 @@ export class TestProvider implements LlmCoreProvider {
 
   async *generateResponseStream(
     model: string,
-    messages: CoreLlmMessage[],
+    messages: LlmMessage[],
     config: LlmGenerationConfig = {},
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     if (this.failOnModels.includes(model)) {

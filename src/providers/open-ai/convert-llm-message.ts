@@ -1,11 +1,11 @@
-import { CoreLlmMessage } from "../../providers";
+import { LlmMessage } from "../../providers";
 import { ImageContent } from "../../media";
 import { LlmToolKit } from "../../tools";
 import { ChatCompletionMessageParam, ChatCompletionContentPart } from "openai/src/resources/chat/completions";
 
 /** Convert unified LLM messages to OpenAI messages (ChatCompletionMessageParam) */
 export const convertLlmMessagesToOpenAiMessages = async (
-  messages: CoreLlmMessage[],
+  messages: LlmMessage[],
   detail?: "low" | "high",
 ): Promise<ChatCompletionMessageParam[]> => {
   const convertedMessages: ChatCompletionMessageParam[] = [];
