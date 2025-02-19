@@ -1,8 +1,8 @@
 import { LogService } from "../logger";
 import {
-  LlmMessage,
   generateAssistantMessage,
   InitLlmGenerationConfig,
+  LlmMessage,
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmStreamResponseMessages,
@@ -10,10 +10,12 @@ import {
   LlmStreamToolCallCompleted,
   LlmStreamToolCallStarted,
 } from "../providers";
-import { maskAll, MaybeUndefined, omit } from "../shared";
+import { maskAll, MaybeUndefined, omit, shallowFilterUndefined } from "../shared";
 import { JorElGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
 import { JorElModelManager } from "./jorel.models";
 import { JorElProviderManager } from "./jorel.providers";
+import { getModelOverrides } from "../providers/get-overrides";
+import { modelParameterOverrides } from "../providers/model-parameter-overrides";
 
 export class JorElCoreStore {
   defaultConfig: InitLlmGenerationConfig = {};
@@ -41,20 +43,54 @@ export class JorElCoreStore {
   }
 
   /**
-   * Generate a response for a given set of messages
-   * @param messages
-   * @param config
-   * @param config.model Model to use for this generation (optional)
-   * @param config.systemMessage System message to include in this request (optional)
-   * @param config.temperature Temperature for this request (optional)
-   * @param config.tools Tools to use for this request (optional)
+   * Applies model-specific overrides to messages and config
+   * @param messages - The messages to apply the overrides to
+   * @param config - The config to apply the overrides to
+   * @param modelName - The name of the model to apply the overrides to
    */
-  async generate(
+  private applyModelOverrides(
     messages: LlmMessage[],
-    config: JorElGenerationConfigWithTools = {},
-  ): Promise<JorElGenerationOutput> {
+    config: JorElGenerationConfigWithTools,
+    modelName: string,
+  ): { messages: LlmMessage[]; config: JorElGenerationConfigWithTools } {
+    const overrides = getModelOverrides(modelName, modelParameterOverrides);
+
+    if(overrides.noSystemMessage && messages.some((m) => m.role === "system")) {
+      this.logger.debug("Core", `System messages are not supported for ${modelName} and will be ignored`);
+    }
+
+    if(overrides.noTemperature && typeof config.temperature === "number") {
+      this.logger.debug("Core", `Temperature is not supported for ${modelName} and will be ignored`);
+    }
+
+    return {
+      messages: overrides.noSystemMessage ? messages.filter((m) => m.role !== "system") : messages,
+      config: shallowFilterUndefined({
+        ...config,
+        temperature: overrides.noTemperature ? null : config.temperature,
+      }),
+    };
+  }
+
+  /**
+   * Generate a response for a given set of messages
+   * @param messages - The messages to generate a response for
+   * @param config - The config to use for this generation
+   * @param config.model - Model to use for this generation (optional)
+   * @param config.systemMessage - System message to include in this request (optional)
+   * @param config.temperature - Temperature for this request (optional)
+   * @param config.tools - Tools to use for this request (optional)
+   */
+  async generate(messages: LlmMessage[], config: JorElGenerationConfigWithTools = {}): Promise<JorElGenerationOutput> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
+
+    const { messages: messagesWithOverrides, config: configWithOverrides } = this.applyModelOverrides(
+      messages,
+      config,
+      modelEntry.model,
+    );
+
     this.logger.debug(
       "Core",
       `Starting to generate response with model ${modelEntry.model} and provider ${modelEntry.provider}`,
@@ -62,13 +98,14 @@ export class JorElCoreStore {
     this.logger.silly("Core", `Generate inputs`, {
       model: modelEntry.model,
       provider: modelEntry.provider,
-      messages,
-      ...omit(config, ["secureContext"]),
+      messagesWithOverrides,
+      ...omit(configWithOverrides, ["secureContext"]),
       secureContext: config.secureContext ? maskAll(config.secureContext) : undefined,
     });
-    const response = await provider.generateResponse(modelEntry.model, messages, {
+
+    const response = await provider.generateResponse(modelEntry.model, messagesWithOverrides, {
       ...this.defaultConfig,
-      ...config,
+      ...configWithOverrides,
       logger: this.logger,
     });
     this.logger.debug(
@@ -83,9 +120,9 @@ export class JorElCoreStore {
 
   /**
    * Internal method to generate a response and process tool calls until a final response is generated
-   * @param messages
-   * @param config
-   * @param autoApprove
+   * @param messages - The messages to generate a response for
+   * @param config - The config to use for this generation
+   * @param autoApprove - Whether to auto-approve tool calls
    */
   async generateAndProcessTools(
     messages: LlmMessage[],
@@ -139,8 +176,8 @@ export class JorElCoreStore {
 
   /**
    * Generate a stream of response chunks for a given set of messages
-   * @param messages
-   * @param config
+   * @param messages - The messages to generate a response for
+   * @param config - The config to use for this generation
    */
   async *generateContentStream(
     messages: LlmMessage[],
@@ -148,6 +185,13 @@ export class JorElCoreStore {
   ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
+
+    const { messages: messagesWithOverrides, config: configWithOverrides } = this.applyModelOverrides(
+      messages,
+      config,
+      modelEntry.model,
+    );
+
     this.logger.debug(
       "Core",
       `Starting to generate response stream with model ${modelEntry.model} and provider ${modelEntry.provider}`,
@@ -155,13 +199,13 @@ export class JorElCoreStore {
     this.logger.silly("Core", `Response stream inputs`, {
       model: modelEntry.model,
       provider: modelEntry.provider,
-      messages,
-      ...omit(config, []),
+      messages: messagesWithOverrides,
+      ...omit(configWithOverrides, []),
     });
 
-    const stream = provider.generateResponseStream(modelEntry.model, messages, {
+    const stream = provider.generateResponseStream(modelEntry.model, messagesWithOverrides, {
       ...this.defaultConfig,
-      ...config,
+      ...configWithOverrides,
       logger: this.logger,
     });
 
@@ -183,9 +227,9 @@ export class JorElCoreStore {
 
   /**
    * Generate a stream of response chunks for a given set of messages and process tool calls until a final response is generated
-   * @param messages
-   * @param config
-   * @param autoApprove
+   * @param messages - The messages to generate a response for
+   * @param config - The config to use for this generation
+   * @param autoApprove - Whether to auto-approve tool calls
    */
   async *generateStreamAndProcessTools(
     messages: LlmMessage[],
@@ -272,8 +316,8 @@ export class JorElCoreStore {
 
   /**
    * Generate an embedding for a given text
-   * @param text
-   * @param model
+   * @param text - The text to generate an embedding for
+   * @param model - The model to use for this generation (optional)
    */
   async generateEmbedding(text: string, model?: string) {
     const modelEntry = this.modelManager.getEmbeddingModel(model || this.modelManager.getDefaultEmbeddingModel());

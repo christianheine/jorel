@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.2 (wip)
+
+- Add initial support for model-specific overrides (e.g., no temperature)
+
 ## 0.11.1 (2025-02-19)
 
 - Include latest assistant message in the message history when streaming with metadata w/o tool use

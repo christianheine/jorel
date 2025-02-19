@@ -19,7 +19,6 @@ const main = async () => {
     {
       model: "o3-mini",
       documents: [jorElIntro, jorElQuickStart],
-      temperature: null, // o3-mini does not support temperature
     },
     true, // Include metadata
   );

@@ -7,6 +7,13 @@ export type LlmToolChoice = "none" | "auto" | "required" | string;
 
 export type JsonSpecification = ZodObject<any> | Record<string, unknown>;
 
+export interface LlmModelParameterOverrides {
+  noTemperature: boolean;
+  noSystemMessage: boolean
+}
+
+export type LlmModelParameterOverridesLookup = { [model: string]: Partial<LlmModelParameterOverrides> }
+
 interface CoreLlmGenerationConfig {
   temperature?: Nullable<number>;
   maxTokens?: number;
@@ -163,7 +170,7 @@ export interface LlmAssistantMessageWithToolCalls {
 export interface LlmAssistantMessageMeta {
   model: string;
   provider: string;
-  temperature: number | undefined;
+  temperature: number | undefined
   durationMs: number;
   inputTokens?: number;
   outputTokens?: number;

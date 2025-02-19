@@ -9,12 +9,10 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  jorEl.models.setDefault("o1-mini");
+
   // Will return a string
-  const response = await jorEl.text("How many r's are in `strawberry`?", {
-    model: "o1-mini",
-    systemMessage: "", // o1-mini doesn't support system messages, so we pass an empty string
-    temperature: null, // o1-mini doesn't support temperature, so we pass null
-  });
+  const response = await jorEl.text("How many r's are in `strawberry`?");
 
   console.log(response);
   // The word **"strawberry"** contains **three** letter **"r"**s. Here's the breakdown:
