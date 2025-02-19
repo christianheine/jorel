@@ -24,7 +24,8 @@ import {
   LlmAssistantMessage,
   LlmAssistantMessageMeta,
   LlmAssistantMessageWithToolCalls,
-  LlmCoreProvider, LlmJsonResponseWithMeta,
+  LlmCoreProvider,
+  LlmJsonResponseWithMeta,
   LlmMessage,
   LlmStreamResponse,
   LlmStreamResponseChunk,
@@ -39,9 +40,9 @@ import {
   OllamaConfig,
   OllamaProvider,
   OpenAIConfig,
-  OpenAIProvider
+  OpenAIProvider,
 } from "../providers";
-import { Nullable } from "../shared";
+import { generateUniqueId, Nullable } from "../shared";
 import { LlmTool, LlmToolConfiguration, LLmToolContextSegment, LlmToolKit } from "../tools";
 import { JorElCoreStore } from "./jorel.core";
 import { JorElAgentManager } from "./jorel.team";
@@ -494,8 +495,32 @@ export class JorEl {
     if (config.tools) {
       yield* this._core.generateStreamAndProcessTools(messages, _config);
     } else {
-      yield* this._core.generateContentStream(messages, _config);
-      yield { type: "messages", messages };
+      const stream = this._core.generateContentStream(messages, _config);
+      for await (const chunk of stream) {
+        if (chunk.type === "chunk") {
+          yield chunk;
+        }
+        if (chunk.type === "response") {
+          yield chunk;
+          if (chunk.role === 'assistant') {
+            messages.push({
+              id: generateUniqueId(),
+              role: "assistant",
+              content: chunk.content,
+              createdAt: Date.now(),
+            });
+          } else {
+            messages.push({
+              id: generateUniqueId(),
+              role: "assistant_with_tools",
+              content: chunk.content,
+              toolCalls: chunk.toolCalls,
+              createdAt: Date.now(),
+            });
+          }
+          yield { type: "messages", messages };
+        }
+      }
     }
   }
 

@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.11.0 (wip)
+## 0.11.1 (2025-02-19)
+
+- Include latest assistant message in the message history when streaming with metadata w/o tool use
+
+## 0.11.0 (2025-02-19)
 
 - [BREAKING] LlmMessageContent (which is used in LlmUserMessage) has been simplified always to an array of
   LLmMessageTextContent or LLmMessageImageUrlContent or LLmMessageImageDataUrlContent.
