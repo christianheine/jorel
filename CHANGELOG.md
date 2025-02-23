@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.11.2 (wip)
+## 0.11.2 (2025-02-19)
 
 - Add initial support for model-specific overrides (e.g., no temperature)
 
