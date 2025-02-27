@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.3 (2025-02-28)
+
+- Update default models for Anthropic & Open AI
+- Add accessor for Anthropic provider
+
 ## 0.11.2 (2025-02-19)
 
 - Add initial support for model-specific overrides (e.g., no temperature)
