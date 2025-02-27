@@ -12,6 +12,7 @@ import {
   defaultMistralAiModels,
   defaultOpenAiEmbeddingModels,
   defaultOpenAiModels,
+  defaultOpenRouterModels,
   defaultVertexAiModels,
   generateSystemMessage,
   generateUserMessage,
@@ -41,6 +42,7 @@ import {
   OllamaProvider,
   OpenAIConfig,
   OpenAIProvider,
+  OpenRouterProvider,
 } from "../providers";
 import { generateUniqueId, Nullable } from "../shared";
 import { LlmTool, LlmToolConfiguration, LLmToolContextSegment, LlmToolKit } from "../tools";
@@ -54,6 +56,7 @@ interface InitialConfig {
   mistral?: MistralConfig | true;
   ollama?: OllamaConfig | true;
   openAI?: OpenAIConfig | true;
+  openRouter?: OpenAIConfig | true;
   vertexAi?: GoogleVertexAiConfig | true;
   systemMessage?: Nullable<string>;
   documentSystemMessage?: string;
@@ -196,6 +199,12 @@ export class JorEl {
         this.models.embeddings.register({ model, dimensions, provider: "openai" });
       }
     },
+    registerOpenRouter: (config?: OpenAIConfig) => {
+      this._core.providerManager.registerProvider("open-router", new OpenRouterProvider(config));
+      for (const model of defaultOpenRouterModels) {
+        this.models.register({ model, provider: "open-router" });
+      }
+    },
     registerGoogleVertexAi: (config?: GoogleVertexAiConfig) => {
       this._core.providerManager.registerProvider("google-vertex-ai", new GoogleVertexAiProvider(config));
       for (const model of defaultVertexAiModels) {
@@ -222,6 +231,10 @@ export class JorEl {
       addModel: (model: string) => this.models.register({ model, provider: "mistral" }),
       getClient: () => (this._core.providerManager.getProvider("mistral") as MistralProvider).client,
     },
+    openRouter: {
+      addModel: (model: string) => this.models.register({ model, provider: "open-router" }),
+      getClient: () => (this._core.providerManager.getProvider("open-router") as OpenRouterProvider).client,
+    },
     vertexAi: {
       addModel: (model: string) => this.models.register({ model, provider: "google-vertex-ai" }),
       getClient: () => (this._core.providerManager.getProvider("google-vertex-ai") as GoogleVertexAiProvider).client,
@@ -238,6 +251,7 @@ export class JorEl {
    * @param config.vertexAi - Google Vertex AI configuration (optional).
    * @param config.ollama - Ollama configuration (optional).
    * @param config.openAI - OpenAI configuration (optional).
+   * @param config.openRouter - OpenRouter configuration (optional).
    * @param config.systemMessage - System message to include in all requests (optional).
    * @param config.documentSystemMessage - System message to include in all requests with documents (optional).
    * @param config.temperature - Default temperature for all requests (optional).
@@ -260,6 +274,8 @@ export class JorEl {
     if (config.vertexAi) this.providers.registerGoogleVertexAi(config.vertexAi === true ? undefined : config.vertexAi);
     if (config.ollama) this.providers.registerOllama(config.ollama === true ? undefined : config.ollama);
     if (config.openAI) this.providers.registerOpenAi(config.openAI === true ? undefined : config.openAI);
+    if (config.openRouter)
+      this.providers.registerOpenRouter(config.openRouter === true ? undefined : config.openRouter);
   }
 
   /** @internal */

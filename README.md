@@ -16,20 +16,20 @@ The full documentation is available at [https://christianheine.github.io/jorel/]
 
 ## Key Features
 
-- **Multi-Provider Support**: Seamlessly work with OpenAI, Anthropic, Groq, Google Vertex AI, Ollama, and more
-- **Unified Interface**: Single, consistent API across all providers
-- **Rich Media Support**: Built-in handling for images and vision models
-- **Tool Integration**: First-class support for function calling and external tools
-- **Document Grounding**: Easy integration of external documents for context
-- **Agent Framework**: Simple but powerful system for complex task processing
-- **Type Safety**: Fully written in TypeScript
+* **Multi-Provider Support**: Seamlessly work with OpenAI, Anthropic, Groq, Google Vertex AI, Ollama, OpenRouter, and more
+* **Unified Interface**: Single, consistent API across all providers
+* **Rich Media Support**: Built-in handling for images and vision models
+* **Tool Integration**: First-class support for function calling and external tools
+* **Document Grounding**: Easy integration of external documents for context
+* **Agent Framework**: Simple but powerful system for complex task processing
+* **Type Safety**: Fully written in TypeScript
 
 ## Why JorEl?
 
-- 🚀 **Simple to Start**: Get running with a single line of code
-- 🔄 **Easy to Switch**: Change providers or models without changing your code
-- 🛠 **Powerful When Needed**: Access low-level provider features when required
-- 📦 **Production Ready**: Built on official provider SDKs
+* 🚀 **Simple to Start**: Get running with a single line of code
+* 🔄 **Easy to Switch**: Change providers or models without changing your code
+* 🛠 **Powerful When Needed**: Access low-level provider features when required
+* 📦 **Production Ready**: Built on official provider SDKs
 
 ## Introduction
 
@@ -78,6 +78,7 @@ const response = await jorel.text("What is the capital of Australia, in one word
 
 console.log(response); // "Sydney"
 ```
+
 ### Basic Usage
 
 #### 1. **Simple Response Generation**
@@ -214,6 +215,26 @@ console.log(followUpResponse);
 // Brandenburg Gate, the Berlin Wall, and Museum Island.
 ```
 
+#### 9. **Using OpenRouter**
+
+JorEl supports OpenRouter, which gives you access to various models from different providers through a single API:
+
+```typescript
+// Initialize with OpenRouter
+const jorEl = new JorEl({
+  openRouter: true, // Uses OPEN_ROUTER_API_KEY environment variable
+});
+
+// Register a model from Anthropic via OpenRouter
+jorEl.providers.openRouter.addModel("anthropic/claude-3-7-sonnet");
+
+// Use the model
+const response = await jorEl.text("What is the capital of France?", {
+  model: "anthropic/claude-3-7-sonnet",
+});
+// Paris
+```
+
 ### Advanced Features
 
 #### 1. **Agents**
@@ -279,13 +300,14 @@ mainAgent.addDelegate({
 ### Provider Support
 
 JorEl supports multiple LLM providers out of the box:
-- OpenAI
-- Anthropic
-- Groq
-- Grok
-- Google Vertex AI
-- Ollama
-- Mistral
+* OpenAI
+* Anthropic
+* Groq
+* Grok
+* Google Vertex AI
+* Ollama
+* Mistral
+* OpenRouter
 
 Each provider can be configured during initialization or registered later:
 
@@ -293,7 +315,8 @@ Each provider can be configured during initialization or registered later:
 // During initialization
 const jorEl = new JorEl({
   openAI: { apiKey: "..." },
-  anthropic: { apiKey: "..." }
+  anthropic: { apiKey: "..." },
+  openRouter: { apiKey: "..." }
 });
 
 // Or after initialization
