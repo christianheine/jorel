@@ -8,6 +8,10 @@ config({ path: "../../.env" });
 const main = async () => {
   const provider = new OpenAIProvider({ apiKey: process.env.OPENAI_API_KEY });
 
+  const models = await provider.getAvailableModels();
+
+  console.log(models.filter(m => m.includes("4.5")));
+
   const response = await provider.generateResponse(
     "gpt-4o-mini",
     [await generateUserMessage("What is the capital of France?")],

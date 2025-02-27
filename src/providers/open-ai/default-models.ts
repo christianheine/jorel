@@ -3,6 +3,8 @@ export const defaultOpenAiModels: string[] = [
   "gpt-4o-mini-2024-07-18",
   "gpt-4o-mini-audio-preview",
   "gpt-4o-mini-audio-preview-2024-12-17",
+  'gpt-4.5-preview',
+  'gpt-4.5-preview-2025-02-27',
   "gpt-4o",
   "gpt-4o-2024-05-13",
   "gpt-4o-2024-08-06",
