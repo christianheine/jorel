@@ -202,6 +202,10 @@ export class JorEl {
         this.models.register({ model, provider: "google-vertex-ai" });
       }
     },
+    anthropic: {
+      addModel: (model: string) => this.models.register({ model, provider: "anthropic" }),
+      getClient: () => (this._core.providerManager.getProvider("anthropic") as AnthropicProvider).client,
+    },
     openAi: {
       addModel: (model: string) => this.models.register({ model, provider: "openai" }),
       getClient: () => (this._core.providerManager.getProvider("openai") as OpenAIProvider).client,
@@ -502,7 +506,7 @@ export class JorEl {
         }
         if (chunk.type === "response") {
           yield chunk;
-          if (chunk.role === 'assistant') {
+          if (chunk.role === "assistant") {
             messages.push({
               id: generateUniqueId(),
               role: "assistant",
