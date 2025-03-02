@@ -174,6 +174,22 @@ describe("LlmTool", () => {
         'Cannot execute tool "subtask-tool". subTask tools cannot be executed directly.',
       );
     });
+
+    it("should pass context and secureContext to executor", async () => {
+      const executor = jest.fn().mockResolvedValue({ result: "success" });
+      const tool = new LlmTool({
+        name: "context-tool",
+        description: "Tool that uses context",
+        executor,
+      });
+
+      const context = { userId: "123", sessionData: { key: "value" } };
+      const secureContext = { apiKey: "secret", credentials: { token: "abc" } };
+
+      await tool.execute({ input: "test" }, { context, secureContext });
+
+      expect(executor).toHaveBeenCalledWith({ input: "test" }, context, secureContext);
+    });
   });
 
   describe("parameter validation", () => {
@@ -216,6 +232,72 @@ describe("LlmTool", () => {
       expect(functionDef.function.parameters?.items).toEqual({
         type: "string",
       });
+    });
+
+    it("should handle empty params", () => {
+      const tool = new LlmTool({
+        name: "empty-params-tool",
+        description: "Tool with empty params",
+        params: {},
+      });
+
+      const functionDef = tool.asLLmFunction;
+      expect(functionDef.function.parameters).toEqual({
+        type: "string",
+        required: [],
+        additionalProperties: false,
+      });
+    });
+
+    it("should handle undefined params", () => {
+      const tool = new LlmTool({
+        name: "no-params-tool",
+        description: "Tool without params",
+      });
+
+      const functionDef = tool.asLLmFunction;
+      expect(functionDef.function.parameters).toBeUndefined();
+    });
+  });
+
+  describe("type inference", () => {
+    it("should correctly infer function type with custom executor", () => {
+      const tool = new LlmTool({
+        name: "function-type",
+        description: "Function type tool",
+        executor: () => Promise.resolve({}),
+      });
+
+      expect(tool.type).toBe("function");
+    });
+
+    it("should correctly infer functionDefinition type with no executor", () => {
+      const tool = new LlmTool({
+        name: "definition-type",
+        description: "Definition type tool",
+      });
+
+      expect(tool.type).toBe("functionDefinition");
+    });
+
+    it("should correctly infer transfer type", () => {
+      const tool = new LlmTool({
+        name: "transfer-type",
+        description: "Transfer type tool",
+        executor: "transfer",
+      });
+
+      expect(tool.type).toBe("transfer");
+    });
+
+    it("should correctly infer subTask type", () => {
+      const tool = new LlmTool({
+        name: "subtask-type",
+        description: "SubTask type tool",
+        executor: "subTask",
+      });
+
+      expect(tool.type).toBe("subTask");
     });
   });
 });

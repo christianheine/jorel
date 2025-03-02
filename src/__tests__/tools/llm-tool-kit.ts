@@ -100,7 +100,23 @@ describe("LlmToolKit", () => {
 
     beforeEach(() => {
       mockExecutor = jest.fn().mockResolvedValue({ success: true });
-      toolKit = new LlmToolKit([{ name: "test", description: "test tool", executor: mockExecutor }]);
+      toolKit = new LlmToolKit([
+        { name: "test", description: "test tool", executor: mockExecutor },
+        {
+          name: "errorTool",
+          description: "error tool",
+          executor: () => {
+            throw new Error("Deliberate error");
+          },
+        },
+        {
+          name: "nonErrorTool",
+          description: "non-error tool",
+          executor: () => {
+            throw "String exception";
+          },
+        },
+      ]);
     });
 
     describe("processToolCall", () => {
@@ -161,6 +177,57 @@ describe("LlmToolKit", () => {
         expect(result.handled).toBe(true);
         expect(result.toolCall.executionState).toBe("error");
         expect(result.toolCall.error?.message).toBe("Test error");
+      });
+
+      it("should increment error attempt count on repeated failures", async () => {
+        const initialToolCall: LlmToolCall = {
+          id: "1",
+          request: { id: "1", function: { name: "errorTool", arguments: {} } },
+          approvalState: "approved",
+          executionState: "pending",
+          result: null,
+          error: null,
+        };
+
+        // First attempt
+        const firstResult = await toolKit.processToolCall(initialToolCall);
+        expect(firstResult.toolCall.executionState).toBe("error");
+        expect(firstResult.toolCall.error?.numberOfAttempts).toBe(1);
+
+        // Second attempt
+        const secondResult = await toolKit.processToolCall(firstResult.toolCall, { retryFailed: true });
+        expect(secondResult.toolCall.executionState).toBe("error");
+        expect(secondResult.toolCall.error?.numberOfAttempts).toBe(2);
+      });
+
+      it("should handle non-Error exceptions in tool execution", async () => {
+        const toolCall: LlmToolCall = {
+          id: "1",
+          request: { id: "1", function: { name: "nonErrorTool", arguments: {} } },
+          approvalState: "approved",
+          executionState: "pending",
+          result: null,
+        };
+
+        const result = await toolKit.processToolCall(toolCall);
+        expect(result.toolCall.executionState).toBe("error");
+        expect(result.toolCall.error?.message).toBe("Unable to execute tool: nonErrorTool");
+        expect(result.toolCall.error?.type).toBe("ToolExecutionError");
+      });
+
+      it("should handle tool not found error", async () => {
+        const toolCall: LlmToolCall = {
+          id: "1",
+          request: { id: "1", function: { name: "nonexistentTool", arguments: {} } },
+          approvalState: "approved",
+          executionState: "pending",
+          result: null,
+        };
+
+        const result = await toolKit.processToolCall(toolCall);
+        expect(result.toolCall.executionState).toBe("error");
+        expect(result.toolCall.error?.message).toBe("Tool not found: nonexistentTool");
+        expect(result.toolCall.error?.type).toBe("ToolNotFoundError");
       });
     });
 
@@ -247,6 +314,14 @@ describe("LlmToolKit", () => {
 
       expect(deserialized).toEqual(testObj);
       expect((deserialized as any).date instanceof Date).toBeTruthy();
+    });
+
+    it("should handle empty objects", () => {
+      const emptyObj = {};
+      const serialized = LlmToolKit.serialize(emptyObj);
+      const deserialized = LlmToolKit.deserialize(serialized);
+
+      expect(deserialized).toEqual(emptyObj);
     });
   });
 
@@ -656,6 +731,180 @@ describe("LlmToolKit", () => {
         expect(result.toolCalls[0].request.function.arguments).toEqual({ foo: "bar" });
         expect(result.toolCalls[0].executionState).toBe("pending");
       });
+    });
+  });
+
+  describe("processCalls", () => {
+    let toolKit: LlmToolKit;
+    let mockExecutor1: jest.Mock;
+    let mockExecutor2: jest.Mock;
+
+    beforeEach(() => {
+      mockExecutor1 = jest.fn().mockResolvedValue({ result: "tool1 result" });
+      mockExecutor2 = jest.fn().mockResolvedValue({ result: "tool2 result" });
+
+      toolKit = new LlmToolKit([
+        { name: "tool1", description: "first tool", executor: mockExecutor1 },
+        { name: "tool2", description: "second tool", executor: mockExecutor2 },
+        { name: "transferTool", description: "transfer tool", executor: "transfer" },
+      ]);
+    });
+
+    it("should process all tool calls in an object", async () => {
+      const input = {
+        content: "Some message",
+        toolCalls: [
+          {
+            id: "1",
+            request: { id: "1", function: { name: "tool1", arguments: { param: "value1" } } },
+            approvalState: "approved" as const,
+            executionState: "pending" as const,
+            result: null,
+            error: null,
+          },
+          {
+            id: "2",
+            request: { id: "2", function: { name: "tool2", arguments: { param: "value2" } } },
+            approvalState: "approved" as const,
+            executionState: "pending" as const,
+            result: null,
+            error: null,
+          },
+        ],
+      };
+
+      const result = await toolKit.processCalls(input);
+
+      expect(result.content).toBe("Some message");
+      expect(result.toolCalls).toHaveLength(2);
+
+      expect(result.toolCalls[0].executionState).toBe("completed");
+      expect(result.toolCalls[0].result).toEqual({ result: "tool1 result" });
+
+      expect(result.toolCalls[1].executionState).toBe("completed");
+      expect(result.toolCalls[1].result).toEqual({ result: "tool2 result" });
+
+      expect(mockExecutor1).toHaveBeenCalledWith({ param: "value1" }, {}, {});
+      expect(mockExecutor2).toHaveBeenCalledWith({ param: "value2" }, {}, {});
+    });
+
+    it("should pass context and secureContext to tool executors", async () => {
+      const input = {
+        toolCalls: [
+          {
+            id: "1",
+            request: { id: "1", function: { name: "tool1", arguments: {} } },
+            approvalState: "approved" as const,
+            executionState: "pending" as const,
+            result: null,
+          },
+        ],
+      };
+
+      const context = { userId: "123" };
+      const secureContext = { apiKey: "secret" };
+
+      await toolKit.processCalls(input, { context, secureContext });
+
+      expect(mockExecutor1).toHaveBeenCalledWith({}, context, secureContext);
+    });
+
+    it("should retry failed tool calls when retryFailed is true", async () => {
+      const input = {
+        toolCalls: [
+          {
+            id: "1",
+            request: { id: "1", function: { name: "tool1", arguments: {} } },
+            approvalState: "approved" as const,
+            executionState: "error" as const,
+            result: null,
+            error: {
+              message: "Previous error",
+              type: "Error",
+              numberOfAttempts: 1,
+              lastAttempt: new Date(),
+            },
+          },
+        ],
+      };
+
+      await toolKit.processCalls(input, { retryFailed: true });
+
+      expect(mockExecutor1).toHaveBeenCalled();
+    });
+
+    it("should not retry failed tool calls by default", async () => {
+      const input = {
+        toolCalls: [
+          {
+            id: "1",
+            request: { id: "1", function: { name: "tool1", arguments: {} } },
+            approvalState: "approved" as const,
+            executionState: "error" as const,
+            result: null,
+            error: {
+              message: "Previous error",
+              type: "Error",
+              numberOfAttempts: 1,
+              lastAttempt: new Date(),
+            },
+          },
+        ],
+      };
+
+      await toolKit.processCalls(input);
+
+      expect(mockExecutor1).not.toHaveBeenCalled();
+    });
+
+    it("should throw error when trying to process transfer tools", async () => {
+      const input = {
+        toolCalls: [
+          {
+            id: "1",
+            request: { id: "1", function: { name: "transferTool", arguments: {} } },
+            approvalState: "approved" as const,
+            executionState: "pending" as const,
+            result: null,
+          },
+        ],
+      };
+
+      await expect(toolKit.processCalls(input)).rejects.toThrow("Transfer tools can only be processed by this method");
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should handle empty tool array", () => {
+      const toolkit = new LlmToolKit([]);
+      expect(toolkit.hasTools).toBe(false);
+      expect(toolkit.tools).toEqual([]);
+      expect(toolkit.asLlmFunctions).toBeUndefined();
+    });
+
+    it("should handle mixed tool types in the same toolkit", () => {
+      const toolkit = new LlmToolKit([
+        { name: "function", description: "function tool", executor: jest.fn() },
+        { name: "definition", description: "definition tool" },
+        { name: "transfer", description: "transfer tool", executor: "transfer" },
+        { name: "subtask", description: "subtask tool", executor: "subTask" },
+      ]);
+
+      expect(toolkit.tools.length).toBe(4);
+      expect(toolkit.tools[0].type).toBe("function");
+      expect(toolkit.tools[1].type).toBe("functionDefinition");
+      expect(toolkit.tools[2].type).toBe("transfer");
+      expect(toolkit.tools[3].type).toBe("subTask");
+    });
+
+    it("should handle tools with confirmation required", () => {
+      const toolkit = new LlmToolKit([
+        { name: "normal", description: "normal tool" },
+        { name: "confirm", description: "confirmation tool", requiresConfirmation: true },
+      ]);
+
+      expect(toolkit.tools[0].requiresConfirmation).toBe(false);
+      expect(toolkit.tools[1].requiresConfirmation).toBe(true);
     });
   });
 });

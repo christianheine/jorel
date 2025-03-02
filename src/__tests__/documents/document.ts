@@ -189,6 +189,56 @@ describe("LlmDocument", () => {
     });
   });
 
+  describe("fromLocalFile", () => {
+    it("should create a document using the deprecated method (which calls fromFile)", async () => {
+      // Mock console.warn to check for deprecation warning if needed
+      const originalWarn = console.warn;
+      console.warn = jest.fn();
+
+      const doc = await LlmDocument.fromLocalFile("src/__tests__/documents/testfile.md");
+
+      expect(doc.id).toBeDefined();
+      expect(doc.type).toBe("markdown");
+      expect(doc.title).toBe("testfile.md");
+      expect(doc.content).toBe("# headline\n\nSome content");
+      expect(doc.source).toBe("src/__tests__/documents/testfile.md");
+
+      // Restore console.warn
+      console.warn = originalWarn;
+    });
+  });
+
+  describe("fromUrls", () => {
+    it("should create a list of documents from multiple URLs", async () => {
+      const docs = await LlmDocument.fromUrls(["https://example.com", "https://example.org"]);
+
+      expect(docs).toHaveLength(2);
+
+      expect(docs[0].title).toBe("https://example.com");
+      expect(docs[0].content).toContain("Example Domain");
+      expect(docs[0].source).toBe("https://example.com");
+
+      expect(docs[1].title).toBe("https://example.org");
+      expect(docs[1].content).toContain("Example Domain");
+      expect(docs[1].source).toBe("https://example.org");
+    });
+
+    it("should respect provided metadata when creating from URLs", async () => {
+      const docs = await LlmDocument.fromUrls(["https://example.com", "https://example.org"], {
+        type: "markdown",
+        title: "URL Document",
+      });
+
+      expect(docs[0].type).toBe("markdown");
+      expect(docs[0].title).toBe("URL Document 1");
+      expect(docs[0].content).toContain("Example Domain");
+
+      expect(docs[1].type).toBe("markdown");
+      expect(docs[1].title).toBe("URL Document 2");
+      expect(docs[1].content).toContain("Example Domain");
+    });
+  });
+
   describe("writeContentToLocalFile", () => {
     it("should write document content to a file", async () => {
       const tempPath = "src/__tests__/documents/temp-test-file.txt";

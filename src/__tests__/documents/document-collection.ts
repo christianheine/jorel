@@ -75,6 +75,20 @@ describe("LlmDocumentCollection", () => {
     it("should return undefined for non-existent documents", () => {
       expect(collection.get("nonexistent")).toBeUndefined();
     });
+
+    it("should replace a document with the same id when adding", () => {
+      const updatedDoc = new LlmDocument({
+        id: "doc1",
+        title: "Updated Document",
+        content: "Updated content",
+        type: "text",
+      });
+
+      collection.add(updatedDoc);
+      expect(collection.length).toBe(1);
+      expect(collection.get("doc1")).toEqual(updatedDoc);
+      expect(collection.get("doc1")?.title).toBe("Updated Document");
+    });
   });
 
   describe("serialization", () => {
@@ -100,6 +114,20 @@ describe("LlmDocumentCollection", () => {
       expect(definition).toHaveLength(2);
       expect(definition[0]).toEqual(sampleDoc1.definition);
       expect(definition[1]).toEqual(sampleDoc2.definition);
+    });
+
+    it("should handle LlmDocument instances in fromJSON", () => {
+      const existingDoc = new LlmDocument({
+        id: "existing1",
+        title: "Existing Doc",
+        content: "Existing content",
+        type: "text",
+      });
+
+      const collection = LlmDocumentCollection.fromJSON([existingDoc]);
+
+      expect(collection.length).toBe(1);
+      expect(collection.get("existing1")?.title).toBe("Existing Doc");
     });
   });
 
@@ -156,6 +184,57 @@ describe("LlmDocumentCollection", () => {
       expect(() => collection.systemMessageRepresentation).toThrow(
         "Document template must include '{{id}}' placeholder.",
       );
+    });
+
+    it("should throw error if template missing content placeholder", () => {
+      const collection = new LlmDocumentCollection([sampleDoc1], {
+        documentToText: {
+          template: "DOC[{{id}}]: Missing content",
+          separator: " | ",
+        },
+      });
+
+      expect(() => collection.systemMessageRepresentation).toThrow(
+        "Document template must include '{{content}}' placeholder.",
+      );
+    });
+
+    it("should handle documents with all attributes in template", () => {
+      const docWithAllFields = new LlmDocument({
+        id: "full-doc",
+        title: "Complete Document",
+        content: "Full content",
+        type: "special",
+        source: "test-source",
+        attributes: {
+          priority: "high",
+          status: "active",
+          count: 42,
+        },
+      });
+
+      const collection = new LlmDocumentCollection([docWithAllFields]);
+      const representation = collection.systemMessageRepresentation;
+
+      expect(representation).toContain(`id='full-doc'`);
+      expect(representation).toContain(`title='Complete Document'`);
+      expect(representation).toContain(`type='special'`);
+      expect(representation).toContain(`source='test-source'`);
+      expect(representation).toContain(`priority='high'`);
+      expect(representation).toContain(`status='active'`);
+      expect(representation).toContain(`count='42'`);
+      expect(representation).toContain(`Full content`);
+    });
+
+    it("should handle custom template with only required placeholders", () => {
+      const collection = new LlmDocumentCollection([sampleDoc1], {
+        documentToText: {
+          template: "{{id}}: {{content}}",
+          separator: "\n---\n",
+        },
+      });
+
+      expect(collection.systemMessageRepresentation).toBe(`${sampleDoc1.id}: ${sampleDoc1.content}`);
     });
   });
 });
