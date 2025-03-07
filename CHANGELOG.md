@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.1 (2025-03-06)
+
+* Add dedicated options for number of tool calls and tool call errors
+* [DEPRECATED] Deprecate maxAttempts in favor of maxToolCalls and maxToolCallErrors
+
 ## 0.12.0 (2025-02-28)
 
 * Add OpenRouter provider (without default models)

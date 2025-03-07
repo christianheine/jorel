@@ -55,11 +55,11 @@ export class JorElCoreStore {
   ): { messages: LlmMessage[]; config: JorElGenerationConfigWithTools } {
     const overrides = getModelOverrides(modelName, modelParameterOverrides);
 
-    if(overrides.noSystemMessage && messages.some((m) => m.role === "system")) {
+    if (overrides.noSystemMessage && messages.some((m) => m.role === "system")) {
       this.logger.debug("Core", `System messages are not supported for ${modelName} and will be ignored`);
     }
 
-    if(overrides.noTemperature && typeof config.temperature === "number") {
+    if (overrides.noTemperature && typeof config.temperature === "number") {
       this.logger.debug("Core", `Temperature is not supported for ${modelName} and will be ignored`);
     }
 
@@ -134,7 +134,13 @@ export class JorElCoreStore {
       throw new Error("Only tools with a function executor can be used in this context");
     }
 
-    const maxAttempts = config.maxAttempts || (config.tools ? 3 : 1);
+    const maxToolCalls = (config.maxToolCalls ?? config.maxAttempts) || 5;
+    const maxToolCallErrors = config.maxToolCallErrors || 3;
+
+    const maxAttempts = Math.max(maxToolCalls, maxToolCallErrors);
+
+    let toolCallErrors = 0;
+    let toolCalls = 0;
 
     let generation: MaybeUndefined<JorElGenerationOutput>;
     for (let i = 0; i < maxAttempts; i++) {
@@ -153,7 +159,11 @@ export class JorElCoreStore {
         generation = await config.tools.processCalls(generation, {
           context: config.context,
           secureContext: config.secureContext,
+          maxErrors: Math.max(0, maxToolCallErrors - toolCallErrors),
+          maxCalls: Math.max(0, maxToolCalls - toolCalls),
         });
+        toolCalls += generation.toolCalls.length;
+        toolCallErrors += generation.toolCalls.filter((t) => t.executionState === "error").length;
         this.logger.debug("Core", `Finished processing tool calls`);
         this.logger.silly("Core", `Tool call outputs`, {
           generation,
@@ -249,7 +259,14 @@ export class JorElCoreStore {
       throw new Error("Only tools with a function executor can be used in this context");
     }
 
-    const maxAttempts = config.maxAttempts || (config.tools ? 3 : 1);
+    const maxToolCalls = (config.maxToolCalls ?? config.maxAttempts) || 5;
+    const maxToolCallErrors = config.maxToolCallErrors || 3;
+
+    const maxAttempts = Math.max(maxToolCalls, maxToolCallErrors);
+
+    let toolCallErrors = 0;
+    let toolCalls = 0;
+
     let response: MaybeUndefined<LlmStreamResponse | LlmStreamResponseWithToolCalls> = undefined;
     for (let i = 0; i < maxAttempts; i++) {
       const stream = this.generateContentStream(messages, config);
@@ -286,8 +303,14 @@ export class JorElCoreStore {
       response = await config.tools.processCalls(response, {
         context: config.context,
         secureContext: config.secureContext,
+        maxErrors: Math.max(0, maxToolCallErrors - toolCallErrors),
+        maxCalls: Math.max(0, maxToolCalls - toolCalls),
       });
 
+      toolCalls += response.toolCalls.length;
+      toolCallErrors += response.toolCalls.filter((t) => t.executionState === "error").length;
+
+      // TODO: Potentially emit tool call events as callback in processCalls to reduce latency
       // Emit tool call completed events for each tool call
       for (const toolCall of response.toolCalls) {
         if (toolCall.executionState === "completed" || toolCall.executionState === "error") {

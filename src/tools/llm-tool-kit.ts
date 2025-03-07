@@ -313,8 +313,13 @@ export class LlmToolKit {
       retryFailed?: boolean;
       context?: LLmToolContextSegment;
       secureContext?: LLmToolContextSegment;
+      maxErrors?: number;
+      maxCalls?: number;
     },
   ): Promise<T> {
+    let errors = 0;
+    let calls = 0;
+
     if (!input.toolCalls) return input;
     const classification = this.classifyToolCalls(input.toolCalls);
     if (classification === "transferPending") {
@@ -322,12 +327,40 @@ export class LlmToolKit {
     }
     const toolCalls: LlmToolCall[] = [];
     for (const call of input.toolCalls) {
+      if (errors >= (config?.maxErrors ?? 3)) {
+        if (call.executionState === "completed") continue;
+        this.setCallToError(call, "Too many tool call errors");
+        continue;
+      }
+      if (calls >= (config?.maxCalls ?? 5)) {
+        if (call.executionState === "completed") continue;
+        this.setCallToError(call, "Too many tool calls");
+        continue;
+      }
       const { toolCall } = await this.processToolCall(call, config);
       toolCalls.push(toolCall);
+      if (toolCall.error) {
+        errors++;
+      }
+      calls++;
     }
     return {
       ...input,
       toolCalls,
+    };
+  }
+
+  private setCallToError(call: LlmToolCall, message: string): LlmToolCall {
+    return {
+      ...call,
+      executionState: "error",
+      result: null,
+      error: {
+        message,
+        type: "ToolExecutionError",
+        numberOfAttempts: call.error ? call.error.numberOfAttempts + 1 : 1,
+        lastAttempt: new Date(),
+      },
     };
   }
 

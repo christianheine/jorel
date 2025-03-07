@@ -77,7 +77,10 @@ export interface JorElTextGenerationConfigWithTools extends JorElCoreGenerationC
   documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection;
   tools?: LlmToolKit | (LlmTool | LlmToolConfiguration)[];
   toolChoice?: LlmToolChoice;
+  /** @deprecated Use `maxToolCalls` instead */
   maxAttempts?: number;
+  maxToolCalls?: number;
+  maxToolCallErrors?: number;
   context?: LLmToolContextSegment;
   secureContext?: LLmToolContextSegment;
   messageHistory?: LlmMessage[];
@@ -92,7 +95,10 @@ export interface JorElGenerationConfigWithTools extends JorElCoreGenerationConfi
   model?: string;
   tools?: LlmToolKit;
   toolChoice?: LlmToolChoice;
+  /** @deprecated Use `maxToolCalls` instead */
   maxAttempts?: number;
+  maxToolCalls?: number;
+  maxToolCallErrors?: number;
   context?: LLmToolContextSegment;
   secureContext?: LLmToolContextSegment;
   json?: boolean | JsonSpecification;
