@@ -1,6 +1,6 @@
 {
   "name": "jorel",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "The easiest way to use LLMs, including streams, images, documents, tools and various agent scenarios.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -58,7 +58,7 @@
     "@mistralai/mistralai": "1.5.1",
     "axios": "1.8.2",
     "dotenv": "16.4.7",
-    "file-type": "20.4.0",
+    "file-type": "16.5.4",
     "groq-sdk": "0.15.0",
     "ollama": "0.5.14",
     "openai": "4.86.2",

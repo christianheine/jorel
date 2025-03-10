@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.3 (2025-03-10)
+
+* Fix dependency issue
+
 ## 0.12.2 (2025-03-10)
 
 * Update default VertexAI models (based on planned obsolescence)
