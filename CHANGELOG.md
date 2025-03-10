@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.2 (2025-03-10)
+
+* Update default VertexAI models (based on planned obsolescence)
+
 ## 0.12.1 (2025-03-06)
 
 * Add dedicated options for number of tool calls and tool call errors

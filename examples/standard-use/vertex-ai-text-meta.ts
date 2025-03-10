@@ -13,7 +13,7 @@ const main = async () => {
   const { response, meta } = await jorEl.text(
     "What is the capital of France?",
     {
-      model: "gemini-1.5-flash-002",
+      model: "gemini-2.0-flash-001",
     },
     true,
   );
