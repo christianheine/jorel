@@ -9,13 +9,14 @@ import {
   LlmStreamResponseWithToolCalls,
   LlmStreamToolCallCompleted,
   LlmStreamToolCallStarted,
+  LlmToolCall,
 } from "../providers";
+import { getModelOverrides } from "../providers/get-overrides";
+import { modelParameterOverrides } from "../providers/model-parameter-overrides";
 import { maskAll, MaybeUndefined, omit, shallowFilterUndefined } from "../shared";
 import { JorElGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
 import { JorElModelManager } from "./jorel.models";
 import { JorElProviderManager } from "./jorel.providers";
-import { getModelOverrides } from "../providers/get-overrides";
-import { modelParameterOverrides } from "../providers/model-parameter-overrides";
 
 export class JorElCoreStore {
   defaultConfig: InitLlmGenerationConfig = {};
@@ -300,26 +301,50 @@ export class JorElCoreStore {
         };
       }
 
-      response = await config.tools.processCalls(response, {
-        context: config.context,
-        secureContext: config.secureContext,
-        maxErrors: Math.max(0, maxToolCallErrors - toolCallErrors),
-        maxCalls: Math.max(0, maxToolCalls - toolCalls),
-      });
+      const processedToolCalls: LlmToolCall[] = [];
 
-      toolCalls += response.toolCalls.length;
-      toolCallErrors += response.toolCalls.filter((t) => t.executionState === "error").length;
-
-      // TODO: Potentially emit tool call events as callback in processCalls to reduce latency
-      // Emit tool call completed events for each tool call
       for (const toolCall of response.toolCalls) {
-        if (toolCall.executionState === "completed" || toolCall.executionState === "error") {
+        if (toolCallErrors >= maxToolCallErrors) {
+          this.setCallToError(toolCall, "Too many tool call errors");
+          processedToolCalls.push(toolCall);
+          continue;
+        }
+
+        if (toolCalls >= maxToolCalls) {
+          this.setCallToError(toolCall, "Too many tool calls");
+          processedToolCalls.push(toolCall);
+          continue;
+        }
+
+        if (toolCall.executionState !== "pending") {
+          continue;
+        }
+
+        const result = await config.tools.processToolCall(toolCall, {
+          context: config.context,
+          secureContext: config.secureContext,
+        });
+
+        processedToolCalls.push(result.toolCall);
+
+        if (result.toolCall.executionState === "completed" || result.toolCall.executionState === "error") {
           yield {
             type: "toolCallCompleted",
-            toolCall,
+            toolCall: result.toolCall,
           };
         }
+
+        if (result.toolCall.executionState === "error") {
+          toolCallErrors++;
+        }
+
+        toolCalls++;
       }
+
+      response = {
+        ...response,
+        toolCalls: processedToolCalls,
+      };
 
       this.logger.debug("Core", "Finished processing tool calls");
 
@@ -335,6 +360,20 @@ export class JorElCoreStore {
       type: "messages",
       messages,
     };
+  }
+
+  /**
+   * Helper method to set a tool call to error state
+   */
+  private setCallToError(toolCall: LlmToolCall, errorMessage: string): void {
+    toolCall.executionState = "error";
+    toolCall.error = {
+      type: "ToolExecutionError",
+      message: errorMessage,
+      numberOfAttempts: 1,
+      lastAttempt: new Date(),
+    };
+    toolCall.result = null;
   }
 
   /**

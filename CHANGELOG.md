@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.4 (2025-03-13)
+
+* Improve how tool responses are being streamed
+
 ## 0.12.3 (2025-03-10)
 
 * Fix dependency issue
