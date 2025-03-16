@@ -12,7 +12,6 @@ import {
 } from "@google-cloud/vertexai";
 import { FunctionDeclaration, FunctionDeclarationSchema } from "@google-cloud/vertexai/src/types/content";
 import { ZodObject } from "zod";
-import zodToJsonSchema from "zod-to-json-schema";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
@@ -25,7 +24,7 @@ import {
   LlmToolCall,
   toolChoiceToVertexAi,
 } from "../../providers";
-import { generateRandomId, generateUniqueId, MaybeUndefined, omit } from "../../shared";
+import { generateRandomId, generateUniqueId, MaybeUndefined, zodSchemaToJsonSchema } from "../../shared";
 import { convertLlmMessagesToVertexAiMessages } from "./convert-llm-message";
 import { ToolCall } from "ollama";
 
@@ -132,7 +131,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
               {
                 name: f.function.name,
                 description: f.function.description,
-                parameters: f.function.parameters ? omit(f.function.parameters, ['$schema']) as unknown as FunctionDeclarationSchema : undefined,
+                parameters: f.function.parameters as unknown as FunctionDeclarationSchema,
               },
             ];
             return { functionDeclarations };
@@ -144,7 +143,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
             responseSchema:
               config.json && typeof config.json !== "boolean"
                 ? config.json instanceof ZodObject
-                  ? omit(zodToJsonSchema(config.json, { target: "openAi" }), ["$schema"])
+                  ? zodSchemaToJsonSchema(config.json)
                   : (config.json as any)
                 : undefined,
           },
@@ -239,7 +238,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
           {
             name: f.function.name,
             description: f.function.description,
-            parameters: f.function.parameters ? omit(f.function.parameters, ['$schema']) as unknown as FunctionDeclarationSchema : undefined,
+            parameters: f.function.parameters as unknown as FunctionDeclarationSchema,
           },
         ];
         return { functionDeclarations };
@@ -251,7 +250,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         responseSchema:
           config.json && typeof config.json !== "boolean"
             ? config.json instanceof ZodObject
-              ? zodToJsonSchema(config.json, { target: "openAi" })
+              ? zodSchemaToJsonSchema(config.json)
               : (config.json as any)
             : undefined,
       },

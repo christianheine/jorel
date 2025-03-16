@@ -1,7 +1,7 @@
 import { Tool } from "ollama";
 import { ZodObject } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import { JsonSpecification } from "../llm-core-provider";
+import { zodSchemaToJsonSchema } from "../../shared";
 
 export const jsonResponseToOllama = (
   format?: boolean | JsonSpecification,
@@ -11,7 +11,7 @@ export const jsonResponseToOllama = (
   } else if (typeof format === "boolean") {
     return "json";
   } else if (typeof format === "object") {
-    return format instanceof ZodObject ? zodToJsonSchema(format, { target: "openAi" }) : format;
+    return format instanceof ZodObject ? zodSchemaToJsonSchema(format) : format;
   }
 
   throw new Error("Invalid format");

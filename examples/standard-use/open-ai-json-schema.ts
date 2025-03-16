@@ -18,7 +18,9 @@ const main = async () => {
     jsonSchema: z.object({
       currentDate: z.string(),
       currentTime: z.string(),
-      location: z.string(),
+      location: z.object({
+        city: z.string(),
+      }),
     }),
   });
 
@@ -26,7 +28,7 @@ const main = async () => {
   // {
   //   currentDate: '2/17/2025',
   //   currentTime: '8:56:22 AM',
-  //   location: 'Sydney'
+  //   location: { city: 'Sydney' }
   // }
 };
 

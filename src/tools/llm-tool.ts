@@ -1,4 +1,4 @@
-import { MaybeUndefined } from "../shared";
+import { MaybeUndefined, zodSchemaToJsonSchema } from "../shared";
 import {
   LlmFunction,
   LlmFunctionParameters,
@@ -7,7 +7,6 @@ import {
   LlmToolExecutor,
 } from "../providers";
 import { ZodObject } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 export type LLmToolContextSegment = Record<string, object | string | number | boolean | null>;
 
@@ -46,7 +45,7 @@ export class LlmTool {
     this.params = !config.params
       ? undefined
       : config.params instanceof ZodObject
-        ? zodToJsonSchema(config.params, { target: "openAi" })
+        ? zodSchemaToJsonSchema(config.params)
         : this.validateParams(config.params);
   }
 
