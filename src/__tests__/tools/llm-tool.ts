@@ -47,14 +47,12 @@ describe("LlmTool", () => {
 
       const llmFunction = tool.asLLmFunction;
       expect(llmFunction.function.parameters).toEqual({
-        $schema: "https://json-schema.org/draft/2019-09/schema#",
         type: "object",
         properties: {
           name: { type: "string" },
           age: { type: "number" },
         },
         required: ["name", "age"],
-        additionalProperties: false,
       });
     });
   });

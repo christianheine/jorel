@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.0 (2025-03-16)
+
+* Rewrite zod to JSON schema conversion to prevent issues with nested objects for certain providers like VertexAI
+* Add experimental support for Google Generative AI (which directly supports API keys)
+
 ## 0.12.4 (2025-03-13)
 
 * Improve how tool responses are being streamed

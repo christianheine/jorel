@@ -6,6 +6,7 @@ import {
   AnthropicProvider,
   defaultAnthropicBedrockModels,
   defaultAnthropicModels,
+  defaultGoogleGenAiModels,
   defaultGrokModels,
   defaultGroqModels,
   defaultMistralAiEmbeddingModels,
@@ -16,6 +17,8 @@ import {
   defaultVertexAiModels,
   generateSystemMessage,
   generateUserMessage,
+  GoogleGenerativeAIConfig,
+  GoogleGenerativeAIProvider,
   GoogleVertexAiConfig,
   GoogleVertexAiProvider,
   GrokProvider,
@@ -51,6 +54,7 @@ import { JorElAgentManager } from "./jorel.team";
 
 interface InitialConfig {
   anthropic?: AnthropicConfig | true;
+  googleGenAi?: GoogleGenerativeAIConfig | true;
   grok?: OpenAIConfig | true;
   groq?: GroqConfig | true;
   mistral?: MistralConfig | true;
@@ -172,6 +176,12 @@ export class JorEl {
         this.models.register({ model, provider: "anthropic" });
       }
     },
+    registerGoogleGenAi: (config?: GoogleGenerativeAIConfig) => {
+      this._core.providerManager.registerProvider("google-gen-ai", new GoogleGenerativeAIProvider(config));
+      for (const model of defaultGoogleGenAiModels) {
+        this.models.register({ model, provider: "google-gen-ai" });
+      }
+    },
     registerGrok: (config?: OpenAIConfig) => {
       this._core.providerManager.registerProvider("grok", new GrokProvider(config));
       for (const model of defaultGrokModels) {
@@ -221,9 +231,9 @@ export class JorEl {
       addModel: (model: string) => this.models.register({ model, provider: "anthropic" }),
       getClient: () => (this._core.providerManager.getProvider("anthropic") as AnthropicProvider).client,
     },
-    openAi: {
-      addModel: (model: string) => this.models.register({ model, provider: "openai" }),
-      getClient: () => (this._core.providerManager.getProvider("openai") as OpenAIProvider).client,
+    googleGenAi: {
+      addModel: (model: string) => this.models.register({ model, provider: "google-gen-ai" }),
+      getClient: () => (this._core.providerManager.getProvider("google-gen-ai") as GoogleGenerativeAIProvider).client,
     },
     grok: {
       addModel: (model: string) => this.models.register({ model, provider: "grok" }),
@@ -236,6 +246,10 @@ export class JorEl {
     mistral: {
       addModel: (model: string) => this.models.register({ model, provider: "mistral" }),
       getClient: () => (this._core.providerManager.getProvider("mistral") as MistralProvider).client,
+    },
+    openAi: {
+      addModel: (model: string) => this.models.register({ model, provider: "openai" }),
+      getClient: () => (this._core.providerManager.getProvider("openai") as OpenAIProvider).client,
     },
     openRouter: {
       addModel: (model: string) => this.models.register({ model, provider: "open-router" }),
@@ -252,6 +266,7 @@ export class JorEl {
    *
    * @param config - The configuration for the Jor-El instance.
    * @param config.anthropic - Anthropic configuration (optional).
+   * @param config.googleGenAi - Google Generative AI configuration (optional).
    * @param config.grok - Grok configuration (optional).
    * @param config.groq - Groq configuration (optional).
    * @param config.vertexAi - Google Vertex AI configuration (optional).
@@ -274,6 +289,8 @@ export class JorEl {
     });
     this.team = new JorElAgentManager(this._core);
     if (config.anthropic) this.providers.registerAnthropic(config.anthropic === true ? undefined : config.anthropic);
+    if (config.googleGenAi)
+      this.providers.registerGoogleGenAi(config.googleGenAi === true ? undefined : config.googleGenAi);
     if (config.grok) this.providers.registerGrok(config.grok === true ? undefined : config.grok);
     if (config.groq) this.providers.registerGroq(config.groq === true ? undefined : config.groq);
     if (config.mistral) this.providers.registerMistral(config.mistral === true ? undefined : config.mistral);
