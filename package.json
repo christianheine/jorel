@@ -1,6 +1,6 @@
 {
   "name": "jorel",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "The easiest way to use LLMs, including streams, images, documents, tools and various agent scenarios.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -57,24 +57,24 @@
     "@anthropic-ai/sdk": "0.39.0",
     "@google-cloud/vertexai": "1.9.3",
     "@google/generative-ai": "0.24.0",
-    "@mistralai/mistralai": "1.5.1",
-    "axios": "1.8.3",
+    "@mistralai/mistralai": "1.5.2",
+    "axios": "1.8.4",
     "dotenv": "16.4.7",
     "file-type": "16.5.4",
-    "groq-sdk": "0.16.0",
+    "groq-sdk": "0.17.0",
     "ollama": "0.5.14",
-    "openai": "4.87.3",
+    "openai": "4.89.0",
     "uuid": "11.1.0",
     "winston": "3.17.0",
     "zod": "3.24.2",
-    "zod-to-json-schema": "3.24.4"
+    "zod-to-json-schema": "3.24.5"
   },
   "devDependencies": {
-    "@eslint/js": "9.22.0",
+    "@eslint/js": "9.23.0",
     "@microsoft/api-extractor": "7.52.1",
     "@types/jest": "29.5.14",
-    "@types/node": "22.13.10",
-    "eslint": "9.22.0",
+    "@types/node": "22.13.11",
+    "eslint": "9.23.0",
     "eslint-config-prettier": "10.1.1",
     "eslint-plugin-prettier": "5.2.3",
     "globals": "16.0.0",
@@ -84,7 +84,7 @@
     "ts-jest": "29.2.6",
     "ts-node": "10.9.2",
     "typescript": "5.8.2",
-    "typescript-eslint": "8.26.1"
+    "typescript-eslint": "8.27.0"
   },
   "engines": {
     "node": ">=18"

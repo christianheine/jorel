@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.1 (2025-03-22)
+
+* Extend Groq default registered models
+
 ## 0.13.0 (2025-03-16)
 
 * Rewrite zod to JSON schema conversion to prevent issues with nested objects for certain providers like VertexAI
