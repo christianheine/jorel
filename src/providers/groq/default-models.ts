@@ -6,4 +6,7 @@ export const defaultGroqModels: string[] = [
   "gemma2-9b-it",
   "mixtral-8x7b-32768",
   "llama-3.2-11b-vision-preview",
+  "deepseek-r1-distill-llama-70b",
+  "deepseek-r1-distill-qwen-32b",
+  "qwen-2.5-32b",
 ];
