@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.2 (2025-03-23)
+
+- Switch Groq to use internally use OpenAi provider as default to extend functionality
+
 ## 0.13.1 (2025-03-22)
 
 * Extend Groq default registered models
