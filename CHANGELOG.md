@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.3 (2025-04-15)
+
+- Add latest OpenAI models (GPT4.1 series) to default models
+
 ## 0.13.2 (2025-03-23)
 
 - Switch Groq to use internally use OpenAi provider as default to extend functionality
