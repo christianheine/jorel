@@ -10,7 +10,7 @@ const main = async () => {
 
   const models = await provider.getAvailableModels();
 
-  console.log(models.filter(m => m.includes("4.5")));
+  console.log(models);
 
   const response = await provider.generateResponse(
     "gpt-4o-mini",

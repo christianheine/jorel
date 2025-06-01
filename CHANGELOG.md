@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.4 (2025-06-02)
+
+- Upgrade external dependencies
+- Add latest Anthropic models to default models
+
 ## 0.13.3 (2025-04-15)
 
 - Add latest OpenAI models (GPT4.1 series) to default models
