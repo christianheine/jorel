@@ -1,6 +1,8 @@
 export const defaultAnthropicModels: string[] = [
   "claude-3-5-haiku-latest",
   "claude-3-5-haiku-20241022",
+  "claude-sonnet-4-20250514",
+  "claude-opus-4-20250514",
   "claude-3-7-sonnet-latest",
   "claude-3-7-sonnet-20250219",
   "claude-3-5-sonnet-latest",
@@ -15,6 +17,8 @@ export const defaultAnthropicModels: string[] = [
 ];
 
 export const defaultAnthropicBedrockModels: string[] = [
+  "anthropic.claude-opus-4-20250514-v1:0",
+  "anthropic.claude-sonnet-4-20250514-v1:0",
   "anthropic.claude-3-5-sonnet-20241022-v2:0",
   "anthropic.claude-3-5-sonnet-20240620-v1:0",
   "anthropic.claude-3-opus-20240229-v1:0",
