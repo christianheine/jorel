@@ -11,9 +11,9 @@ import {
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
   toolChoiceToOpenAi,
-  jsonResponseToOpenAi,
 } from "../../providers";
 import { LlmToolKit } from "../../tools";
+import { jsonResponseToMistral } from "./convert-inputs";
 import { convertLlmMessagesToMistralMessages } from "./convert-llm-message";
 
 interface ToolCall {
@@ -53,7 +53,7 @@ export class MistralProvider implements LlmCoreProvider {
       model,
       messages: await convertLlmMessagesToMistralMessages(messages),
       temperature,
-      responseFormat: jsonResponseToOpenAi(config.json),
+      responseFormat: jsonResponseToMistral(config.json),
       maxTokens: config.maxTokens,
       toolChoice: toolChoiceToOpenAi(config.toolChoice),
       tools: config.tools?.asLlmFunctions?.map((f) => ({
@@ -131,7 +131,7 @@ export class MistralProvider implements LlmCoreProvider {
       model,
       messages: await convertLlmMessagesToMistralMessages(messages),
       temperature,
-      responseFormat: jsonResponseToOpenAi(config.json),
+      responseFormat: jsonResponseToMistral(config.json),
       maxTokens: config.maxTokens,
       stream: true,
       tools: config.tools?.asLlmFunctions?.map((f) => ({
