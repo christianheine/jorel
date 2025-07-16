@@ -1,7 +1,7 @@
 import { ZodObject } from "zod";
-import { JsonSpecification } from "../llm-core-provider";
 import { zodSchemaToJsonSchema } from "../../shared";
-import { ResponseFormat } from "@mistralai/mistralai/src/models/components/responseformat";
+import { JsonSpecification } from "../llm-core-provider";
+import { ResponseFormat } from "@mistralai/mistralai/models/components";
 
 export const jsonResponseToMistral = (
   format?: boolean | JsonSpecification,

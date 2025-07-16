@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.4 (2025-07-17)
+
+- Fix jsonSchema response format for Mistral provider
+
 ## 0.13.4 (2025-06-02)
 
 - Upgrade external dependencies
