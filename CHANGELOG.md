@@ -1,21 +1,26 @@
 # Changelog
 
-## 0.13.4 (2025-07-17)
+## 0.13.6 (2025-08-10)
 
-- Fix jsonSchema response format for Mistral provider
+* Upgrade external dependencies
+* Add latest default models for Open AI, Vertex AI & Mistral
+
+## 0.13.5 (2025-07-17)
+
+* Fix jsonSchema response format for Mistral provider
 
 ## 0.13.4 (2025-06-02)
 
-- Upgrade external dependencies
-- Add latest Anthropic models to default models
+* Upgrade external dependencies
+* Add latest Anthropic models to default models
 
 ## 0.13.3 (2025-04-15)
 
-- Add latest OpenAI models (GPT4.1 series) to default models
+* Add latest OpenAI models (GPT4.1 series) to default models
 
 ## 0.13.2 (2025-03-23)
 
-- Switch Groq to use internally use OpenAi provider as default to extend functionality
+* Switch Groq to use internally use OpenAi provider as default to extend functionality
 
 ## 0.13.1 (2025-03-22)
 

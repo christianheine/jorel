@@ -1,19 +1,18 @@
 import { Mistral } from "@mistralai/mistralai";
-import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
 import {
-  LlmMessage,
   generateAssistantMessage,
   LlmCoreProvider,
   LlmGenerationConfig,
+  LlmMessage,
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
-  toolChoiceToOpenAi,
 } from "../../providers";
+import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
-import { jsonResponseToMistral } from "./convert-inputs";
+import { jsonResponseToMistral, toolChoiceToMistral } from "./convert-inputs";
 import { convertLlmMessagesToMistralMessages } from "./convert-llm-message";
 
 interface ToolCall {
@@ -55,7 +54,7 @@ export class MistralProvider implements LlmCoreProvider {
       temperature,
       responseFormat: jsonResponseToMistral(config.json),
       maxTokens: config.maxTokens,
-      toolChoice: toolChoiceToOpenAi(config.toolChoice),
+      toolChoice: toolChoiceToMistral(config.toolChoice),
       tools: config.tools?.asLlmFunctions?.map((f) => ({
         type: "function",
         function: {
@@ -146,7 +145,7 @@ export class MistralProvider implements LlmCoreProvider {
           },
         },
       })),
-      toolChoice: toolChoiceToOpenAi(config.toolChoice),
+      toolChoice: toolChoiceToMistral(config.toolChoice),
     });
 
     let inputTokens: MaybeUndefined<number>;

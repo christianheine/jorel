@@ -1,7 +1,7 @@
-import { LlmMessage } from "../../providers";
+import { ChatCompletionContentPart, ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { ImageContent } from "../../media";
+import { LlmMessage } from "../../providers";
 import { LlmToolKit } from "../../tools";
-import { ChatCompletionMessageParam, ChatCompletionContentPart } from "openai/src/resources/chat/completions";
 
 /** Convert unified LLM messages to OpenAI messages (ChatCompletionMessageParam) */
 export const convertLlmMessagesToOpenAiMessages = async (

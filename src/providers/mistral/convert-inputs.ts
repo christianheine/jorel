@@ -1,7 +1,7 @@
+import { ResponseFormat, ToolChoice, ToolChoiceEnum } from "@mistralai/mistralai/models/components";
 import { ZodObject } from "zod";
 import { zodSchemaToJsonSchema } from "../../shared";
-import { JsonSpecification } from "../llm-core-provider";
-import { ResponseFormat } from "@mistralai/mistralai/models/components";
+import { JsonSpecification, LlmToolChoice } from "../llm-core-provider";
 
 export const jsonResponseToMistral = (
   format?: boolean | JsonSpecification,
@@ -28,4 +28,24 @@ export const jsonResponseToMistral = (
   }
 
   throw new Error("Invalid format");
+};
+
+export const toolChoiceToMistral = (toolChoice?: LlmToolChoice): ToolChoice | ToolChoiceEnum | undefined => {
+  if (!toolChoice) {
+    return undefined;
+  }
+
+  if (toolChoice === "auto") {
+    return "auto";
+  } else if (toolChoice === "required") {
+    return "any"; // Mistral uses "any" instead of "required"
+  } else if (toolChoice === "none") {
+    return "none";
+  } else {
+    // For specific function names, return ToolChoice object
+    return {
+      type: "function",
+      function: { name: toolChoice },
+    };
+  }
 };

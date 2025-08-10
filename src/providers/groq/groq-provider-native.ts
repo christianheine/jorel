@@ -8,10 +8,10 @@ import {
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmToolCall,
-  toolChoiceToOpenAi,
 } from "..";
 import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
+import { toolChoiceToGroq } from "./convert-inputs";
 import { convertLlmMessagesToGroqMessages } from "./convert-llm-message";
 
 export interface GroqConfig {
@@ -20,7 +20,10 @@ export interface GroqConfig {
   name?: string;
 }
 
-/** Provides access to Groq and other compatible services */
+/**
+ *  Provides access to Groq and other compatible services
+ *  @deprecated: use GroqProvider instead
+ */
 export class GroqProviderNative implements LlmCoreProvider {
   public readonly name;
   readonly client: Groq;
@@ -50,7 +53,7 @@ export class GroqProviderNative implements LlmCoreProvider {
       response_format: config.json ? { type: "json_object" } : { type: "text" },
       tools: config.tools?.asLlmFunctions,
       parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
-      tool_choice: toolChoiceToOpenAi(config.toolChoice),
+      tool_choice: toolChoiceToGroq(config.toolChoice),
     });
 
     const durationMs = Date.now() - start;

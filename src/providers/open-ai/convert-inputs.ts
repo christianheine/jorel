@@ -1,7 +1,7 @@
 import { ChatCompletionCreateParamsBase } from "openai/resources/chat/completions";
 import { ZodObject } from "zod";
-import { JsonSpecification, LlmToolChoice } from "../llm-core-provider";
 import { zodSchemaToJsonSchema } from "../../shared";
+import { JsonSpecification, LlmToolChoice } from "../llm-core-provider";
 
 export const jsonResponseToOpenAi = (
   format?: boolean | JsonSpecification,
@@ -21,7 +21,7 @@ export const jsonResponseToOpenAi = (
       json_schema: {
         name: "json_schema",
         description: schemaDescription,
-        schema: format instanceof ZodObject ? zodSchemaToJsonSchema(format, 'openAi') : format,
+        schema: format instanceof ZodObject ? zodSchemaToJsonSchema(format, "openAi") : format,
         strict: true,
       },
     };

@@ -9,4 +9,11 @@ export const modelParameterOverrides: LlmModelParameterOverridesLookup = {
   "o1-mini-2024-09-12": { noTemperature: true, noSystemMessage: true },
   o1: { noTemperature: true },
   "o1-2024-12-17": { noTemperature: true },
+  "gpt-5-nano": { noTemperature: true },
+  "gpt-5": { noTemperature: true },
+  "gpt-5-mini-2025-08-07": { noTemperature: true },
+  "gpt-5-mini": { noTemperature: true },
+  "gpt-5-nano-2025-08-07": { noTemperature: true },
+  "gpt-5-chat-latest": { noTemperature: true },
+  "gpt-5-2025-08-07": { noTemperature: true },
 };

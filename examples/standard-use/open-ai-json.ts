@@ -10,7 +10,7 @@ const main = async () => {
   const jorEl = new JorEl({ openAI: true });
 
   // Optional: Set default model
-  jorEl.models.setDefault("gpt-4o-mini");
+  jorEl.models.setDefault("gpt-5-nano");
 
   // Optional: Set system message
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snake_case for attributes!";

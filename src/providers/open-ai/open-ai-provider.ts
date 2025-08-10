@@ -1,19 +1,19 @@
 import { OpenAI } from "openai";
-import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
 import {
-  LlmMessage,
   generateAssistantMessage,
   LlmCoreProvider,
   LlmGenerationConfig,
+  LlmMessage,
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
-import { convertLlmMessagesToOpenAiMessages } from "./convert-llm-message";
+import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
 import { jsonResponseToOpenAi, toolChoiceToOpenAi } from "./convert-inputs";
+import { convertLlmMessagesToOpenAiMessages } from "./convert-llm-message";
 
 interface ToolCall {
   id: string;
@@ -70,6 +70,9 @@ export class OpenAIProvider implements LlmCoreProvider {
     const message = response.choices[0].message;
 
     const toolCalls: MaybeUndefined<LlmToolCall[]> = message.tool_calls?.map((call) => {
+      if (call.type === "custom") {
+        throw new Error(`Unsupported tool call type: ${call.type}`);
+      }
       return {
         id: generateUniqueId(),
         request: {
