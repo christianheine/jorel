@@ -4,6 +4,8 @@ import { Nullable } from "../shared";
 import { LLmToolContextSegment, LlmToolKit } from "../tools";
 
 export type LlmToolChoice = "none" | "auto" | "required" | string;
+export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | null;
+export type Verbosity = "low" | "medium" | "high" | null;
 
 export type JsonSpecification = ZodObject<any> | Record<string, unknown>;
 
@@ -22,6 +24,8 @@ interface CoreLlmGenerationConfig {
   tools?: LlmToolKit;
   toolChoice?: LlmToolChoice;
   logLevel?: LogLevel;
+  verbosity?: Verbosity;
+  reasoningEffort?: ReasoningEffort;
 }
 
 export interface LlmGenerationConfig extends CoreLlmGenerationConfig {

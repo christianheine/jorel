@@ -1,9 +1,9 @@
 import { JorEl } from "../..";
 import { TestProvider } from "../../__mocks__/test-provider";
 import { CreateLlmDocument, LlmDocumentCollection } from "../../documents";
-import { LlmTool, LlmToolKit } from "../../tools";
 import { ImageContent } from "../../media";
 import { LlmMessage, LlmUserMessage } from "../../providers";
+import { LlmTool, LlmToolKit } from "../../tools";
 
 describe("JorEl", () => {
   let jorel: JorEl;
@@ -430,33 +430,24 @@ describe("JorEl", () => {
       // Create a provider that will test model overrides
       const overrideTestProvider = new TestProvider();
       jorel.providers.registerCustom("override-test", overrideTestProvider);
+
+      // Use a real model that has temperature overrides
       jorel.models.register({
-        model: "no-temperature-model",
+        model: "o1-mini",
         provider: "override-test",
         setAsDefault: true,
-      });
-
-      // Mock the applyModelOverrides method to simulate a model that doesn't support temperature
-      const originalGenerate = jorel["_core"].generate;
-      jorel["_core"].generate = jest.fn().mockImplementation(async (messages, config) => {
-        // Simulate the behavior of applyModelOverrides for a model that doesn't support temperature
-        const newConfig = { ...config, temperature: null };
-        return originalGenerate.call(jorel["_core"], messages, newConfig);
       });
 
       const spy = jest.spyOn(overrideTestProvider, "generateResponse");
 
       await jorel.text("Hello", { temperature: 0.7 });
 
-      // The temperature should be null in the final call
+      // The temperature should be null in the final call because o1-mini doesn't support temperature
       expect(spy).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(Array),
         expect.objectContaining({ temperature: null }),
       );
-
-      // Restore the original method
-      jorel["_core"].generate = originalGenerate;
     });
   });
 

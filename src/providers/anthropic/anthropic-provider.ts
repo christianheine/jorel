@@ -88,6 +88,7 @@ export class AnthropicProvider implements LlmCoreProvider {
       temperature,
       max_tokens: config.maxTokens || 4096,
       system: systemMessage,
+      thinking: config.reasoningEffort === "minimal" ? { type: "disabled" } : undefined,
       tool_choice:
         config.toolChoice === "none" || !config.tools || !config.tools.hasTools
           ? undefined
@@ -181,6 +182,7 @@ export class AnthropicProvider implements LlmCoreProvider {
       max_tokens: config.maxTokens || 4096,
       system: systemMessage,
       stream: true,
+      thinking: config.reasoningEffort === "minimal" ? { type: "disabled" } : undefined,
       tool_choice:
         config.toolChoice === "none" || !config.tools || !config.tools.hasTools
           ? undefined

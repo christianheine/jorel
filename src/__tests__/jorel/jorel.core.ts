@@ -1,5 +1,5 @@
-import { JorElCoreStore } from "../../jorel/jorel.core";
 import { TestProvider } from "../../__mocks__/test-provider";
+import { JorElCoreStore } from "../../jorel/jorel.core";
 import { LlmMessage, LlmUserMessage } from "../../providers";
 import { LlmTool, LlmToolKit } from "../../tools";
 
@@ -39,9 +39,9 @@ describe("JorElCoreStore", () => {
     });
 
     it("should apply model overrides", async () => {
-      // Mock the applyModelOverrides method
-      const originalApplyModelOverrides = coreStore["applyModelOverrides"];
-      coreStore["applyModelOverrides"] = jest.fn().mockImplementation((messages, config) => {
+      // Mock the applyModelDefaultsAndOverrides method
+      const originalApplyMethod = coreStore["applyModelDefaultsAndOverrides"];
+      coreStore["applyModelDefaultsAndOverrides"] = jest.fn().mockImplementation((messages, config, modelEntry) => {
         return {
           messages,
           config: { ...config, temperature: null },
@@ -68,7 +68,7 @@ describe("JorElCoreStore", () => {
       );
 
       // Restore original method
-      coreStore["applyModelOverrides"] = originalApplyModelOverrides;
+      coreStore["applyModelDefaultsAndOverrides"] = originalApplyMethod;
     });
   });
 

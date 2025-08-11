@@ -47,10 +47,13 @@ import {
   OpenAIConfig,
   OpenAIProvider,
   OpenRouterProvider,
+  ReasoningEffort,
+  Verbosity,
 } from "../providers";
 import { generateUniqueId, Nullable } from "../shared";
 import { LlmTool, LlmToolConfiguration, LLmToolContextSegment, LlmToolKit } from "../tools";
 import { JorElCoreStore } from "./jorel.core";
+import { ModelSpecificDefaults } from "./jorel.models";
 import { JorElAgentManager } from "./jorel.team";
 
 interface InitialConfig {
@@ -74,6 +77,10 @@ interface InitialConfig {
 export interface JorElCoreGenerationConfig {
   temperature?: Nullable<number>;
   maxTokens?: number;
+  /** Reasoning effort for the model - only supported by some providers & models (currently mainly OpenAI) */
+  reasoningEffort?: ReasoningEffort;
+  /** Verbosity for the model - only supported by some providers & models (currently only OpenAI) */
+  verbosity?: Verbosity;
 }
 
 export interface JorElTextGenerationConfigWithTools extends JorElCoreGenerationConfig {
@@ -138,7 +145,12 @@ export class JorEl {
    */
   public readonly models = {
     list: () => this._core.modelManager.listModels(),
-    register: (params: { model: string; provider: string; setAsDefault?: boolean }) => {
+    register: (params: {
+      model: string;
+      provider: string;
+      setAsDefault?: boolean;
+      defaults?: ModelSpecificDefaults;
+    }) => {
       this._core.providerManager.getProvider(params.provider); // Ensure provider exists
       return this._core.modelManager.registerModel(params);
     },
@@ -150,6 +162,8 @@ export class JorEl {
         provider: "",
         setAsDefault: true,
       }),
+    setModelSpecificDefaults: (model: string, defaults: ModelSpecificDefaults) =>
+      this._core.modelManager.setModelSpecificDefaults(model, defaults),
     embeddings: {
       register: (params: { model: string; provider: string; dimensions: number; setAsDefault?: boolean }) =>
         this._core.modelManager.registerEmbeddingModel(params),

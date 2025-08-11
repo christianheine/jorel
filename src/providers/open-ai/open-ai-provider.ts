@@ -61,6 +61,8 @@ export class OpenAIProvider implements LlmCoreProvider {
       parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
       tool_choice: toolChoiceToOpenAi(config.toolChoice),
       tools: config.tools?.asLlmFunctions,
+      reasoning_effort: config.reasoningEffort,
+      verbosity: config.verbosity,
     });
 
     const durationMs = Date.now() - start;
@@ -129,6 +131,8 @@ export class OpenAIProvider implements LlmCoreProvider {
       stream_options: {
         include_usage: true,
       },
+      reasoning_effort: config.reasoningEffort,
+      verbosity: config.verbosity,
     });
 
     let inputTokens: MaybeUndefined<number>;

@@ -1,10 +1,23 @@
 import { LogService } from "../logger";
+import { ReasoningEffort, Verbosity } from "../providers";
+
+export interface ModelSpecificDefaults {
+  temperature?: number | null;
+  reasoningEffort?: ReasoningEffort;
+  verbosity?: Verbosity;
+}
+
+export interface ModelEntry {
+  model: string;
+  provider: string;
+  defaults?: ModelSpecificDefaults;
+}
 
 /**
  * Manages models for JorEl
  */
 export class JorElModelManager {
-  private models: { model: string; provider: string }[] = [];
+  private models: ModelEntry[] = [];
   private embeddingModels: { model: string; provider: string; dimensions: number }[] = [];
   private defaultModel: string = "";
   private defaultEmbeddingModel: string = "";
@@ -21,10 +34,31 @@ export class JorElModelManager {
    * @returns The model entry
    * @throws Error - If the provider does not exist
    */
-  registerModel({ model, provider, setAsDefault }: { model: string; provider: string; setAsDefault?: boolean }) {
-    this.models.push({ model, provider });
+  registerModel({
+    model,
+    provider,
+    setAsDefault,
+    defaults,
+  }: {
+    model: string;
+    provider: string;
+    setAsDefault?: boolean;
+    defaults?: ModelSpecificDefaults;
+  }) {
+    this.models.push({ model, provider, defaults });
     this.logger.debug("ModelManager", `Registered model ${model} with provider ${provider}`);
     if (setAsDefault || !this.defaultModel) this.defaultModel = model;
+  }
+
+  /**
+   * Set the defaults for a model
+   * @param model The model name
+   * @param defaults The defaults to set
+   */
+  setModelSpecificDefaults(model: string, defaults: ModelSpecificDefaults) {
+    const modelEntry = this.getModel(model);
+    modelEntry.defaults = defaults;
+    this.logger.debug("ModelManager", `Set specific defaults for model ${model} to ${JSON.stringify(defaults)}`);
   }
 
   /**
@@ -46,7 +80,7 @@ export class JorElModelManager {
    * @returns The model entry
    * @throws Error - If the model does not exist
    */
-  getModel(model: string): { model: string; provider: string } {
+  getModel(model: string): ModelEntry {
     const modelEntry = this.models.find((m) => m.model === model);
     if (!modelEntry) throw new Error(`Model ${model} is not registered`);
     return modelEntry;
@@ -74,7 +108,7 @@ export class JorElModelManager {
   /**
    * List all models
    */
-  listModels(): { model: string; provider: string }[] {
+  listModels(): ModelEntry[] {
     return this.models;
   }
 

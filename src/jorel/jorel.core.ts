@@ -15,7 +15,7 @@ import { getModelOverrides } from "../providers/get-overrides";
 import { modelParameterOverrides } from "../providers/model-parameter-overrides";
 import { maskAll, MaybeUndefined, omit, shallowFilterUndefined } from "../shared";
 import { JorElGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
-import { JorElModelManager } from "./jorel.models";
+import { JorElModelManager, ModelEntry } from "./jorel.models";
 import { JorElProviderManager } from "./jorel.providers";
 
 export class JorElCoreStore {
@@ -44,31 +44,33 @@ export class JorElCoreStore {
   }
 
   /**
-   * Applies model-specific overrides to messages and config
-   * @param messages - The messages to apply the overrides to
-   * @param config - The config to apply the overrides to
-   * @param modelName - The name of the model to apply the overrides to
+   * Applies model-specific defaults and overrides to messages and config
+   * @param messages - The messages to apply the defaults and overrides to
+   * @param config - The config to apply the defaults and overrides to
+   * @param modelEntry - The model entry to apply (with potential defaults)
    */
-  private applyModelOverrides(
+  private applyModelDefaultsAndOverrides(
     messages: LlmMessage[],
     config: JorElGenerationConfigWithTools,
-    modelName: string,
+    modelEntry: ModelEntry,
   ): { messages: LlmMessage[]; config: JorElGenerationConfigWithTools } {
-    const overrides = getModelOverrides(modelName, modelParameterOverrides);
+    const overrides = getModelOverrides(modelEntry.model, modelParameterOverrides);
 
     if (overrides.noSystemMessage && messages.some((m) => m.role === "system")) {
-      this.logger.debug("Core", `System messages are not supported for ${modelName} and will be ignored`);
+      this.logger.debug("Core", `System messages are not supported for ${modelEntry.model} and will be ignored`);
     }
 
     if (overrides.noTemperature && typeof config.temperature === "number") {
-      this.logger.debug("Core", `Temperature is not supported for ${modelName} and will be ignored`);
+      this.logger.debug("Core", `Temperature is not supported for ${modelEntry.model} and will be ignored`);
     }
 
     return {
       messages: overrides.noSystemMessage ? messages.filter((m) => m.role !== "system") : messages,
       config: shallowFilterUndefined({
         ...config,
-        temperature: overrides.noTemperature ? null : config.temperature,
+        temperature: overrides.noTemperature ? null : config.temperature || modelEntry.defaults?.temperature,
+        reasoningEffort: config.reasoningEffort || modelEntry.defaults?.reasoningEffort,
+        verbosity: config.verbosity || modelEntry.defaults?.verbosity,
       }),
     };
   }
@@ -86,10 +88,10 @@ export class JorElCoreStore {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
 
-    const { messages: messagesWithOverrides, config: configWithOverrides } = this.applyModelOverrides(
+    const { messages: messagesWithOverrides, config: configWithOverrides } = this.applyModelDefaultsAndOverrides(
       messages,
       config,
-      modelEntry.model,
+      modelEntry,
     );
 
     this.logger.debug(
@@ -197,10 +199,10 @@ export class JorElCoreStore {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
 
-    const { messages: messagesWithOverrides, config: configWithOverrides } = this.applyModelOverrides(
+    const { messages: messagesWithOverrides, config: configWithOverrides } = this.applyModelDefaultsAndOverrides(
       messages,
       config,
-      modelEntry.model,
+      modelEntry,
     );
 
     this.logger.debug(
