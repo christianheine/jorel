@@ -61,7 +61,7 @@ console.log(meta);
 
 ### Passing the message history for follow-up questions
 
-Both `text`, `json` and `stream` support passing the message history. 
+Both `text` , `json` and `stream` support passing the message history. 
 
 This is useful for when you want to ask a follow-up question to a previous response. You can easily retrieve the message history from the response object when also requesting metadata. 
 
@@ -90,7 +90,6 @@ console.log(followUpResponse);
 // It is known for its rich history, vibrant arts scene, and landmarks such as the
 // Brandenburg Gate, the Berlin Wall, and Museum Island.
 ```
-
 
 ## Generating JSON responses
 
@@ -253,7 +252,6 @@ interface GenerationConfig {
   // Tool configuration
   tools?: LlmToolKit;               // Tools the LLM can use
   toolChoice?: "none" | "auto" | "required" | string;  // How tools should be used
-  maxAttempts?: number;             // Maximum attempts for tool execution
   context?: LLmToolContextSegment;  // Context available to tools (will be pass as second argument to executor, not visible or controllable by the LLM)
   secureContext?: LLmToolContextSegment;  // Secure context for tools (will be pass as third argument to executor, and will not be included in logs)
 }
@@ -272,7 +270,7 @@ const response = await jorEl.text("What's the weather like in Sydney?", {
     executor: getWeather,
     params: weatherSchema
   }],
-  maxAttempts: 2
+  maxToolCalls: 2
 });
 ```
 

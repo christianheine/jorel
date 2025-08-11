@@ -135,7 +135,7 @@ export class JorElCoreStore {
       throw new Error("Only tools with a function executor can be used in this context");
     }
 
-    const maxToolCalls = (config.maxToolCalls ?? config.maxAttempts) || 5;
+    const maxToolCalls = config.maxToolCalls || 5;
     const maxToolCallErrors = config.maxToolCallErrors || 3;
 
     const maxAttempts = Math.max(maxToolCalls, maxToolCallErrors);
@@ -260,7 +260,7 @@ export class JorElCoreStore {
       throw new Error("Only tools with a function executor can be used in this context");
     }
 
-    const maxToolCalls = (config.maxToolCalls ?? config.maxAttempts) || 5;
+    const maxToolCalls = config.maxToolCalls || 5;
     const maxToolCallErrors = config.maxToolCallErrors || 3;
 
     const maxAttempts = Math.max(maxToolCalls, maxToolCallErrors);

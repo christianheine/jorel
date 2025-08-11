@@ -233,7 +233,7 @@ You can control how many times a tool can be attempted:
 ```typescript
 const response = await jorEl.text("What's the weather?", {
   tools: [weatherTool],
-  maxAttempts: 3,  // Maximum attempts per tool call
+  maxToolCalls: 3,  // Maximum attempts per tool call
 });
 ```
 
