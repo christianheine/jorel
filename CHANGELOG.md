@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.0 (2025-08-11)
+
+* [BREAKING] Remove support for deprecated `maxAttempts` parameter
+* Add support for additional model generation parameters (`reasoningEffort` & `verbosity`)
+* Add support for model-specific default settings
+* Improve handling of non-default provider names (e.g., to register providers multiple times)
+* Migrate Google Generarative AI provider from `@google/generative-ai` to `@google/genai`
+
 ## 0.13.6 (2025-08-10)
 
 * Upgrade external dependencies
