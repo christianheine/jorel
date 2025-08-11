@@ -43,6 +43,7 @@ import {
   MistralProvider,
   OllamaConfig,
   OllamaProvider,
+  OpenAiAzureConfig,
   OpenAIConfig,
   OpenAIProvider,
   OpenRouterProvider,
@@ -60,6 +61,7 @@ interface InitialConfig {
   mistral?: MistralConfig | true;
   ollama?: OllamaConfig | true;
   openAI?: OpenAIConfig | true;
+  openAiAzure?: Omit<OpenAiAzureConfig, "azure"> | true;
   openRouter?: OpenAIConfig | true;
   vertexAi?: GoogleVertexAiConfig | true;
   systemMessage?: Nullable<string>;
@@ -215,6 +217,10 @@ export class JorEl {
         this.models.embeddings.register({ model, dimensions, provider: "openai" });
       }
     },
+    registerOpenAiAzure: (config?: Omit<OpenAiAzureConfig, "azure">) => {
+      const provider = new OpenAIProvider({ ...config, azure: true });
+      this._core.providerManager.registerProvider(provider.name, provider);
+    },
     registerOpenRouter: (config?: OpenAIConfig) => {
       this._core.providerManager.registerProvider("open-router", new OpenRouterProvider(config));
       for (const model of defaultOpenRouterModels) {
@@ -250,6 +256,10 @@ export class JorEl {
     openAi: {
       addModel: (model: string) => this.models.register({ model, provider: "openai" }),
       getClient: () => (this._core.providerManager.getProvider("openai") as OpenAIProvider).client,
+    },
+    openAiAzure: {
+      addModel: (model: string) => this.models.register({ model, provider: "openai-azure" }),
+      getClient: () => (this._core.providerManager.getProvider("openai-azure") as OpenAIProvider).client,
     },
     openRouter: {
       addModel: (model: string) => this.models.register({ model, provider: "open-router" }),
@@ -297,6 +307,8 @@ export class JorEl {
     if (config.vertexAi) this.providers.registerGoogleVertexAi(config.vertexAi === true ? undefined : config.vertexAi);
     if (config.ollama) this.providers.registerOllama(config.ollama === true ? undefined : config.ollama);
     if (config.openAI) this.providers.registerOpenAi(config.openAI === true ? undefined : config.openAI);
+    if (config.openAiAzure)
+      this.providers.registerOpenAiAzure(config.openAiAzure === true ? undefined : config.openAiAzure);
     if (config.openRouter)
       this.providers.registerOpenRouter(config.openRouter === true ? undefined : config.openRouter);
   }

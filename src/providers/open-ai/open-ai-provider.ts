@@ -1,4 +1,4 @@
-import { OpenAI } from "openai";
+import { AzureOpenAI, OpenAI } from "openai";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
@@ -14,32 +14,31 @@ import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
 import { jsonResponseToOpenAi, toolChoiceToOpenAi } from "./convert-inputs";
 import { convertLlmMessagesToOpenAiMessages } from "./convert-llm-message";
-
-interface ToolCall {
-  id: string;
-  function: {
-    name: string;
-    arguments: string;
-  };
-}
-
-export interface OpenAIConfig {
-  apiKey?: string;
-  apiUrl?: string;
-  name?: string;
-}
+import { OpenAiAzureConfig, OpenAIConfig, OpenAiToolCall } from "./types";
 
 /** Provides access to OpenAI and other compatible services */
 export class OpenAIProvider implements LlmCoreProvider {
   public readonly name;
-  readonly client: OpenAI;
+  readonly client: OpenAI | AzureOpenAI;
+  readonly isAzure: boolean;
 
-  constructor({ apiKey, apiUrl, name }: OpenAIConfig = {}) {
-    this.name = name || "openai";
+  constructor(options: OpenAiAzureConfig | OpenAIConfig = {}) {
+    if (options.azure) {
+      this.name = options.name || "openai-azure";
+      this.client = new AzureOpenAI({
+        endpoint: options.apiUrl || process.env.AZURE_OPENAI_ENDPOINT,
+        apiKey: options.apiKey || process.env.AZURE_OPENAI_API_KEY,
+        apiVersion: options.apiVersion || process.env.AZURE_OPENAI_API_VERSION || "2024-12-01-preview",
+      });
+      this.isAzure = true;
+    } else {
+      this.name = options.name || "openai";
     this.client = new OpenAI({
-      apiKey: apiKey ?? process.env.OPENAI_API_KEY,
-      baseURL: apiUrl,
+        apiKey: options.apiKey || process.env.OPENAI_API_KEY,
+        baseURL: options.apiUrl || process.env.OPENAI_API_URL,
     });
+      this.isAzure = false;
+    }
   }
 
   async generateResponse(
@@ -133,7 +132,7 @@ export class OpenAIProvider implements LlmCoreProvider {
     let inputTokens: MaybeUndefined<number>;
     let outputTokens: MaybeUndefined<number>;
 
-    const _toolCalls: ToolCall[] = [];
+    const _toolCalls: OpenAiToolCall[] = [];
 
     let content = "";
     for await (const chunk of response) {
