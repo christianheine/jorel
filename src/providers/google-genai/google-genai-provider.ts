@@ -4,6 +4,7 @@ import {
   GoogleGenAI,
   HarmBlockThreshold,
   HarmCategory,
+  Schema,
 } from "@google/genai";
 import { ZodObject } from "zod";
 import {
@@ -259,20 +260,15 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
 
     // Add tools
     if (config.tools?.asLlmFunctions?.length) {
-      // @ts-expect-error Type 'Partial<LlmFunctionParameters>' is not assignable to type 'Schema'
-      // Types of property 'type' are incompatible.
-      // Type 'LlmFunctionParameter | undefined' is not assignable to type 'Type | undefined'.
-      // Type '"string"' is not assignable to type 'Type | undefined'. Did you mean 'Type.STRING'?
-      // TODO: Fix type errors.
-      requestConfig.tools = config.tools.asLlmFunctions.map((f) => ({
-        functionDeclarations: [
-          {
+      requestConfig.tools = [
+        {
+          functionDeclarations: config.tools.asLlmFunctions.map((f) => ({
             name: f.function.name,
             description: f.function.description,
-            parameters: f.function.parameters,
-          },
-        ],
-      }));
+            parameters: f.function.parameters as unknown as Schema, // TODO: Improve types
+          })),
+        },
+      ];
     }
 
     // Add tool config

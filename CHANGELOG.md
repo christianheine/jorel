@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.1 (2025-08-12)
+
+* Fix issue with using multiple tools with the Google GenAI provider
+
 ## 0.14.0 (2025-08-11)
 
 * [BREAKING] Remove support for deprecated `maxAttempts` parameter

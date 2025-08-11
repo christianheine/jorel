@@ -3,21 +3,35 @@
 import { config } from "dotenv";
 import { z } from "zod";
 import { JorEl } from "../../../src";
+
 import { getWeather } from "../../_utilities/get-weather";
 
 config({ path: "../../../.env" });
+
+const getCityInfo = async (city: string) => {
+  return {
+    city,
+    population: 5000000,
+  };
+};
 
 const main = async () => {
   // Create instance
   const jorEl = new JorEl({ googleGenAi: true });
 
   // Will return a stream of chunks, and a response and messages object
-  const stream = jorEl.streamWithMeta("What is the weather in Sydney, NSW?", {
+  const stream = jorEl.streamWithMeta("What is the current weather andpopulation of Sydney?", {
     tools: [
       {
         name: "get_weather",
         description: "Get the current temperature and conditions for a city",
         executor: getWeather,
+        params: z.object({ city: z.string() }),
+      },
+      {
+        name: "get_city_population",
+        description: "Get the current population of a city",
+        executor: getCityInfo,
         params: z.object({ city: z.string() }),
       },
     ],
