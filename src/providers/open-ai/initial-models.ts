@@ -1,4 +1,4 @@
-export const defaultOpenAiModels: string[] = [
+export const initialOpenAiModels: string[] = [
   "gpt-5-nano",
   "gpt-5",
   "gpt-5-mini-2025-08-07",
@@ -38,7 +38,7 @@ export const defaultOpenAiModels: string[] = [
   "o1-mini-2024-09-12",
 ];
 
-export const defaultOpenAiEmbeddingModels: {
+export const initialOpenAiEmbeddingModels: {
   model: string;
   dimensions: number;
 }[] = [

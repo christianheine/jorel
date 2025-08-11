@@ -30,10 +30,11 @@ export interface MistralConfig {
 /** Provides access to OpenAI and other compatible services */
 export class MistralProvider implements LlmCoreProvider {
   public readonly name;
+  static readonly defaultName = "mistral";
   readonly client: Mistral;
 
   constructor({ apiKey }: MistralConfig = {}) {
-    this.name = "mistral";
+    this.name = MistralProvider.defaultName;
     this.client = new Mistral({
       apiKey: apiKey ?? process.env.MISTRAL_API_KEY,
     });

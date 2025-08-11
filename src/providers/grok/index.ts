@@ -1,2 +1,2 @@
-export * from "./default-models";
 export * from "./grok-provider";
+export * from "./initial-models";

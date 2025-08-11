@@ -4,17 +4,6 @@ import { ImageContent } from "../media";
 import {
   AnthropicConfig,
   AnthropicProvider,
-  defaultAnthropicBedrockModels,
-  defaultAnthropicModels,
-  defaultGoogleGenAiModels,
-  defaultGrokModels,
-  defaultGroqModels,
-  defaultMistralAiEmbeddingModels,
-  defaultMistralAiModels,
-  defaultOpenAiEmbeddingModels,
-  defaultOpenAiModels,
-  defaultOpenRouterModels,
-  defaultVertexAiModels,
   generateSystemMessage,
   generateUserMessage,
   GoogleGenerativeAIConfig,
@@ -24,6 +13,17 @@ import {
   GrokProvider,
   GroqConfig,
   GroqProvider,
+  initialAnthropicBedrockModels,
+  initialAnthropicModels,
+  initialGoogleGenAiModels,
+  initialGrokModels,
+  initialGroqModels,
+  initialMistralAiEmbeddingModels,
+  initialMistralAiModels,
+  initialOpenAiEmbeddingModels,
+  initialOpenAiModels,
+  initialOpenRouterModels,
+  initialVertexAiModels,
   JsonSpecification,
   LlmAssistantMessage,
   LlmAssistantMessageMeta,
@@ -171,103 +171,134 @@ export class JorEl {
     list: () => this._core.providerManager.listProviders(),
     registerCustom: (provider: string, coreProvider: LlmCoreProvider) =>
       this._core.providerManager.registerProvider(provider, coreProvider),
-    registerAnthropic: (config?: AnthropicConfig) => {
-      this._core.providerManager.registerProvider("anthropic", new AnthropicProvider(config));
-      const defaultModels = config?.bedrock ? defaultAnthropicBedrockModels : defaultAnthropicModels;
-      for (const model of defaultModels) {
-        this.models.register({ model, provider: "anthropic" });
+    registerAnthropic: (config?: AnthropicConfig, withoutInitialModels?: boolean) => {
+      const provider = new AnthropicProvider(config);
+      this._core.providerManager.registerProvider(provider.name, provider);
+      if (!withoutInitialModels) {
+        const defaultModels = config?.bedrock ? initialAnthropicBedrockModels : initialAnthropicModels;
+        for (const model of defaultModels) {
+          this.models.register({ model, provider: provider.name });
+        }
       }
     },
-    registerGoogleGenAi: (config?: GoogleGenerativeAIConfig) => {
-      this._core.providerManager.registerProvider("google-gen-ai", new GoogleGenerativeAIProvider(config));
-      for (const model of defaultGoogleGenAiModels) {
-        this.models.register({ model, provider: "google-gen-ai" });
+    registerGoogleGenAi: (config?: GoogleGenerativeAIConfig, withoutInitialModels?: boolean) => {
+      const provider = new GoogleGenerativeAIProvider(config);
+      this._core.providerManager.registerProvider(provider.name, provider);
+      if (!withoutInitialModels) {
+        for (const model of initialGoogleGenAiModels) {
+          this.models.register({ model, provider: provider.name });
+        }
       }
     },
-    registerGrok: (config?: OpenAIConfig) => {
-      this._core.providerManager.registerProvider("grok", new GrokProvider(config));
-      for (const model of defaultGrokModels) {
-        this.models.register({ model, provider: "grok" });
+    registerGrok: (config?: OpenAIConfig, withoutInitialModels?: boolean) => {
+      const provider = new GrokProvider(config);
+      this._core.providerManager.registerProvider(provider.name, provider);
+      if (!withoutInitialModels) {
+        for (const model of initialGrokModels) {
+          this.models.register({ model, provider: provider.name });
+        }
       }
     },
-    registerGroq: (config?: GroqConfig) => {
-      this._core.providerManager.registerProvider("groq", new GroqProvider(config));
-      for (const model of defaultGroqModels) {
-        this.models.register({ model, provider: "groq" });
+    registerGroq: (config?: GroqConfig, withoutInitialModels?: boolean) => {
+      const provider = new GroqProvider(config);
+      this._core.providerManager.registerProvider(provider.name, provider);
+      if (!withoutInitialModels) {
+        for (const model of initialGroqModels) {
+          this.models.register({ model, provider: provider.name });
+        }
       }
     },
-    registerMistral: (config?: MistralConfig) => {
-      this._core.providerManager.registerProvider("mistral", new MistralProvider(config));
-      for (const model of defaultMistralAiModels) {
-        this.models.register({ model, provider: "mistral" });
-      }
-      for (const { model, dimensions } of defaultMistralAiEmbeddingModels) {
-        this.models.embeddings.register({ model, dimensions, provider: "mistral" });
+    registerMistral: (config?: MistralConfig, withoutInitialModels?: boolean) => {
+      const provider = new MistralProvider(config);
+      this._core.providerManager.registerProvider(provider.name, provider);
+      if (!withoutInitialModels) {
+        for (const model of initialMistralAiModels) {
+          this.models.register({ model, provider: provider.name });
+        }
+        for (const { model, dimensions } of initialMistralAiEmbeddingModels) {
+          this.models.embeddings.register({ model, dimensions, provider: provider.name });
+        }
       }
     },
     registerOllama: (config?: OllamaConfig) => {
-      this._core.providerManager.registerProvider("ollama", new OllamaProvider(config));
+      const provider = new OllamaProvider(config);
+      this._core.providerManager.registerProvider(provider.name, provider);
     },
-    registerOpenAi: (config?: OpenAIConfig) => {
-      this._core.providerManager.registerProvider("openai", new OpenAIProvider(config));
-      for (const model of defaultOpenAiModels) {
-        this.models.register({ model, provider: "openai" });
-      }
-      for (const { model, dimensions } of defaultOpenAiEmbeddingModels) {
-        this.models.embeddings.register({ model, dimensions, provider: "openai" });
+    registerOpenAi: (config?: OpenAIConfig, withoutInitialModels?: boolean) => {
+      const provider = new OpenAIProvider(config);
+      this._core.providerManager.registerProvider(provider.name, provider);
+      if (!withoutInitialModels) {
+        for (const model of initialOpenAiModels) {
+          this.models.register({ model, provider: provider.name });
+        }
+        for (const { model, dimensions } of initialOpenAiEmbeddingModels) {
+          this.models.embeddings.register({ model, dimensions, provider: provider.name });
+        }
       }
     },
     registerOpenAiAzure: (config?: Omit<OpenAiAzureConfig, "azure">) => {
       const provider = new OpenAIProvider({ ...config, azure: true });
       this._core.providerManager.registerProvider(provider.name, provider);
     },
-    registerOpenRouter: (config?: OpenAIConfig) => {
-      this._core.providerManager.registerProvider("open-router", new OpenRouterProvider(config));
-      for (const model of defaultOpenRouterModels) {
-        this.models.register({ model, provider: "open-router" });
+    registerOpenRouter: (config?: OpenAIConfig, withoutInitialModels?: boolean) => {
+      const provider = new OpenRouterProvider(config);
+      this._core.providerManager.registerProvider(provider.name, provider);
+      if (!withoutInitialModels) {
+        for (const model of initialOpenRouterModels) {
+          this.models.register({ model, provider: provider.name });
+        }
       }
     },
-    registerGoogleVertexAi: (config?: GoogleVertexAiConfig) => {
-      this._core.providerManager.registerProvider("google-vertex-ai", new GoogleVertexAiProvider(config));
-      for (const model of defaultVertexAiModels) {
-        this.models.register({ model, provider: "google-vertex-ai" });
+    registerGoogleVertexAi: (config?: GoogleVertexAiConfig, withoutInitialModels?: boolean) => {
+      const provider = new GoogleVertexAiProvider(config);
+      this._core.providerManager.registerProvider(provider.name, provider);
+      if (!withoutInitialModels) {
+        for (const model of initialVertexAiModels) {
+          this.models.register({ model, provider: provider.name });
+        }
       }
     },
     anthropic: {
-      addModel: (model: string) => this.models.register({ model, provider: "anthropic" }),
-      getClient: () => (this._core.providerManager.getProvider("anthropic") as AnthropicProvider).client,
+      addModel: (model: string) => this.models.register({ model, provider: AnthropicProvider.defaultName }),
+      getClient: () =>
+        (this._core.providerManager.getProvider(AnthropicProvider.defaultName) as AnthropicProvider).client,
     },
     googleGenAi: {
-      addModel: (model: string) => this.models.register({ model, provider: "google-gen-ai" }),
-      getClient: () => (this._core.providerManager.getProvider("google-gen-ai") as GoogleGenerativeAIProvider).client,
+      addModel: (model: string) => this.models.register({ model, provider: GoogleGenerativeAIProvider.defaultName }),
+      getClient: () =>
+        (this._core.providerManager.getProvider(GoogleGenerativeAIProvider.defaultName) as GoogleGenerativeAIProvider)
+          .client,
     },
     grok: {
-      addModel: (model: string) => this.models.register({ model, provider: "grok" }),
-      getClient: () => (this._core.providerManager.getProvider("grok") as GrokProvider).client,
+      addModel: (model: string) => this.models.register({ model, provider: GrokProvider.defaultName }),
+      getClient: () => (this._core.providerManager.getProvider(GrokProvider.defaultName) as GrokProvider).client,
     },
     groq: {
-      addModel: (model: string) => this.models.register({ model, provider: "groq" }),
-      getClient: () => (this._core.providerManager.getProvider("groq") as GroqProvider).client,
+      addModel: (model: string) => this.models.register({ model, provider: GroqProvider.defaultName }),
+      getClient: () => (this._core.providerManager.getProvider(GroqProvider.defaultName) as GroqProvider).client,
     },
     mistral: {
-      addModel: (model: string) => this.models.register({ model, provider: "mistral" }),
-      getClient: () => (this._core.providerManager.getProvider("mistral") as MistralProvider).client,
+      addModel: (model: string) => this.models.register({ model, provider: MistralProvider.defaultName }),
+      getClient: () => (this._core.providerManager.getProvider(MistralProvider.defaultName) as MistralProvider).client,
     },
     openAi: {
-      addModel: (model: string) => this.models.register({ model, provider: "openai" }),
-      getClient: () => (this._core.providerManager.getProvider("openai") as OpenAIProvider).client,
+      addModel: (model: string) => this.models.register({ model, provider: OpenAIProvider.defaultName }),
+      getClient: () => (this._core.providerManager.getProvider(OpenAIProvider.defaultName) as OpenAIProvider).client,
     },
     openAiAzure: {
-      addModel: (model: string) => this.models.register({ model, provider: "openai-azure" }),
-      getClient: () => (this._core.providerManager.getProvider("openai-azure") as OpenAIProvider).client,
+      addModel: (model: string) => this.models.register({ model, provider: OpenAIProvider.defaultName + "-azure" }),
+      getClient: () =>
+        (this._core.providerManager.getProvider(OpenAIProvider.defaultName + "-azure") as OpenAIProvider).client,
     },
     openRouter: {
-      addModel: (model: string) => this.models.register({ model, provider: "open-router" }),
-      getClient: () => (this._core.providerManager.getProvider("open-router") as OpenRouterProvider).client,
+      addModel: (model: string) => this.models.register({ model, provider: OpenRouterProvider.defaultName }),
+      getClient: () =>
+        (this._core.providerManager.getProvider(OpenRouterProvider.defaultName) as OpenRouterProvider).client,
     },
     vertexAi: {
-      addModel: (model: string) => this.models.register({ model, provider: "google-vertex-ai" }),
-      getClient: () => (this._core.providerManager.getProvider("google-vertex-ai") as GoogleVertexAiProvider).client,
+      addModel: (model: string) => this.models.register({ model, provider: GoogleVertexAiProvider.defaultName }),
+      getClient: () =>
+        (this._core.providerManager.getProvider(GoogleVertexAiProvider.defaultName) as GoogleVertexAiProvider).client,
     },
   };
 

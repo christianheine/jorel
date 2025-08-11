@@ -1,4 +1,4 @@
-export const defaultGroqModels: string[] = [
+export const initialGroqModels: string[] = [
   "llama-3.1-8b-instant",
   "llama-3.3-70b-versatile",
   "llama3-8b-8192",

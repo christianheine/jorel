@@ -1,4 +1,4 @@
-export const defaultAnthropicModels: string[] = [
+export const initialAnthropicModels: string[] = [
   "claude-3-5-haiku-latest",
   "claude-3-5-haiku-20241022",
   "claude-sonnet-4-20250514",
@@ -16,7 +16,7 @@ export const defaultAnthropicModels: string[] = [
   "claude-2.0",
 ];
 
-export const defaultAnthropicBedrockModels: string[] = [
+export const initialAnthropicBedrockModels: string[] = [
   "anthropic.claude-opus-4-20250514-v1:0",
   "anthropic.claude-sonnet-4-20250514-v1:0",
   "anthropic.claude-3-5-sonnet-20241022-v2:0",

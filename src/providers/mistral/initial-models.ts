@@ -1,4 +1,4 @@
-export const defaultMistralAiModels: string[] = [
+export const initialMistralAiModels: string[] = [
   "mistral-medium-latest",
   "magistral-medium-latest",
   "magistral-small-latest",
@@ -18,7 +18,7 @@ export const defaultMistralAiModels: string[] = [
   "voxtral-mini-latest",
 ];
 
-export const defaultMistralAiEmbeddingModels: {
+export const initialMistralAiEmbeddingModels: {
   model: string;
   dimensions: number;
 }[] = [

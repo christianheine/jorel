@@ -18,13 +18,15 @@ import { OpenAiAzureConfig, OpenAIConfig, OpenAiToolCall } from "./types";
 
 /** Provides access to OpenAI and other compatible services */
 export class OpenAIProvider implements LlmCoreProvider {
+  static readonly defaultName: string = "openai";
+
   public readonly name;
   readonly client: OpenAI | AzureOpenAI;
   readonly isAzure: boolean;
 
   constructor(options: OpenAiAzureConfig | OpenAIConfig = {}) {
     if (options.azure) {
-      this.name = options.name || "openai-azure";
+      this.name = options.name || OpenAIProvider.defaultName + "-azure";
       this.client = new AzureOpenAI({
         endpoint: options.apiUrl || process.env.AZURE_OPENAI_ENDPOINT,
         apiKey: options.apiKey || process.env.AZURE_OPENAI_API_KEY,
@@ -32,11 +34,11 @@ export class OpenAIProvider implements LlmCoreProvider {
       });
       this.isAzure = true;
     } else {
-      this.name = options.name || "openai";
-    this.client = new OpenAI({
+      this.name = options.name || OpenAIProvider.defaultName;
+      this.client = new OpenAI({
         apiKey: options.apiKey || process.env.OPENAI_API_KEY,
         baseURL: options.apiUrl || process.env.OPENAI_API_URL,
-    });
+      });
       this.isAzure = false;
     }
   }

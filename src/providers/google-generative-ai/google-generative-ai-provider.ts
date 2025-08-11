@@ -11,8 +11,8 @@ import {
 } from "@google/generative-ai";
 import { ZodObject } from "zod";
 import {
-  defaultGoogleGenAiModels,
   generateAssistantMessage,
+  initialGoogleGenAiModels,
   LlmCoreProvider,
   LlmGenerationConfig,
   LlmMessage,
@@ -36,14 +36,17 @@ export interface GoogleGenerativeAIConfig {
 
 export class GoogleGenerativeAIProvider implements LlmCoreProvider {
   public readonly name: string;
+  static readonly defaultName = "google-generative-ai";
+
   readonly client: GoogleGenerativeAI;
+
   private readonly safetySettings?: {
     category: HarmCategory;
     threshold: HarmBlockThreshold;
   }[];
 
   constructor({ apiKey, safetySettings, name }: GoogleGenerativeAIConfig = {}) {
-    this.name = name || "google-generative-ai";
+    this.name = name || GoogleGenerativeAIProvider.defaultName;
     const key = apiKey || process.env.GOOGLE_AI_API_KEY;
 
     if (!key) {
@@ -235,7 +238,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    return defaultGoogleGenAiModels;
+    return initialGoogleGenAiModels;
   }
 
   async createEmbedding(model: string, text: string): Promise<number[]> {

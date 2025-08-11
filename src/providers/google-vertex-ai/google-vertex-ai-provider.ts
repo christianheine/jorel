@@ -11,6 +11,7 @@ import {
   VertexAI,
 } from "@google-cloud/vertexai";
 import { FunctionDeclaration, FunctionDeclarationSchema } from "@google-cloud/vertexai/src/types/content";
+import { ToolCall } from "ollama";
 import { ZodObject } from "zod";
 import {
   generateAssistantMessage,
@@ -26,7 +27,6 @@ import {
 } from "../../providers";
 import { generateRandomId, generateUniqueId, MaybeUndefined, zodSchemaToJsonSchema } from "../../shared";
 import { convertLlmMessagesToVertexAiMessages } from "./convert-llm-message";
-import { ToolCall } from "ollama";
 
 const defaultSafetySettings = [
   {
@@ -63,6 +63,8 @@ export interface GoogleVertexAiConfig {
 
 /** Provides access to GoogleVertexAi and other compatible services */
 export class GoogleVertexAiProvider implements LlmCoreProvider {
+  static readonly defaultName = "google-vertex-ai";
+
   public readonly name;
   readonly client: VertexAI;
 
@@ -73,7 +75,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
   }[] = defaultSafetySettings;
 
   constructor({ project, location, keyFilename, safetySettings, name }: GoogleVertexAiConfig = {}) {
-    this.name = name || "google-vertex-ai";
+    this.name = name || GoogleVertexAiProvider.defaultName;
     const config = {
       project: project || process.env.GCP_PROJECT,
       location: location || process.env.GCP_LOCATION,

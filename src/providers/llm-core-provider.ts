@@ -1,7 +1,7 @@
+import { ZodObject } from "zod";
+import { LoggerOption, LogLevel, LogService } from "../logger";
 import { Nullable } from "../shared";
 import { LLmToolContextSegment, LlmToolKit } from "../tools";
-import { LoggerOption, LogLevel, LogService } from "../logger";
-import { ZodObject } from "zod";
 
 export type LlmToolChoice = "none" | "auto" | "required" | string;
 
@@ -9,10 +9,10 @@ export type JsonSpecification = ZodObject<any> | Record<string, unknown>;
 
 export interface LlmModelParameterOverrides {
   noTemperature: boolean;
-  noSystemMessage: boolean
+  noSystemMessage: boolean;
 }
 
-export type LlmModelParameterOverridesLookup = { [model: string]: Partial<LlmModelParameterOverrides> }
+export type LlmModelParameterOverridesLookup = { [model: string]: Partial<LlmModelParameterOverrides> };
 
 interface CoreLlmGenerationConfig {
   temperature?: Nullable<number>;
@@ -170,7 +170,7 @@ export interface LlmAssistantMessageWithToolCalls {
 export interface LlmAssistantMessageMeta {
   model: string;
   provider: string;
-  temperature: number | undefined
+  temperature: number | undefined;
   durationMs: number;
   inputTokens?: number;
   outputTokens?: number;
@@ -228,6 +228,7 @@ export interface LlmStreamToolCallCompleted {
 }
 
 export interface LlmCoreProvider {
+  readonly defaultName?: string;
   readonly name: string;
 
   generateResponse(model: string, messages: LlmMessage[], config?: LlmGenerationConfig): Promise<LlmResponse>;

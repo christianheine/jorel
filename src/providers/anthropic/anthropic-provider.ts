@@ -1,5 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
+import Anthropic from "@anthropic-ai/sdk";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
@@ -11,9 +11,9 @@ import {
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
-import { convertLlmMessagesToAnthropicMessages } from "./convert-llm-message";
 import { generateUniqueId, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
+import { convertLlmMessagesToAnthropicMessages } from "./convert-llm-message";
 
 export interface AnthropicConfig {
   apiKey?: string;
@@ -27,11 +27,13 @@ export interface AnthropicConfig {
 
 /** Provides access to OpenAI and other compatible services */
 export class AnthropicProvider implements LlmCoreProvider {
+  static readonly defaultName = "anthropic";
+
   public readonly name;
   readonly client: AnthropicBedrock | Anthropic;
 
   constructor({ apiKey, bedrock, name }: AnthropicConfig = {}) {
-    this.name = name || "anthropic";
+    this.name = name || AnthropicProvider.defaultName;
     if (bedrock) {
       const region = bedrock.awsRegion || process.env.AWS_REGION;
       const accessKeyId = bedrock.awsAccessKey || process.env.AWS_ACCESS_KEY_ID;

@@ -1,10 +1,10 @@
 import ollama, { Ollama, ToolCall } from "ollama";
 
 import {
-  LlmMessage,
   generateAssistantMessage,
   LlmCoreProvider,
   LlmGenerationConfig,
+  LlmMessage,
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
@@ -22,13 +22,14 @@ export interface OllamaConfig {
 /** Provides access to local Ollama server */
 export class OllamaProvider implements LlmCoreProvider {
   public readonly name;
+  static readonly defaultName = "ollama";
 
   get client(): Ollama {
     return ollama;
   }
 
   constructor({ name }: OllamaConfig = {}) {
-    this.name = name || "ollama";
+    this.name = name || OllamaProvider.defaultName;
   }
 
   async generateResponse(

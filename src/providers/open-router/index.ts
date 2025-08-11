@@ -1,2 +1,2 @@
-export * from "./default-models";
+export * from "./initial-models";
 export * from "./open-router-provider";

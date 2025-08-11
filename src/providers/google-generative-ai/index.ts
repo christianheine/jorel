@@ -1,2 +1,2 @@
-export * from "./default-models";
 export * from "./google-generative-ai-provider";
+export * from "./initial-models";

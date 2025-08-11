@@ -1,4 +1,4 @@
 export * from "./convert-inputs";
-export * from "./default-models";
+export * from "./initial-models";
 export * from "./open-ai-provider";
 export * from "./types";
