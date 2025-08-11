@@ -1,6 +1,6 @@
 export * from "./anthropic";
 export * from "./generate-message";
-export * from "./google-generative-ai";
+export * from "./google-genai";
 export * from "./google-vertex-ai";
 export * from "./grok";
 export * from "./groq";

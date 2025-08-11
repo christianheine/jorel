@@ -1,4 +1,4 @@
-import { Content, FunctionCall, FunctionResponse, Part } from "@google/generative-ai";
+import { Content, FunctionCall, FunctionResponse, Part } from "@google/genai";
 import { LlmMessage, LlmToolCall, LlmUserMessageContent } from "../llm-core-provider";
 
 function convertContentToGenerativeAiPart(content: LlmUserMessageContent): Part {
@@ -145,7 +145,7 @@ export function convertLlmMessagesToGoogleGenerativeAiMessages(messages: LlmMess
  * Helper function to extract text content from a Content object
  */
 export function extractTextFromContent(content: Content): string {
-  return content.parts
+  return (content.parts ?? [])
     .map((part) => ("text" in part ? part.text : ""))
     .filter((text) => text !== undefined)
     .join("");
