@@ -1,4 +1,4 @@
-import { Content, FunctionCall, FunctionResponse, Part } from "@google/genai";
+import { Content, Part } from "@google/genai";
 import { LlmMessage, LlmToolCall, LlmUserMessageContent } from "../llm-core-provider";
 
 function convertContentToGenerativeAiPart(content: LlmUserMessageContent): Part {
@@ -29,8 +29,8 @@ function convertToolCallToFunctionCallPart(toolCall: LlmToolCall): Part {
   return {
     functionCall: {
       name: toolCall.request.function.name,
-      args: toolCall.request.function.arguments,
-    } as FunctionCall,
+      args: toolCall.request.function.arguments as Record<string, unknown>,
+    },
   };
 }
 
@@ -41,16 +41,18 @@ function convertCompletedToolCallToFunctionResponsePart(toolCall: LlmToolCall): 
   if (toolCall.executionState === "completed") {
     return {
       functionResponse: {
+        id: toolCall.id,
         name: toolCall.request.function.name,
-        response: toolCall.result,
-      } as FunctionResponse,
+        response: { result: toolCall.result },
+      },
     };
   } else if (toolCall.executionState === "error") {
     return {
       functionResponse: {
+        id: toolCall.id,
         name: toolCall.request.function.name,
         response: { error: toolCall.error.message },
-      } as FunctionResponse,
+      },
     };
   }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.2 (2025-08-12)
+
+* Fix issue with tool results with the Google GenAI provider
+
 ## 0.14.1 (2025-08-12)
 
 * Fix issue with using multiple tools with the Google GenAI provider

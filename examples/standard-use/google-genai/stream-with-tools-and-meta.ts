@@ -12,6 +12,7 @@ const getCityInfo = async (city: string) => {
   return {
     city,
     population: 5000000,
+    landmarks: ["Sydney Opera House", "Sydney Harbour Bridge", "Royal Botanic Garden"],
   };
 };
 

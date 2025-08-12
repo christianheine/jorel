@@ -1,4 +1,4 @@
-import { MaybeUndefined, zodSchemaToJsonSchema } from "../shared";
+import { ZodObject } from "zod";
 import {
   LlmFunction,
   LlmFunctionParameters,
@@ -6,7 +6,7 @@ import {
   LlmToolExecutionOutputs,
   LlmToolExecutor,
 } from "../providers";
-import { ZodObject } from "zod";
+import { MaybeUndefined, zodSchemaToJsonSchema } from "../shared";
 
 export type LLmToolContextSegment = Record<string, object | string | number | boolean | null>;
 
