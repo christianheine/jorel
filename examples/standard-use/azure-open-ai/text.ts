@@ -15,7 +15,10 @@ const main = async () => {
     systemMessage: "Answer with as few words as possible",
   });
 
-  jorEl.providers.openAiAzure.addModel("gpt-5-mini");
+  jorEl.providers.openAiAzure.addModel("gpt-5-mini", true, {
+    reasoningEffort: "minimal",
+    verbosity: "low",
+  });
 
   const response = await jorEl.text("What is the capital of France");
 

@@ -16,7 +16,9 @@ const main = async () => {
     },
   });
 
-  jorEl.providers.openAiAzure.addModel("gpt-5");
+  jorEl.providers.openAiAzure.addModel("gpt-5-mini", true, {
+    reasoningEffort: "minimal",
+  });
 
   // Will return a stream of chunks, and a response and messages object
   const stream = jorEl.streamWithMeta("What is the weather in Sydney?", {

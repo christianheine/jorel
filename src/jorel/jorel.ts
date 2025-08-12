@@ -95,11 +95,12 @@ export interface JorElTextGenerationConfigWithTools extends JorElCoreGenerationC
   context?: LLmToolContextSegment;
   secureContext?: LLmToolContextSegment;
   messageHistory?: LlmMessage[];
+  json?: boolean | JsonSpecification;
+  jsonDescription?: string;
 }
 
-export interface JorElJsonGenerationConfigWithTools extends JorElTextGenerationConfigWithTools {
+export interface JorElJsonGenerationConfigWithTools extends Omit<JorElTextGenerationConfigWithTools, "json"> {
   jsonSchema?: JsonSpecification;
-  jsonSchemaDescription?: string;
 }
 
 export interface JorElGenerationConfigWithTools extends JorElCoreGenerationConfig {
@@ -269,26 +270,31 @@ export class JorEl {
       }
     },
     anthropic: {
-      addModel: (model: string) => this.models.register({ model, provider: AnthropicProvider.defaultName }),
+      addModel: (model: string, setAsDefault?: boolean, defaults?: ModelSpecificDefaults) =>
+        this.models.register({ model, provider: AnthropicProvider.defaultName, setAsDefault, defaults }),
       getClient: () =>
         (this._core.providerManager.getProvider(AnthropicProvider.defaultName) as AnthropicProvider).client,
     },
     googleGenAi: {
-      addModel: (model: string) => this.models.register({ model, provider: GoogleGenerativeAIProvider.defaultName }),
+      addModel: (model: string, setAsDefault?: boolean, defaults?: ModelSpecificDefaults) =>
+        this.models.register({ model, provider: GoogleGenerativeAIProvider.defaultName, setAsDefault, defaults }),
       getClient: () =>
         (this._core.providerManager.getProvider(GoogleGenerativeAIProvider.defaultName) as GoogleGenerativeAIProvider)
           .client,
     },
     grok: {
-      addModel: (model: string) => this.models.register({ model, provider: GrokProvider.defaultName }),
+      addModel: (model: string, setAsDefault?: boolean, defaults?: ModelSpecificDefaults) =>
+        this.models.register({ model, provider: GrokProvider.defaultName, setAsDefault, defaults }),
       getClient: () => (this._core.providerManager.getProvider(GrokProvider.defaultName) as GrokProvider).client,
     },
     groq: {
-      addModel: (model: string) => this.models.register({ model, provider: GroqProvider.defaultName }),
+      addModel: (model: string, setAsDefault?: boolean, defaults?: ModelSpecificDefaults) =>
+        this.models.register({ model, provider: GroqProvider.defaultName, setAsDefault, defaults }),
       getClient: () => (this._core.providerManager.getProvider(GroqProvider.defaultName) as GroqProvider).client,
     },
     mistral: {
-      addModel: (model: string) => this.models.register({ model, provider: MistralProvider.defaultName }),
+      addModel: (model: string, setAsDefault?: boolean, defaults?: ModelSpecificDefaults) =>
+        this.models.register({ model, provider: MistralProvider.defaultName, setAsDefault, defaults }),
       getClient: () => (this._core.providerManager.getProvider(MistralProvider.defaultName) as MistralProvider).client,
     },
     openAi: {
@@ -296,17 +302,20 @@ export class JorEl {
       getClient: () => (this._core.providerManager.getProvider(OpenAIProvider.defaultName) as OpenAIProvider).client,
     },
     openAiAzure: {
-      addModel: (model: string) => this.models.register({ model, provider: OpenAIProvider.defaultName + "-azure" }),
+      addModel: (model: string, setAsDefault?: boolean, defaults?: ModelSpecificDefaults) =>
+        this.models.register({ model, provider: OpenAIProvider.defaultName + "-azure", setAsDefault, defaults }),
       getClient: () =>
         (this._core.providerManager.getProvider(OpenAIProvider.defaultName + "-azure") as OpenAIProvider).client,
     },
     openRouter: {
-      addModel: (model: string) => this.models.register({ model, provider: OpenRouterProvider.defaultName }),
+      addModel: (model: string, setAsDefault?: boolean, defaults?: ModelSpecificDefaults) =>
+        this.models.register({ model, provider: OpenRouterProvider.defaultName, setAsDefault, defaults }),
       getClient: () =>
         (this._core.providerManager.getProvider(OpenRouterProvider.defaultName) as OpenRouterProvider).client,
     },
     vertexAi: {
-      addModel: (model: string) => this.models.register({ model, provider: GoogleVertexAiProvider.defaultName }),
+      addModel: (model: string, setAsDefault?: boolean, defaults?: ModelSpecificDefaults) =>
+        this.models.register({ model, provider: GoogleVertexAiProvider.defaultName, setAsDefault, defaults }),
       getClient: () =>
         (this._core.providerManager.getProvider(GoogleVertexAiProvider.defaultName) as GoogleVertexAiProvider).client,
     },

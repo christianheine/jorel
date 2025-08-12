@@ -14,7 +14,9 @@ const main = async () => {
     },
   });
 
-  jorEl.providers.openAiAzure.addModel("gpt-5-mini");
+  jorEl.providers.openAiAzure.addModel("gpt-5-mini", true, {
+    reasoningEffort: "minimal",
+  });
 
   // Optional: Set system message
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snake_case for attributes!";
