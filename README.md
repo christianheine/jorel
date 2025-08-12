@@ -324,4 +324,6 @@ const jorEl = new JorEl({
 jorEl.providers.registerGroq({ apiKey: "..." });
 ```
 
+Some providers expose additional parameters, e.g. around retries and timeouts.
+
 For complete documentation, visit our [documentation site](https://christianheine.github.io/jorel/).

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.3 (2025-08-12)
+
+* Add support to generate in JSON/ JSON Schema when using the `text` or `stream` methods (e.g. to stream JSON, or generate without parsing)
+* Expose additional parameters when instantiating providers (e.g., backoff strategies, timeouts)
+
 ## 0.14.2 (2025-08-12)
 
 * Fix issue with tool results with the Google GenAI provider

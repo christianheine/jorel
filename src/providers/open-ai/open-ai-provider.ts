@@ -31,6 +31,8 @@ export class OpenAIProvider implements LlmCoreProvider {
         endpoint: options.apiUrl || process.env.AZURE_OPENAI_ENDPOINT,
         apiKey: options.apiKey || process.env.AZURE_OPENAI_API_KEY,
         apiVersion: options.apiVersion || process.env.AZURE_OPENAI_API_VERSION || "2024-12-01-preview",
+        maxRetries: options.maxRetries || 3,
+        timeout: options.timeout,
       });
       this.isAzure = true;
     } else {
@@ -38,6 +40,8 @@ export class OpenAIProvider implements LlmCoreProvider {
       this.client = new OpenAI({
         apiKey: options.apiKey || process.env.OPENAI_API_KEY,
         baseURL: options.apiUrl || process.env.OPENAI_API_URL,
+        maxRetries: options.maxRetries,
+        timeout: options.timeout,
       });
       this.isAzure = false;
     }

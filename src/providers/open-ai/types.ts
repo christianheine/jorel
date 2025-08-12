@@ -11,6 +11,8 @@ export interface OpenAIConfig {
   apiKey?: string;
   apiUrl?: string;
   name?: string;
+  maxRetries?: number;
+  timeout?: number;
 }
 
 export interface OpenAiAzureConfig {
@@ -19,4 +21,6 @@ export interface OpenAiAzureConfig {
   apiUrl?: string;
   apiVersion?: string;
   name?: string;
+  maxRetries?: number;
+  timeout?: number;
 }

@@ -23,6 +23,8 @@ export interface AnthropicConfig {
     awsSecretKey?: string;
   };
   name?: string;
+  maxRetries?: number;
+  timeout?: number;
 }
 
 /** Provides access to OpenAI and other compatible services */
@@ -32,7 +34,7 @@ export class AnthropicProvider implements LlmCoreProvider {
   public readonly name;
   readonly client: AnthropicBedrock | Anthropic;
 
-  constructor({ apiKey, bedrock, name }: AnthropicConfig = {}) {
+  constructor({ apiKey, bedrock, name, maxRetries, timeout }: AnthropicConfig = {}) {
     this.name = name || AnthropicProvider.defaultName;
     if (bedrock) {
       const region = bedrock.awsRegion || process.env.AWS_REGION;
@@ -56,6 +58,8 @@ export class AnthropicProvider implements LlmCoreProvider {
         awsRegion: region,
         awsAccessKey: accessKeyId,
         awsSecretKey: secretAccessKey,
+        maxRetries,
+        timeout,
       });
     } else {
       const _apiKey = apiKey || process.env.ANTHROPIC_API_KEY;
@@ -67,6 +71,8 @@ export class AnthropicProvider implements LlmCoreProvider {
 
       this.client = new Anthropic({
         apiKey: _apiKey,
+        maxRetries,
+        timeout,
       });
     }
   }

@@ -1,4 +1,5 @@
 import { Mistral } from "@mistralai/mistralai";
+import { RetryConfig } from "@mistralai/mistralai/lib/retries";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
@@ -25,6 +26,8 @@ interface ToolCall {
 
 export interface MistralConfig {
   apiKey?: string;
+  retryConfig?: RetryConfig;
+  timeout?: number;
 }
 
 /** Provides access to OpenAI and other compatible services */
@@ -33,10 +36,12 @@ export class MistralProvider implements LlmCoreProvider {
   static readonly defaultName = "mistral";
   readonly client: Mistral;
 
-  constructor({ apiKey }: MistralConfig = {}) {
+  constructor({ apiKey, retryConfig, timeout }: MistralConfig = {}) {
     this.name = MistralProvider.defaultName;
     this.client = new Mistral({
       apiKey: apiKey ?? process.env.MISTRAL_API_KEY,
+      retryConfig,
+      timeoutMs: timeout,
     });
   }
 
