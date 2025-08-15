@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.4 (2025-08-15)
+
+* Fix issue with file attachments for Google GenAi provider
+
 ## 0.14.3 (2025-08-12)
 
 * Add support to generate in JSON/ JSON Schema when using the `text` or `stream` methods (e.g. to stream JSON, or generate without parsing)

@@ -1,4 +1,5 @@
 import { Content, Part } from "@google/genai";
+import { getBase64PartFromDataUrl } from "../../media/utils";
 import { LlmMessage, LlmToolCall, LlmUserMessageContent } from "../llm-core-provider";
 
 function convertContentToGenerativeAiPart(content: LlmUserMessageContent): Part {
@@ -16,7 +17,7 @@ function convertContentToGenerativeAiPart(content: LlmUserMessageContent): Part 
       return {
         inlineData: {
           mimeType: content.mimeType || "image/jpeg",
-          data: content.data,
+          data: getBase64PartFromDataUrl(content.data),
         },
       };
   }
