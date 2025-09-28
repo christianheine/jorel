@@ -9,6 +9,13 @@ export type Verbosity = "low" | "medium" | "high" | null;
 
 export type JsonSpecification = ZodObject<any> | Record<string, unknown>;
 
+export type LLmGenerationStopReason = "toolCallsRequireApproval" | "completed";
+
+/**
+ * Classification types for tool calls
+ */
+export type ToolCallClassification = "approvalPending" | "executionPending" | "completed";
+
 export interface LlmModelParameterOverrides {
   noTemperature: boolean;
   noSystemMessage: boolean;
@@ -33,6 +40,7 @@ interface CoreLlmGenerationConfig {
   logLevel?: LogLevel;
   verbosity?: Verbosity;
   reasoningEffort?: ReasoningEffort;
+  streamBuffer?: StreamBufferConfig;
 }
 
 export interface LlmGenerationConfig extends CoreLlmGenerationConfig {
@@ -41,6 +49,22 @@ export interface LlmGenerationConfig extends CoreLlmGenerationConfig {
 
 export interface InitLlmGenerationConfig extends CoreLlmGenerationConfig {
   logger?: LoggerOption | LogService;
+}
+
+/**
+ * Minimal interface for messages in an array - only requires the fields we actually need
+ */
+export interface LlmMessageBase {
+  id?: string;
+  role: "assistant" | "assistant_with_tools" | "system" | "user";
+}
+
+/**
+ * Generic type for objects that contain tool calls
+ * This allows consumers to add additional fields while still using the toolkit
+ */
+export interface WithToolCalls {
+  toolCalls: LlmToolCall[];
 }
 
 export interface LlmSystemMessage {
@@ -214,12 +238,14 @@ export interface LlmTextResponseWithMeta {
   response: string;
   meta: LlmAssistantMessageMeta;
   messages: LlmMessage[];
+  stopReason: LLmGenerationStopReason;
 }
 
 export interface LlmJsonResponseWithMeta {
   response: object;
   meta: LlmAssistantMessageMeta;
   messages: LlmMessage[];
+  stopReason: LLmGenerationStopReason;
 }
 
 export interface LlmStreamResponseChunk {
@@ -245,6 +271,7 @@ export interface LlmStreamResponseWithToolCalls {
 export interface LlmStreamResponseMessages {
   type: "messages";
   messages: LlmMessage[];
+  stopReason: LLmGenerationStopReason;
 }
 
 export interface LlmStreamToolCallStarted {

@@ -614,7 +614,7 @@ describe("LlmToolKit", () => {
           toolCalls: [createPendingToolCall("1", "tool1"), createPendingToolCall("2", "tool2")],
         };
 
-        const result = toolkit.rejectCalls(input, "1");
+        const result = toolkit.utilities.message.rejectToolCalls(input, { toolCallIds: "1" });
         expect(result.toolCalls[0].approvalState).toBe("rejected");
         expect(result.toolCalls[1].approvalState).toBe("requiresApproval");
       });
@@ -628,7 +628,7 @@ describe("LlmToolKit", () => {
           ],
         };
 
-        const result = toolkit.rejectCalls(input, ["1", "3"]);
+        const result = toolkit.utilities.message.rejectToolCalls(input, { toolCallIds: ["1", "3"] });
         expect(result.toolCalls[0].approvalState).toBe("rejected");
         expect(result.toolCalls[1].approvalState).toBe("requiresApproval");
         expect(result.toolCalls[2].approvalState).toBe("rejected");
@@ -639,7 +639,7 @@ describe("LlmToolKit", () => {
           toolCalls: [createPendingToolCall("1", "tool1"), createPendingToolCall("2", "tool2")],
         };
 
-        const result = toolkit.rejectCalls(input);
+        const result = toolkit.utilities.message.rejectToolCalls(input);
         expect(result.toolCalls.every((call) => call.approvalState === "rejected")).toBe(true);
       });
 
@@ -651,7 +651,7 @@ describe("LlmToolKit", () => {
           ],
         };
 
-        const result = toolkit.rejectCalls(input);
+        const result = toolkit.utilities.message.rejectToolCalls(input);
         expect(result.toolCalls[0].approvalState).toBe("approved");
         expect(result.toolCalls[1].approvalState).toBe("rejected");
       });
@@ -663,7 +663,7 @@ describe("LlmToolKit", () => {
           toolCalls: [createPendingToolCall("1", "tool1"), createPendingToolCall("2", "tool2")],
         };
 
-        const result = toolkit.approveCalls(input, "1");
+        const result = toolkit.utilities.message.approveToolCalls(input, { toolCallIds: "1" });
         expect(result.toolCalls[0].approvalState).toBe("approved");
         expect(result.toolCalls[1].approvalState).toBe("requiresApproval");
       });
@@ -677,7 +677,7 @@ describe("LlmToolKit", () => {
           ],
         };
 
-        const result = toolkit.approveCalls(input, ["1", "3"]);
+        const result = toolkit.utilities.message.approveToolCalls(input, { toolCallIds: ["1", "3"] });
         expect(result.toolCalls[0].approvalState).toBe("approved");
         expect(result.toolCalls[1].approvalState).toBe("requiresApproval");
         expect(result.toolCalls[2].approvalState).toBe("approved");
@@ -688,7 +688,7 @@ describe("LlmToolKit", () => {
           toolCalls: [createPendingToolCall("1", "tool1"), createPendingToolCall("2", "tool2")],
         };
 
-        const result = toolkit.approveCalls(input);
+        const result = toolkit.utilities.message.approveToolCalls(input);
         expect(result.toolCalls.every((call) => call.approvalState === "approved")).toBe(true);
       });
 
@@ -700,7 +700,7 @@ describe("LlmToolKit", () => {
           ],
         };
 
-        const result = toolkit.approveCalls(input);
+        const result = toolkit.utilities.message.approveToolCalls(input);
         expect(result.toolCalls[0].approvalState).toBe("rejected");
         expect(result.toolCalls[1].approvalState).toBe("approved");
       });
@@ -726,8 +726,8 @@ describe("LlmToolKit", () => {
           ],
         };
 
-        const result = toolkit.approveCalls(input);
-        expect(result.someOtherProperty).toBe("value");
+        const result = toolkit.utilities.message.approveToolCalls(input);
+        expect((result as any).someOtherProperty).toBe("value");
         expect(result.toolCalls[0].request.function.arguments).toEqual({ foo: "bar" });
         expect(result.toolCalls[0].executionState).toBe("pending");
       });
@@ -870,7 +870,7 @@ describe("LlmToolKit", () => {
         ],
       };
 
-      await expect(toolKit.processCalls(input)).rejects.toThrow("Transfer tools can only be processed by this method");
+      await expect(toolKit.processCalls(input)).rejects.toThrow("Transfer tools cannot be processed by this method");
     });
   });
 

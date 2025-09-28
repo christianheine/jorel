@@ -106,6 +106,20 @@ export interface JorElJsonGenerationConfigWithTools extends Omit<JorElTextGenera
   jsonSchema?: JsonSpecification;
 }
 
+export interface JorElMessagesGenerationConfig extends JorElCoreGenerationConfig {
+  model?: string;
+  tools?: LlmToolKit | (LlmTool | LlmToolConfiguration)[];
+  toolChoice?: LlmToolChoice;
+  maxToolCalls?: number;
+  maxToolCallErrors?: number;
+  context?: LLmToolContextSegment;
+  secureContext?: LLmToolContextSegment;
+}
+
+export interface JorElMessagesJsonGenerationConfig extends Omit<JorElMessagesGenerationConfig, "json"> {
+  jsonSchema?: JsonSpecification;
+}
+
 export interface JorElGenerationConfigWithTools extends JorElCoreGenerationConfig {
   model?: string;
   tools?: LlmToolKit;
@@ -123,6 +137,14 @@ export type JorElTaskInput = string | (string | ImageContent)[];
 export type JorElGenerationOutput = (LlmAssistantMessage | LlmAssistantMessageWithToolCalls) & {
   meta: LlmAssistantMessageMeta;
 };
+
+/**
+ * Type guard to check if input is an array of LlmMessage objects
+ * @internal
+ */
+function isLlmMessageArray(input: JorElTaskInput | LlmMessage[]): input is LlmMessage[] {
+  return Array.isArray(input) && input.length > 0 && typeof input[0] === "object" && "role" in input[0];
+}
 
 /**
  * Jor-El: Singular interface for managing multiple LLM providers and models
@@ -453,31 +475,53 @@ export class JorEl {
     config?: JorElTextGenerationConfigWithTools,
     includeMeta?: true,
   ): Promise<LlmTextResponseWithMeta>;
+  /**
+   * Generate a response for a given set of messages.
+   *
+   * @param messages - The messages to generate a response for.
+   * @param config - Configuration for the specific generation.
+   * @param includeMeta - Whether to include the metadata and all previous messages in the response.
+   * @returns The text response, or an object with the response, metadata, and messages.
+   */
+  async text(messages: LlmMessage[], config?: JorElMessagesGenerationConfig, includeMeta?: false): Promise<string>;
   async text(
-    task: JorElTaskInput,
-    config: JorElTextGenerationConfigWithTools = {},
+    messages: LlmMessage[],
+    config?: JorElMessagesGenerationConfig,
+    includeMeta?: true,
+  ): Promise<LlmTextResponseWithMeta>;
+  async text(
+    taskOrMessages: JorElTaskInput | LlmMessage[],
+    config: JorElTextGenerationConfigWithTools | JorElMessagesGenerationConfig = {},
     includeMeta = false,
   ): Promise<string | LlmTextResponseWithMeta> {
-    const { systemMessage, documents, documentSystemMessage, messageHistory, ...coreConfig } = config;
-    const _messages = await this.generateMessages(
-      task,
-      systemMessage,
-      documents,
-      documentSystemMessage,
-      messageHistory,
-    );
+    let _messages: LlmMessage[];
+
+    if (isLlmMessageArray(taskOrMessages)) {
+      _messages = taskOrMessages;
+    } else {
+      const taskConfig = config as JorElTextGenerationConfigWithTools;
+      const { systemMessage, documents, documentSystemMessage, messageHistory } = taskConfig;
+      _messages = await this.generateMessages(
+        taskOrMessages,
+        systemMessage,
+        documents,
+        documentSystemMessage,
+        messageHistory,
+      );
+    }
+
     const _config: JorElGenerationConfigWithTools = {
-      ...coreConfig,
+      ...config,
       tools: config.tools
         ? config.tools instanceof LlmToolKit
           ? config.tools
           : new LlmToolKit(config.tools)
         : undefined,
     };
-    const { output, messages } = await this._core.generateAndProcessTools(_messages, _config);
+    const { output, messages, stopReason } = await this._core.generateAndProcessTools(_messages, _config);
     const response = output.content || "";
     const meta = output.meta;
-    return includeMeta ? { response, meta, messages } : response;
+    return includeMeta ? { response, meta, messages, stopReason } : response;
   }
 
   /**
@@ -495,31 +539,57 @@ export class JorEl {
     config?: JorElJsonGenerationConfigWithTools,
     includeMeta?: true,
   ): Promise<LlmJsonResponseWithMeta>;
+  /**
+   * Generate a JSON response for a given set of messages.
+   *
+   * @param messages - The messages to generate a response for.
+   * @param config - Configuration for the specific generation.
+   * @param includeMeta - Whether to include the metadata and all previous messages in the response.
+   * @returns The JSON response, or an object with the response, metadata, and messages.
+   * @throws Error - If the response is not valid JSON.
+   */
+  async json(messages: LlmMessage[], config?: JorElMessagesJsonGenerationConfig, includeMeta?: false): Promise<object>;
   async json(
-    task: JorElTaskInput,
-    config: JorElJsonGenerationConfigWithTools = {},
+    messages: LlmMessage[],
+    config?: JorElMessagesJsonGenerationConfig,
+    includeMeta?: true,
+  ): Promise<LlmJsonResponseWithMeta>;
+  async json(
+    taskOrMessages: JorElTaskInput | LlmMessage[],
+    config: JorElJsonGenerationConfigWithTools | JorElMessagesJsonGenerationConfig = {},
     includeMeta = false,
   ): Promise<object | LlmJsonResponseWithMeta> {
-    const { systemMessage, documents, documentSystemMessage, messageHistory, ...coreConfig } = config;
-    const _messages = await this.generateMessages(
-      task,
-      systemMessage,
-      documents,
-      documentSystemMessage,
-      messageHistory,
-    );
+    let _messages: LlmMessage[];
+    let jsonSchema: JsonSpecification | boolean;
+
+    if (isLlmMessageArray(taskOrMessages)) {
+      _messages = taskOrMessages;
+      jsonSchema = (config as JorElMessagesJsonGenerationConfig).jsonSchema || true;
+    } else {
+      const taskConfig = config as JorElJsonGenerationConfigWithTools;
+      const { systemMessage, documents, documentSystemMessage, messageHistory } = taskConfig;
+      _messages = await this.generateMessages(
+        taskOrMessages,
+        systemMessage,
+        documents,
+        documentSystemMessage,
+        messageHistory,
+      );
+      jsonSchema = taskConfig.jsonSchema || true;
+    }
+
     const _config: JorElGenerationConfigWithTools = {
-      ...coreConfig,
-      json: config.jsonSchema || true,
+      ...config,
+      json: jsonSchema,
       tools: config.tools
         ? config.tools instanceof LlmToolKit
           ? config.tools
           : new LlmToolKit(config.tools)
         : undefined,
     };
-    const { output, messages } = await this._core.generateAndProcessTools(_messages, _config);
+    const { output, messages, stopReason } = await this._core.generateAndProcessTools(_messages, _config);
     const parsed = output.content ? LlmToolKit.deserialize(output.content) : {};
-    return includeMeta ? { response: parsed, meta: output.meta, messages } : parsed;
+    return includeMeta ? { response: parsed, meta: output.meta, messages, stopReason } : parsed;
   }
 
   /**
@@ -533,30 +603,30 @@ export class JorEl {
   }
 
   /**
-   * Generate a stream of response chunks for a given task.
+   * Generate a stream of response chunks for a given task or set of messages.
    *
-   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
+   * @param taskOrMessages - The task to generate a response for (either a string or an array of strings and ImageContent objects) or an array of messages.
    * @param config - Configuration for the specific generation.
    */
   async *stream(
-    task: JorElTaskInput,
-    config: JorElTextGenerationConfigWithTools = {},
+    taskOrMessages: JorElTaskInput | LlmMessage[],
+    config: JorElTextGenerationConfigWithTools | JorElMessagesGenerationConfig = {},
   ): AsyncGenerator<string, void, unknown> {
-    const stream = this.streamWithMeta(task, config);
+    const stream = this.streamWithMeta(taskOrMessages, config);
     for await (const chunk of stream) {
       if (chunk.type === "chunk" && chunk.content) yield chunk.content;
     }
   }
 
   /**
-   * Generate a stream of response chunks for a given task with metadata.
+   * Generate a stream of response chunks for a given task or set of messages with metadata.
    *
-   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
+   * @param taskOrMessages - The task to generate a response for (either a string or an array of strings and ImageContent objects) or an array of messages.
    * @param config - Configuration for the specific generation.
    */
   async *streamWithMeta(
-    task: JorElTaskInput,
-    config: JorElTextGenerationConfigWithTools = {},
+    taskOrMessages: JorElTaskInput | LlmMessage[],
+    config: JorElTextGenerationConfigWithTools | JorElMessagesGenerationConfig = {},
   ): AsyncGenerator<
     | LlmStreamResponseChunk
     | LlmStreamResponse
@@ -567,10 +637,24 @@ export class JorEl {
     void,
     unknown
   > {
-    const { systemMessage, documents, documentSystemMessage, messageHistory, ...coreConfig } = config;
-    const messages = await this.generateMessages(task, systemMessage, documents, documentSystemMessage, messageHistory);
+    let messages: LlmMessage[];
+
+    if (isLlmMessageArray(taskOrMessages)) {
+      messages = taskOrMessages;
+    } else {
+      const taskConfig = config as JorElTextGenerationConfigWithTools;
+      const { systemMessage, documents, documentSystemMessage, messageHistory } = taskConfig;
+      messages = await this.generateMessages(
+        taskOrMessages,
+        systemMessage,
+        documents,
+        documentSystemMessage,
+        messageHistory,
+      );
+    }
+
     const _config = {
-      ...coreConfig,
+      ...config,
       tools: config.tools
         ? config.tools instanceof LlmToolKit
           ? config.tools
@@ -603,7 +687,7 @@ export class JorEl {
               createdAt: Date.now(),
             });
           }
-          yield { type: "messages", messages };
+          yield { type: "messages", messages, stopReason: "completed" };
         }
       }
     }
@@ -618,6 +702,66 @@ export class JorEl {
    */
   async embed(text: string, config: { model?: string } = {}): Promise<number[]> {
     return this._core.generateEmbedding(text, config.model);
+  }
+
+  /**
+   * Process approved tool calls in messages and return updated messages.
+   * This method is useful when you have messages with approved tool calls that need to be executed.
+   *
+   * @param messages - The messages containing tool calls to process.
+   * @param config - Configuration for tool call processing.
+   * @param config.tools - The tools to use for processing (required).
+   * @param config.context - Context to pass to tool executors (optional).
+   * @param config.secureContext - Secure context to pass to tool executors (optional).
+   * @param config.maxErrors - Maximum number of tool call errors allowed (optional, defaults to 3).
+   * @param config.maxCalls - Maximum number of tool calls to process (optional, defaults to 5).
+   * @returns Updated messages with processed tool calls.
+   */
+  async processToolCalls(
+    messages: LlmMessage[],
+    config: {
+      tools: LlmToolKit | (LlmTool | LlmToolConfiguration)[];
+      context?: LLmToolContextSegment;
+      secureContext?: LLmToolContextSegment;
+      maxErrors?: number;
+      maxCalls?: number;
+    },
+  ): Promise<LlmMessage[]> {
+    const tools = config.tools instanceof LlmToolKit ? config.tools : new LlmToolKit(config.tools);
+
+    // Find the latest message with tool calls that need processing
+    const messageWithToolCalls = messages
+      .slice()
+      .reverse()
+      .find(
+        (message): message is LlmAssistantMessageWithToolCalls =>
+          message.role === "assistant_with_tools" &&
+          message.toolCalls.some((call) => call.executionState === "pending"),
+      );
+
+    if (!messageWithToolCalls) {
+      this.logger.debug("JorEl", "No pending tool calls found to process");
+      return messages;
+    }
+
+    this.logger.debug("JorEl", "Processing pending tool calls");
+
+    // Process the tool calls
+    const processedMessage = await tools.processCalls(messageWithToolCalls, {
+      context: config.context,
+      secureContext: config.secureContext,
+      maxErrors: config.maxErrors || 3,
+      maxCalls: config.maxCalls || 5,
+    });
+
+    this.logger.debug("JorEl", "Finished processing pending tool calls");
+
+    return messages.map((msg) => {
+      if (msg.id === processedMessage.id) {
+        return processedMessage;
+      }
+      return msg;
+    });
   }
 
   /**

@@ -2,6 +2,7 @@ import { LogService } from "../logger";
 import {
   generateAssistantMessage,
   InitLlmGenerationConfig,
+  LLmGenerationStopReason,
   LlmMessage,
   LlmStreamResponse,
   LlmStreamResponseChunk,
@@ -132,11 +133,8 @@ export class JorElCoreStore {
     messages: LlmMessage[],
     config: JorElGenerationConfigWithTools = {},
     autoApprove = false,
-  ): Promise<{ output: JorElGenerationOutput; messages: LlmMessage[] }> {
+  ): Promise<{ output: JorElGenerationOutput; messages: LlmMessage[]; stopReason: LLmGenerationStopReason }> {
     const _messages = [...messages];
-    if (config.tools && config.tools.tools.some((t) => t.type !== "function")) {
-      throw new Error("Only tools with a function executor can be used in this context");
-    }
 
     const maxToolCalls = config.maxToolCalls || 5;
     const maxToolCallErrors = config.maxToolCallErrors || 3;
@@ -152,7 +150,7 @@ export class JorElCoreStore {
       if (generation.role === "assistant" || !config.tools) {
         break;
       } else {
-        generation = autoApprove ? config.tools.approveCalls(generation) : generation;
+        generation = autoApprove ? config.tools.utilities.message.approveToolCalls(generation) : generation;
         this.logger.debug("Core", `Starting to process tool calls`);
         this.logger.silly("Core", `Tool call inputs`, {
           generation,
@@ -173,6 +171,15 @@ export class JorElCoreStore {
           generation,
         });
         _messages.push(generateAssistantMessage(generation.content, generation.toolCalls));
+        const classification = config.tools.classifyToolCalls(generation.toolCalls);
+        if (classification === "approvalPending") {
+          this.logger.debug("Core", "Tool calls require approval - stopping processing");
+          return {
+            output: generation,
+            messages: _messages,
+            stopReason: "toolCallsRequireApproval",
+          };
+        }
       }
     }
 
@@ -185,6 +192,7 @@ export class JorElCoreStore {
     return {
       output: generation,
       messages: _messages,
+      stopReason: "completed",
     };
   }
 
@@ -196,7 +204,15 @@ export class JorElCoreStore {
   async *generateContentStream(
     messages: LlmMessage[],
     config: JorElGenerationConfigWithTools = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
+  ): AsyncGenerator<
+    | LlmStreamResponseChunk
+    | LlmStreamResponse
+    | LlmStreamResponseWithToolCalls
+    | LlmStreamToolCallStarted
+    | LlmStreamToolCallCompleted,
+    void,
+    unknown
+  > {
     const modelEntry = this.modelManager.getModel(config.model || this.modelManager.getDefaultModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
 
@@ -214,7 +230,8 @@ export class JorElCoreStore {
       model: modelEntry.model,
       provider: modelEntry.provider,
       messages: messagesWithOverrides,
-      ...omit(configWithOverrides, []),
+      ...omit(configWithOverrides, ["streamBuffer"]),
+      streamBuffer: configWithOverrides.streamBuffer ? { ...configWithOverrides.streamBuffer } : undefined,
     });
 
     const stream = provider.generateResponseStream(modelEntry.model, messagesWithOverrides, {
@@ -227,7 +244,7 @@ export class JorElCoreStore {
     const bufferedStream = this.createBufferedStream(stream, configWithOverrides.streamBuffer);
 
     for await (const chunk of bufferedStream) {
-        yield chunk;
+      yield chunk;
       if (chunk.type === "response") {
         this.logger.debug("Core", "Finished generating response stream");
         this.logger.silly("Core", "Response stream output", {
@@ -284,7 +301,7 @@ export class JorElCoreStore {
       if (!response) throw new Error("Unable to generate a response");
       if (response.role === "assistant" || !config.tools) break;
 
-      response = autoApprove ? config.tools.approveCalls(response) : response;
+      response = autoApprove ? config.tools.utilities.message.approveToolCalls(response) : response;
 
       this.logger.debug("Core", "Processing tool calls");
 
@@ -360,6 +377,7 @@ export class JorElCoreStore {
     yield {
       type: "messages",
       messages,
+      stopReason: "completed",
     };
   }
 

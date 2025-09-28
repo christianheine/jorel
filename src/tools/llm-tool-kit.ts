@@ -1,10 +1,7 @@
-import { LlmTool, LlmToolConfiguration, LLmToolContextSegment } from "./llm-tool";
-import { dateReviver, MaybeUndefined, Nullable } from "../shared";
 import { LlmFunction, LlmToolCall } from "../providers";
-
-interface LlmToolKitConfiguration {
-  allowParallelCalls?: boolean;
-}
+import { dateReviver, MaybeUndefined, Nullable } from "../shared";
+import { LlmTool, LlmToolConfiguration, LLmToolContextSegment } from "./llm-tool";
+import { LlmToolKitUtilities } from "./utilities";
 
 /**
  * A toolkit for managing one or more LLM tools.
@@ -13,7 +10,21 @@ export class LlmToolKit {
   public readonly tools: LlmTool[];
   public allowParallelCalls: boolean;
 
-  constructor(tools: (LlmTool | LlmToolConfiguration)[], config: LlmToolKitConfiguration = {}) {
+  public static readonly utilities = new LlmToolKitUtilities();
+
+  /**
+   * Allow access from the instance as well
+   */
+  get utilities(): LlmToolKitUtilities {
+    return LlmToolKit.utilities;
+  }
+
+  constructor(
+    tools: (LlmTool | LlmToolConfiguration)[],
+    config: {
+      allowParallelCalls?: boolean;
+    } = {},
+  ) {
     this.tools = tools.map((tool) => (tool instanceof LlmTool ? tool : new LlmTool(tool)));
     this.allowParallelCalls = config.allowParallelCalls ?? true;
   }
@@ -123,25 +134,9 @@ export class LlmToolKit {
   }
 
   /**
-   * Reject one or more tool calls
-   * @param input Object containing tool calls (e.g. llm "assistant_with_tools" message)
-   * @param idOrIds ID or array of IDs of tool calls to reject. If not provided, all tool calls will be rejected.
-   */
-  rejectCalls<T extends { toolCalls: LlmToolCall[] }>(input: T, idOrIds?: string | string[]): T {
-    return this.approveOrRejectCalls(input, "rejected", idOrIds);
-  }
-
-  /**
-   * Approve one or more tool calls
-   * @param input Object containing tool calls (e.g. llm "assistant_with_tools" message)
-   * @param idOrIds ID or array of IDs of tool calls to approve. If not provided, all tool calls will be approved.
-   */
-  approveCalls<T extends { toolCalls: LlmToolCall[] }>(input: T, idOrIds?: string | string[]): T {
-    return this.approveOrRejectCalls(input, "approved", idOrIds);
-  }
-
-  /**
-   * Classify what type of tool calls are present
+   * Classify what type of tool calls are present. This implementation goes beyond the basic classification inside
+   * the toolkit utilities to provide more detailed information, such as pending transfers and missing executors
+   * which require access to the tool instances
    * @param toolCalls
    */
   classifyToolCalls(
@@ -323,63 +318,67 @@ export class LlmToolKit {
     if (!input.toolCalls) return input;
     const classification = this.classifyToolCalls(input.toolCalls);
     if (classification === "transferPending") {
-      throw new Error("Transfer tools can only be processed by this method");
+      throw new Error("Transfer tools cannot be processed by this method");
     }
+
     const toolCalls: LlmToolCall[] = [];
     for (const call of input.toolCalls) {
-      if (errors >= (config?.maxErrors ?? 3)) {
-        if (call.executionState === "completed") continue;
-        this.setCallToError(call, "Too many tool call errors");
-        continue;
+      if (call.executionState === "completed" || (call.executionState === "error" && !config?.retryFailed)) {
+        toolCalls.push(call);
+      } else if (call.executionState === "cancelled") {
+        toolCalls.push(call);
+      } else if (errors >= (config?.maxErrors ?? 5)) {
+        const message = "Too many tool call errors";
+        toolCalls.push({
+          ...call,
+          executionState: "cancelled",
+          result: null,
+          error: {
+            message,
+            type: "ToolExecutionError",
+            numberOfAttempts: call.error ? call.error.numberOfAttempts + 1 : 1,
+            lastAttempt: new Date(),
+          },
+        });
+      } else if (calls >= (config?.maxCalls ?? 8)) {
+        const message = "Too many tool calls";
+        toolCalls.push({
+          ...call,
+          executionState: "cancelled",
+          result: null,
+          error: {
+            message,
+            type: "ToolExecutionError",
+            numberOfAttempts: call.error ? call.error.numberOfAttempts + 1 : 1,
+            lastAttempt: new Date(),
+          },
+        });
+      } else if (classification === "missingExecutor") {
+        const message = "Unable to execute tool";
+        toolCalls.push({
+          ...call,
+          executionState: "cancelled",
+          result: null,
+          error: {
+            message,
+            type: "ToolExecutionError",
+            numberOfAttempts: call.error ? call.error.numberOfAttempts + 1 : 1,
+            lastAttempt: new Date(),
+          },
+        });
+      } else {
+        const { toolCall } = await this.processToolCall(call, config);
+        toolCalls.push(toolCall);
+        if (toolCall.error) {
+          errors++;
+        }
+        calls++;
       }
-      if (calls >= (config?.maxCalls ?? 5)) {
-        if (call.executionState === "completed") continue;
-        this.setCallToError(call, "Too many tool calls");
-        continue;
-      }
-      const { toolCall } = await this.processToolCall(call, config);
-      toolCalls.push(toolCall);
-      if (toolCall.error) {
-        errors++;
-      }
-      calls++;
     }
+
     return {
       ...input,
       toolCalls,
     };
-  }
-
-  private setCallToError(call: LlmToolCall, message: string): LlmToolCall {
-    return {
-      ...call,
-      executionState: "error",
-      result: null,
-      error: {
-        message,
-        type: "ToolExecutionError",
-        numberOfAttempts: call.error ? call.error.numberOfAttempts + 1 : 1,
-        lastAttempt: new Date(),
-      },
-    };
-  }
-
-  /**
-   * Internal helper to approve or reject tool calls
-   * @internal
-   */
-  private approveOrRejectCalls<T extends { toolCalls: LlmToolCall[] }>(
-    input: T,
-    approvalState: "approved" | "rejected",
-    idOrIds?: string | string[],
-  ): T {
-    const rejectedIds = idOrIds ? (Array.isArray(idOrIds) ? idOrIds : [idOrIds]) : null;
-    const toolCalls = input.toolCalls.map((call) => {
-      if (call.approvalState === "requiresApproval" && (!rejectedIds || rejectedIds.includes(call.request.id))) {
-        return { ...call, approvalState };
-      }
-      return call;
-    });
-    return { ...input, toolCalls };
   }
 }
