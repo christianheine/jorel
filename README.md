@@ -19,9 +19,10 @@ The full documentation is available at [https://christianheine.github.io/jorel/]
 * **Multi-Provider Support**: Seamlessly work with OpenAI, Anthropic, Groq, Google Vertex AI, Ollama, OpenRouter, and more
 * **Unified Interface**: Single, consistent API across all providers
 * **Rich Media Support**: Built-in handling for images and vision models
-* **Tool Integration**: First-class support for function calling and external tools
+* **Advanced Tool Integration**: First-class support for function calling with approval workflows and tool management utilities
 * **Document Grounding**: Easy integration of external documents for context
 * **Agent Framework**: Simple but powerful system for complex task processing
+* **Stream Control**: Configurable buffering for optimal streaming performance
 * **Type Safety**: Fully written in TypeScript
 
 ## Why JorEl?
@@ -61,6 +62,15 @@ To run the example, use:
 ```bash
 npm run start
 ```
+
+## What's New in v0.15.0
+
+* **🛠️ Enhanced Tool Handling**: New `LlmToolKit` class with approval workflows and advanced tool management utilities
+* **📊 Stream Buffering**: Control chunk emission rates with configurable buffering for better performance
+* **🔧 Improved Tool Approvals**: Built-in support for tool confirmation and approval workflows
+* **🧹 API Cleanup**: Removed deprecated `ask` method (use `text` instead)
+
+See the [full changelog](CHANGELOG.md) for complete details.
 
 ### Quick start
 
@@ -111,6 +121,26 @@ for await (const chunk of stream) {
 }
 ```
 
+#### 3a. **Stream Buffering**
+
+Control the rate of chunk emission to help with backpressure in downstream systems:
+
+```typescript
+// Buffer chunks for 200ms before emitting
+const stream = jorEl.stream("Generate a long story", {
+  streamBuffer: { bufferTimeMs: 200 }
+});
+
+for await (const chunk of stream) {
+    process.stdout.write(chunk); // Fewer, larger chunks
+}
+
+// Or disable buffering entirely
+const unbufferedStream = jorEl.stream("Generate a story", {
+  streamBuffer: { disabled: true }
+});
+```
+
 #### 4. **Image Context**
 
 Allows to pass images to the model.
@@ -154,6 +184,82 @@ const response = await jorEl.text("What's the weather in Sydney?", {
     params: z.object({ city: z.string() })
   }]
 });
+```
+
+#### 6a. **Tool Approvals & Advanced Tool Handling**
+
+JorEl now provides advanced tool handling capabilities including approval workflows and utilities for managing tool calls:
+
+```typescript
+import { LlmToolKit } from "jorel";
+
+// Create tools with approval requirements
+const toolkit = new LlmToolKit([
+  {
+    name: "read_file",
+    description: "Read contents of a file",
+    requiresConfirmation: false, // Safe operation
+    executor: async (args) => ({ content: "file contents..." }),
+    params: {
+      type: "object",
+      properties: { filename: { type: "string" } },
+      required: ["filename"]
+    }
+  },
+  {
+    name: "delete_file", 
+    description: "Delete a file permanently",
+    requiresConfirmation: true, // Requires approval
+    executor: async (args) => ({ success: true }),
+    params: {
+      type: "object", 
+      properties: { filename: { type: "string" } },
+      required: ["filename"]
+    }
+  }
+]);
+
+// Initial generation with tools requiring approval
+const initialResult = await jorEl.text(
+  "Please read config.txt and delete temp.log", 
+  { tools: toolkit }, 
+  true // Include metadata
+);
+
+// Handle approval workflow if needed
+if (initialResult.stopReason === "toolCallsRequireApproval") {
+  const messageRequiringApproval = toolkit.utilities.messages
+    .getLatestMessageWithApprovalRequired(initialResult.messages);
+  
+  const toolCallsRequiringApproval = toolkit.utilities.message
+    .extractToolCallsRequiringApproval(messageRequiringApproval);
+  
+  let updatedMessages = initialResult.messages;
+  
+  for (const toolCall of toolCallsRequiringApproval) {
+    const { name } = toolCall.request.function;
+    
+    if (name === "delete_file") {
+      // Reject dangerous operations
+      updatedMessages = toolkit.utilities.messages.rejectToolCalls(
+        updatedMessages, { toolCallIds: toolCall.id }
+      );
+    } else {
+      // Approve safe operations
+      updatedMessages = toolkit.utilities.messages.approveToolCalls(
+        updatedMessages, { toolCallIds: toolCall.id }
+      );
+    }
+  }
+  
+  // Process approved tool calls and generate final response
+  if (toolkit.utilities.messages.getNumberOfPendingToolCalls(updatedMessages) > 0) {
+    updatedMessages = await jorEl.processToolCalls(updatedMessages, { tools: toolkit });
+  }
+  
+  const finalResult = await jorEl.text(updatedMessages, { tools: toolkit }, true);
+  console.log(finalResult.response);
+}
 ```
 
 #### 7. **Responses with metadata**

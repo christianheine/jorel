@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.15.0 (2025-09-28)
+
+**Note: This is planned to be the final 0.x release before JorEl 1.0.0, marking the transition to a stable API.**
+
+* Add support for stream buffering
+* Improve support for tool approvals & tool handling in general (added utilities on LlmToolKit)
+* Improve support to resume processing once tools calls are approved (and processes)
+* Improve handling of cancelled tool calls
+* Remove `ask` method (previously retired in favor of `text`)
+* Fix files paths when loading docs in examples
+* Upgrade dependencies
+
 ## 0.14.4 (2025-08-15)
 
 * Fix issue with file attachments for Google GenAi provider
