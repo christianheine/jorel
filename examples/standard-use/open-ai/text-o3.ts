@@ -10,8 +10,8 @@ const main = async () => {
   const jorEl = new JorEl({ openAI: true });
 
   // Load documents from local documentation files
-  const jorElIntro = await LlmDocument.fromFile("../../docs/docs/intro.md");
-  const jorElQuickStart = await LlmDocument.fromFile("../../docs/docs/quick-start.md");
+  const jorElIntro = await LlmDocument.fromFile("../../../docs/docs/intro.md");
+  const jorElQuickStart = await LlmDocument.fromFile("../../../docs/docs/quick-start.md");
 
   // Generate the response
   const { response, meta } = await jorEl.text(
