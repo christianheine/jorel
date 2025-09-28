@@ -16,64 +16,6 @@ describe("JorEl", () => {
     jorel.models.register({ model: "test-model-1", provider: "test" });
   });
 
-  describe("ask", () => {
-    it("should return a simple response", async () => {
-      const response = await jorel.ask("Hello");
-      expect(response).toBe("This is a test response");
-    });
-
-    it("should use specified model", async () => {
-      jorel.models.register({ model: "test-model-2", provider: "test" });
-
-      const response = await jorel.ask("Hello", { model: "test-model-2" });
-      expect(response).toBe("This is a test response");
-    });
-
-    it("should throw error for unregistered model", async () => {
-      await expect(
-        jorel.ask("Hello", {
-          model: "non-existent-model",
-        }),
-      ).rejects.toThrow("Model non-existent-model is not registered");
-    });
-
-    it("should handle temperature setting", async () => {
-      const spy = jest.spyOn(testProvider, "generateResponse");
-
-      await jorel.ask("Hello", { temperature: 0.7 });
-
-      expect(spy).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(Array),
-        expect.objectContaining({ temperature: 0.7 }),
-      );
-    });
-
-    it("should use default model when none specified", async () => {
-      jorel.models.register({
-        model: "test-model-2",
-        provider: "test",
-        setAsDefault: true,
-      });
-
-      const spy = jest.spyOn(testProvider, "generateResponse");
-      await jorel.ask("Hello");
-
-      expect(spy).toHaveBeenCalledWith("test-model-2", expect.any(Array), expect.any(Object));
-    });
-
-    it("should return metadata when includeMeta is true", async () => {
-      const response = await jorel.ask("Hello", {}, true);
-      expect(response).toHaveProperty("response");
-      expect(response).toHaveProperty("meta");
-      expect(response).toHaveProperty("messages");
-      expect(response.response).toBe("This is a test response");
-      expect(response.meta).toHaveProperty("model");
-      expect(response.meta).toHaveProperty("provider");
-      expect(response.meta).toHaveProperty("durationMs");
-    });
-  });
-
   describe("text", () => {
     it("should return a simple response", async () => {
       const response = await jorel.text("Hello");
@@ -365,7 +307,7 @@ describe("JorEl", () => {
         },
       });
 
-      const response = await jorel.ask("Use the tool", { tools: toolKit });
+      const response = await jorel.text("Use the tool", { tools: toolKit });
       expect(response).toBe("This is a test response");
 
       // Restore original method

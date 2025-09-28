@@ -441,29 +441,6 @@ export class JorEl {
 
   /**
    * Generate a response for a given task.
-   * @deprecated Use `text` instead.
-   * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
-   * @param config - Configuration for the specific generation.
-   * @param includeMeta - Whether to include the metadata and all previous messages in the response.
-   * @returns The text response, or an object with the response, metadata, and messages.
-   */
-  async ask(task: JorElTaskInput, config?: JorElTextGenerationConfigWithTools, includeMeta?: false): Promise<string>;
-  async ask(
-    task: JorElTaskInput,
-    config?: JorElTextGenerationConfigWithTools,
-    includeMeta?: true,
-  ): Promise<{ response: string; meta: LlmAssistantMessageMeta; messages: LlmMessage[] }>;
-  async ask(
-    task: JorElTaskInput,
-    config: JorElTextGenerationConfigWithTools = {},
-    includeMeta = false,
-  ): Promise<string | { response: string; meta: LlmAssistantMessageMeta; messages: LlmMessage[] }> {
-    // @ts-expect-error ts(2769) - overloads
-    return this.text(task, config, includeMeta);
-  }
-
-  /**
-   * Generate a response for a given task.
    *
    * @param task - The task to generate a response for (either a string or an array of strings and ImageContent objects).
    * @param config - Configuration for the specific generation.
