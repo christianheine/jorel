@@ -41,7 +41,7 @@ describe("JorElCoreStore", () => {
     it("should apply model overrides", async () => {
       // Mock the applyModelDefaultsAndOverrides method
       const originalApplyMethod = coreStore["applyModelDefaultsAndOverrides"];
-      coreStore["applyModelDefaultsAndOverrides"] = jest.fn().mockImplementation((messages, config, modelEntry) => {
+      coreStore["applyModelDefaultsAndOverrides"] = jest.fn().mockImplementation((messages, config) => {
         return {
           messages,
           config: { ...config, temperature: null },
@@ -166,6 +166,109 @@ describe("JorElCoreStore", () => {
 
       expect(chunks.length).toBeGreaterThan(0);
       expect(chunks[chunks.length - 1]).toHaveProperty("type", "response");
+    });
+
+    it("should buffer content chunks when configured", async () => {
+      // Set up provider with multiple small chunks
+      const bufferedProvider = new TestProvider({
+        defaultStreamResponse: ["a", "b", "c", "d", "e"],
+        simulateDelay: 10, // Small delay between chunks
+      });
+      coreStore.providerManager.registerProvider("buffered", bufferedProvider);
+      coreStore.modelManager.registerModel({ model: "buffered-model", provider: "buffered" });
+
+      const messages: LlmMessage[] = [
+        {
+          id: "1",
+          role: "user",
+          content: [{ type: "text", text: "Hello" }],
+          createdAt: Date.now(),
+        } as LlmUserMessage,
+      ];
+
+      // Test with buffering
+      const bufferedChunks: any[] = [];
+      const bufferedStream = coreStore.generateContentStream(messages, {
+        model: "buffered-model",
+        streamBuffer: { bufferTimeMs: 50 },
+      });
+
+      for await (const chunk of bufferedStream) {
+        if (chunk.type === "chunk") {
+          bufferedChunks.push(chunk);
+        }
+      }
+
+      // Should have fewer chunks due to buffering
+      expect(bufferedChunks.length).toBeLessThan(5);
+
+      // Content should be combined
+      const totalContent = bufferedChunks.map((c) => c.content).join("");
+      expect(totalContent).toBe("abcde");
+    });
+
+    it("should pass through chunks when buffering is disabled", async () => {
+      const messages: LlmMessage[] = [
+        {
+          id: "1",
+          role: "user",
+          content: [{ type: "text", text: "Hello" }],
+          createdAt: Date.now(),
+        } as LlmUserMessage,
+      ];
+
+      const chunks: any[] = [];
+      const stream = coreStore.generateContentStream(messages, {
+        streamBuffer: { disabled: true },
+      });
+
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks.length).toBeGreaterThan(0);
+      expect(chunks[chunks.length - 1]).toHaveProperty("type", "response");
+    });
+
+    it("should flush buffer before response chunk", async () => {
+      // Set up provider with content chunks followed by response
+      const flushProvider = new TestProvider({
+        defaultStreamResponse: ["chunk1", "chunk2"],
+        simulateDelay: 10,
+      });
+      coreStore.providerManager.registerProvider("flush", flushProvider);
+      coreStore.modelManager.registerModel({ model: "flush-model", provider: "flush" });
+
+      const messages: LlmMessage[] = [
+        {
+          id: "1",
+          role: "user",
+          content: [{ type: "text", text: "Hello" }],
+          createdAt: Date.now(),
+        } as LlmUserMessage,
+      ];
+
+      const chunks: any[] = [];
+      const stream = coreStore.generateContentStream(messages, {
+        model: "flush-model",
+        streamBuffer: { bufferTimeMs: 100 }, // Long buffer time
+      });
+
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+
+      // Should have at least one content chunk and one response chunk
+      const contentChunks = chunks.filter((c) => c.type === "chunk");
+      const responseChunks = chunks.filter((c) => c.type === "response");
+
+      expect(contentChunks.length).toBeGreaterThan(0);
+      expect(responseChunks.length).toBe(1);
+
+      // Response chunk should come after content chunks
+      const lastContentIndex = chunks.map((c) => c.type).lastIndexOf("chunk");
+      const responseIndex = chunks.map((c) => c.type).indexOf("response");
+      expect(responseIndex).toBeGreaterThan(lastContentIndex);
     });
   });
 

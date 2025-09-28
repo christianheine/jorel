@@ -10,6 +10,7 @@ import {
   LlmStreamToolCallCompleted,
   LlmStreamToolCallStarted,
   LlmToolCall,
+  StreamBufferConfig,
 } from "../providers";
 import { getModelOverrides } from "../providers/get-overrides";
 import { modelParameterOverrides } from "../providers/model-parameter-overrides";
@@ -222,13 +223,11 @@ export class JorElCoreStore {
       logger: this.logger,
     });
 
-    for await (const chunk of stream) {
-      if (chunk.type === "toolCallStarted" || chunk.type === "toolCallCompleted") {
-        // Do nothing
-      } else {
-        yield chunk;
-      }
+    // Apply buffering if configured
+    const bufferedStream = this.createBufferedStream(stream, configWithOverrides.streamBuffer);
 
+    for await (const chunk of bufferedStream) {
+        yield chunk;
       if (chunk.type === "response") {
         this.logger.debug("Core", "Finished generating response stream");
         this.logger.silly("Core", "Response stream output", {
@@ -277,7 +276,7 @@ export class JorElCoreStore {
       for await (const chunk of stream) {
         if (chunk.type === "chunk") {
           yield chunk;
-        } else {
+        } else if (chunk.type === "response") {
           response = chunk;
         }
       }
@@ -376,6 +375,86 @@ export class JorElCoreStore {
       lastAttempt: new Date(),
     };
     toolCall.result = null;
+  }
+
+  /**
+   * Helper method to create a buffered stream from content chunks
+   */
+  private async *createBufferedStream(
+    stream: AsyncGenerator<
+      | LlmStreamResponseChunk
+      | LlmStreamResponse
+      | LlmStreamResponseWithToolCalls
+      | LlmStreamToolCallStarted
+      | LlmStreamToolCallCompleted,
+      void,
+      unknown
+    >,
+    bufferConfig?: StreamBufferConfig,
+  ): AsyncGenerator<
+    | LlmStreamResponseChunk
+    | LlmStreamResponse
+    | LlmStreamResponseWithToolCalls
+    | LlmStreamToolCallStarted
+    | LlmStreamToolCallCompleted,
+    void,
+    unknown
+  > {
+    // If buffering is disabled or no buffer time is set, pass through directly
+    if (bufferConfig?.disabled || !bufferConfig?.bufferTimeMs || bufferConfig.bufferTimeMs <= 0) {
+      yield* stream;
+      return;
+    }
+
+    let buffer = "";
+    let bufferStartTime: number | null = null;
+
+    const flushBuffer = function* () {
+      if (buffer) {
+        yield {
+          type: "chunk" as const,
+          content: buffer,
+        };
+        buffer = "";
+        bufferStartTime = null;
+      }
+    };
+
+    const shouldFlushBuffer = (): boolean => {
+      if (!buffer || bufferStartTime === null) return false;
+      return Date.now() - bufferStartTime >= bufferConfig.bufferTimeMs!;
+    };
+
+    try {
+      for await (const chunk of stream) {
+        // Handle content chunks - these get buffered
+        if (chunk.type === "chunk") {
+          // Start timing if this is the first content in buffer
+          if (!buffer) {
+            bufferStartTime = Date.now();
+          }
+
+          buffer += chunk.content;
+
+          // Check if buffer time has elapsed
+          if (shouldFlushBuffer()) {
+            yield* flushBuffer();
+          }
+        } else {
+          // For non-content chunks (response, toolCallStarted, toolCallCompleted)
+          // Flush any buffered content first, then emit the chunk
+          if (buffer) {
+            yield* flushBuffer();
+          }
+          yield chunk;
+        }
+      }
+    } finally {
+      // Ensure any remaining buffer is flushed when stream ends
+      if (buffer) {
+        yield* flushBuffer();
+      }
+    }
   }
 
   /**

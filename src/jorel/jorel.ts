@@ -48,6 +48,7 @@ import {
   OpenAIProvider,
   OpenRouterProvider,
   ReasoningEffort,
+  StreamBufferConfig,
   Verbosity,
 } from "../providers";
 import { generateUniqueId, Nullable } from "../shared";
@@ -81,6 +82,8 @@ export interface JorElCoreGenerationConfig {
   reasoningEffort?: ReasoningEffort;
   /** Verbosity for the model - only supported by some providers & models (currently only OpenAI) */
   verbosity?: Verbosity;
+  /** Stream buffering configuration for controlling chunk emission rate */
+  streamBuffer?: StreamBufferConfig;
 }
 
 export interface JorElTextGenerationConfigWithTools extends JorElCoreGenerationConfig {

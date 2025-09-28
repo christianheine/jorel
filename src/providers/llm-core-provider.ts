@@ -14,6 +14,13 @@ export interface LlmModelParameterOverrides {
   noSystemMessage: boolean;
 }
 
+export interface StreamBufferConfig {
+  /** Time in milliseconds to buffer content chunks before emitting. Default: 0 (no buffering) */
+  bufferTimeMs?: number;
+  /** Disable buffering entirely. Default: false */
+  disabled?: boolean;
+}
+
 export type LlmModelParameterOverridesLookup = { [model: string]: Partial<LlmModelParameterOverrides> };
 
 interface CoreLlmGenerationConfig {
