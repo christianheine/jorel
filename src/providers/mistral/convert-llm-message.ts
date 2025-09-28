@@ -1,7 +1,7 @@
-import { LlmMessage } from "../../providers";
-import { LlmToolKit } from "../../tools";
 import { ChatCompletionRequest } from "@mistralai/mistralai/models/components/chatcompletionrequest";
 import { ContentChunk } from "@mistralai/mistralai/models/components/contentchunk";
+import { LlmMessage } from "../../providers";
+import { LlmToolKit } from "../../tools";
 
 /** Convert unified LLM messages to Mistral messages */
 export const convertLlmMessagesToMistralMessages = async (
@@ -42,10 +42,10 @@ export const convertLlmMessagesToMistralMessages = async (
               content: LlmToolKit.serialize(toolCall.result),
               toolCallId: toolCall.request.id,
             });
-          } else if (toolCall.executionState === "error") {
+          } else if (toolCall.executionState === "error" || toolCall.executionState === "cancelled") {
             convertedMessages.push({
               role: "tool",
-              content: toolCall.error.message,
+              content: toolCall.error?.message || "Cancelled",
               toolCallId: toolCall.request.id,
             });
           }

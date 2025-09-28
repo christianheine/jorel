@@ -138,6 +138,20 @@ export interface LlmToolCall__Completed {
   error?: null;
 }
 
+export interface LlmToolCall__Cancelled {
+  id: string;
+  approvalState: LlmToolCallApprovalState;
+  executionState: "cancelled";
+  request: LlmToolCallRequest;
+  result: null;
+  error?: {
+    type: string;
+    message: string;
+    numberOfAttempts: number;
+    lastAttempt: Date;
+  };
+}
+
 export interface LlmToolCall__Error {
   id: string;
   approvalState: LlmToolCallApprovalState;
@@ -152,7 +166,12 @@ export interface LlmToolCall__Error {
   };
 }
 
-export type LlmToolCall = LlmToolCall__Pending | LlmToolCall__InProgress | LlmToolCall__Completed | LlmToolCall__Error;
+export type LlmToolCall =
+  | LlmToolCall__Pending
+  | LlmToolCall__InProgress
+  | LlmToolCall__Completed
+  | LlmToolCall__Error
+  | LlmToolCall__Cancelled;
 
 export interface LlmAssistantMessage {
   id: string;

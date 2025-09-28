@@ -47,12 +47,12 @@ function convertCompletedToolCallToFunctionResponsePart(toolCall: LlmToolCall): 
         response: { result: toolCall.result },
       },
     };
-  } else if (toolCall.executionState === "error") {
+  } else if (toolCall.executionState === "error" || toolCall.executionState === "cancelled") {
     return {
       functionResponse: {
         id: toolCall.id,
         name: toolCall.request.function.name,
-        response: { error: toolCall.error.message },
+        response: { error: toolCall.error?.message || "Cancelled" },
       },
     };
   }

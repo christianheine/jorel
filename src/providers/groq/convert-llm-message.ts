@@ -1,5 +1,5 @@
-import { LlmMessage } from "../../providers";
 import { ChatCompletionContentPart, ChatCompletionMessageParam } from "groq-sdk/resources/chat";
+import { LlmMessage } from "../../providers";
 import { LlmToolKit } from "../../tools";
 
 /** Convert unified LLM messages to Groq messages (ChatCompletionMessageParam) */
@@ -40,10 +40,10 @@ export const convertLlmMessagesToGroqMessages = async (
             content: LlmToolKit.serialize(toolCall.result),
             tool_call_id: toolCall.request.id,
           });
-        } else if (toolCall.executionState === "error") {
+        } else if (toolCall.executionState === "error" || toolCall.executionState === "cancelled") {
           convertedMessages.push({
             role: "tool",
-            content: toolCall.error.message,
+            content: toolCall.error?.message || "Cancelled",
             tool_call_id: toolCall.request.id,
           });
         }

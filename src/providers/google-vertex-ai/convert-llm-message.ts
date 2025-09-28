@@ -1,6 +1,6 @@
-import { LlmMessage, LlmUserMessageContent } from "../../providers";
 import { Content, Part } from "@google-cloud/vertexai";
 import { getBase64PartFromDataUrl } from "../../media/utils";
+import { LlmMessage, LlmUserMessageContent } from "../../providers";
 
 const textContentToParts = (text: string): Part[] => {
   return [
@@ -81,11 +81,19 @@ export const convertLlmMessagesToVertexAiMessages = async (
         chatMessages.push({
           role: "user",
           parts: m.toolCalls
-            .filter((toolCall) => toolCall.executionState === "completed" || toolCall.executionState === "error")
+            .filter(
+              (toolCall) =>
+                toolCall.executionState === "completed" ||
+                toolCall.executionState === "error" ||
+                toolCall.executionState === "cancelled",
+            )
             .map((toolCall) => ({
               functionResponse: {
                 name: toolCall.request.function.name,
-                response: toolCall.executionState === "completed" ? toolCall.result : { error: toolCall.error.message },
+                response:
+                  toolCall.executionState === "completed"
+                    ? toolCall.result
+                    : { error: toolCall.error?.message || "Cancelled" },
               },
             })),
         });

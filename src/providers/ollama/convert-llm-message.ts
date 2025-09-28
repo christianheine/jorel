@@ -1,6 +1,6 @@
-import { LlmMessage } from "../../providers";
 import { Message, ToolCall } from "ollama";
 import { ImageContent } from "../../media";
+import { LlmMessage } from "../../providers";
 import { LlmToolKit } from "../../tools";
 
 /** Convert unified LLM messages to Ollama messages (Message) */
@@ -37,10 +37,10 @@ export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[])
             role: "tool",
             content: LlmToolKit.serialize(toolCall.result),
           });
-        } else if (toolCall.executionState === "error") {
+        } else if (toolCall.executionState === "error" || toolCall.executionState === "cancelled") {
           convertedMessages.push({
             role: "tool",
-            content: toolCall.error.message,
+            content: toolCall.error?.message || "Cancelled",
           });
         }
       }

@@ -1,6 +1,6 @@
-import { LlmMessage } from "../../providers";
 import Anthropic from "@anthropic-ai/sdk";
 import { getBase64PartFromDataUrl } from "../../media/utils";
+import { LlmMessage } from "../../providers";
 import { LlmToolKit } from "../../tools";
 
 type ValidMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
@@ -60,7 +60,8 @@ export const convertLlmMessagesToAnthropicMessages = async (
 
       if (message.toolCalls) {
         for (const toolCall of message.toolCalls.filter(
-          (tc) => tc.executionState === "completed" || tc.executionState === "error",
+          (tc) =>
+            tc.executionState === "completed" || tc.executionState === "error" || tc.executionState === "cancelled",
         )) {
           convertedChatMessages.push({
             role: "user",
@@ -70,8 +71,8 @@ export const convertLlmMessagesToAnthropicMessages = async (
                 tool_use_id: toolCall.request.id,
                 content:
                   toolCall.executionState === "error"
-                    ? `Error: ${toolCall.error.message}`
-                    : LlmToolKit.serialize(toolCall.result),
+                    ? `Error: ${toolCall.error?.message || "Cancelled"}`
+                    : LlmToolKit.serialize(toolCall.result || {}),
               },
             ],
           });
