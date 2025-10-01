@@ -114,6 +114,8 @@ export interface JorElMessagesGenerationConfig extends JorElCoreGenerationConfig
   maxToolCallErrors?: number;
   context?: LLmToolContextSegment;
   secureContext?: LLmToolContextSegment;
+  json?: boolean | JsonSpecification;
+  jsonDescription?: string;
 }
 
 export interface JorElMessagesJsonGenerationConfig extends Omit<JorElMessagesGenerationConfig, "json"> {
@@ -806,7 +808,7 @@ export class JorEl {
    * message, the system message inside the messages will be ignored.
    * @internal
    */
-  private async generateMessages(
+  async generateMessages(
     content: JorElTaskInput,
     systemMessage?: string,
     documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection,

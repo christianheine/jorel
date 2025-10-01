@@ -1,8 +1,13 @@
 # Changelog
 
-## 0.15.0 (2025-09-28)
+## 0.15.1 (2025-10-01)
 
 **Note: This is planned to be the final 0.x release before JorEl 1.0.0, marking the transition to a stable API.**
+
+* Add missing json config when passing messages directly
+* Expose functionality to generate messages
+
+## 0.15.0 (2025-09-28)
 
 * Add support for stream buffering
 * Improve support for tool approvals & tool handling in general (added utilities on LlmToolKit)
