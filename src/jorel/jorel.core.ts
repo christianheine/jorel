@@ -241,11 +241,7 @@ export class JorElCoreStore {
     });
 
     // Apply buffering if configured
-    const bufferedStream = this.createBufferedStream(
-      stream,
-      configWithOverrides.streamBuffer,
-      configWithOverrides.abortSignal,
-    );
+    const bufferedStream = this.createBufferedStream(stream, configWithOverrides.streamBuffer);
 
     for await (const chunk of bufferedStream) {
       yield chunk;
@@ -420,7 +416,6 @@ export class JorElCoreStore {
       unknown
     >,
     bufferConfig?: StreamBufferConfig,
-    abortSignal?: AbortSignal,
   ): AsyncGenerator<
     | LlmStreamResponseChunk
     | LlmStreamResponse
@@ -457,11 +452,6 @@ export class JorElCoreStore {
 
     try {
       for await (const chunk of stream) {
-        // Check if the request was aborted
-        if (abortSignal?.aborted) {
-          throw new Error("Request was aborted");
-        }
-
         // Handle content chunks - these get buffered
         if (chunk.type === "chunk") {
           // Start timing if this is the first content in buffer

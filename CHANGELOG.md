@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.1 (2025-10-06)
+
+* Gracefully end stream when cancelling a generation with stream buffer active
+
 ## 0.16.0 (2025-10-06)
 
 * Add cancellation support
