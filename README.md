@@ -63,7 +63,11 @@ To run the example, use:
 npm run start
 ```
 
-## What's New in v0.15.0
+## What's new in v0.16.x
+
+* **Cancellation support**: Added initial support to pass an AbortController to the generation (not equally supported by all providers)
+
+## What's New in v0.15.x
 
 * **🛠️ Enhanced Tool Handling**: New `LlmToolKit` class with approval workflows and advanced tool management utilities
 * **📊 Stream Buffering**: Control chunk emission rates with configurable buffering for better performance

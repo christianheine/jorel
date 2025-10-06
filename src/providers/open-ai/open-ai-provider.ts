@@ -1,4 +1,5 @@
-import { AzureOpenAI, OpenAI } from "openai";
+import { AzureOpenAI, OpenAI, OpenAIError } from "openai";
+import { Stream } from "openai/core/streaming";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
@@ -10,7 +11,7 @@ import {
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
-import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
+import { firstEntry, generateUniqueId, JorElAbortError, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
 import { jsonResponseToOpenAi, toolChoiceToOpenAi } from "./convert-inputs";
 import { convertLlmMessagesToOpenAiMessages } from "./convert-llm-message";
@@ -56,18 +57,34 @@ export class OpenAIProvider implements LlmCoreProvider {
 
     const temperature = config.temperature ?? undefined;
 
-    const response = await this.client.chat.completions.create({
-      model,
-      messages: await convertLlmMessagesToOpenAiMessages(messages),
-      temperature,
-      response_format: jsonResponseToOpenAi(config.json, config.jsonDescription),
-      max_tokens: config.maxTokens,
-      parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
-      tool_choice: toolChoiceToOpenAi(config.toolChoice),
-      tools: config.tools?.asLlmFunctions,
-      reasoning_effort: config.reasoningEffort,
-      verbosity: config.verbosity,
-    });
+    let response: OpenAI.Chat.Completions.ChatCompletion & {
+      _request_id?: string | null;
+    };
+
+    try {
+      response = await this.client.chat.completions.create(
+        {
+          model,
+          messages: await convertLlmMessagesToOpenAiMessages(messages),
+          temperature,
+          response_format: jsonResponseToOpenAi(config.json, config.jsonDescription),
+          max_tokens: config.maxTokens,
+          parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
+          tool_choice: toolChoiceToOpenAi(config.toolChoice),
+          tools: config.tools?.asLlmFunctions,
+          reasoning_effort: config.reasoningEffort,
+          verbosity: config.verbosity,
+        },
+        {
+          signal: config.abortSignal,
+        },
+      );
+    } catch (error: any) {
+      if (error instanceof OpenAIError && error.message.toLowerCase().includes("aborted")) {
+        throw new JorElAbortError("Request was aborted");
+      }
+      throw error;
+    }
 
     const durationMs = Date.now() - start;
 
@@ -122,22 +139,38 @@ export class OpenAIProvider implements LlmCoreProvider {
 
     const temperature = config.temperature ?? undefined;
 
-    const response = await this.client.chat.completions.create({
-      model,
-      messages: await convertLlmMessagesToOpenAiMessages(messages),
-      temperature,
-      response_format: jsonResponseToOpenAi(config.json, config.jsonDescription),
-      max_tokens: config.maxTokens,
-      stream: true,
-      tools: config.tools?.asLlmFunctions,
-      parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
-      tool_choice: toolChoiceToOpenAi(config.toolChoice),
-      stream_options: {
-        include_usage: true,
-      },
-      reasoning_effort: config.reasoningEffort,
-      verbosity: config.verbosity,
-    });
+    let response: Stream<OpenAI.Chat.Completions.ChatCompletionChunk> & {
+      _request_id?: string | null;
+    };
+
+    try {
+      response = await this.client.chat.completions.create(
+        {
+          model,
+          messages: await convertLlmMessagesToOpenAiMessages(messages),
+          temperature,
+          response_format: jsonResponseToOpenAi(config.json, config.jsonDescription),
+          max_tokens: config.maxTokens,
+          stream: true,
+          tools: config.tools?.asLlmFunctions,
+          parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
+          tool_choice: toolChoiceToOpenAi(config.toolChoice),
+          stream_options: {
+            include_usage: true,
+          },
+          reasoning_effort: config.reasoningEffort,
+          verbosity: config.verbosity,
+        },
+        {
+          signal: config.abortSignal,
+        },
+      );
+    } catch (error: any) {
+      if (error instanceof OpenAIError && error.message.toLowerCase().includes("aborted")) {
+        throw new JorElAbortError("Request was aborted");
+      }
+      throw error;
+    }
 
     let inputTokens: MaybeUndefined<number>;
     let outputTokens: MaybeUndefined<number>;
@@ -225,11 +258,16 @@ export class OpenAIProvider implements LlmCoreProvider {
     return models.data.map((model) => model.id);
   }
 
-  async createEmbedding(model: string, text: string): Promise<number[]> {
-    const response = await this.client.embeddings.create({
-      model,
-      input: text,
-    });
+  async createEmbedding(model: string, text: string, abortSignal?: AbortSignal): Promise<number[]> {
+    const response = await this.client.embeddings.create(
+      {
+        model,
+        input: text,
+      },
+      {
+        signal: abortSignal,
+      },
+    );
 
     if (!response || !response.data || !response.data || response.data.length === 0) {
       throw new Error("Failed to create embedding");

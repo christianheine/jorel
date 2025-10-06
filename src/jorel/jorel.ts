@@ -84,6 +84,8 @@ export interface JorElCoreGenerationConfig {
   verbosity?: Verbosity;
   /** Stream buffering configuration for controlling chunk emission rate */
   streamBuffer?: StreamBufferConfig;
+  /** AbortSignal to cancel the generation request */
+  abortSignal?: AbortSignal;
 }
 
 export interface JorElTextGenerationConfigWithTools extends JorElCoreGenerationConfig {
@@ -689,7 +691,7 @@ export class JorEl {
               createdAt: Date.now(),
             });
           }
-          yield { type: "messages", messages, stopReason: "completed" };
+          yield { type: "messages", messages, stopReason: config.abortSignal?.aborted ? "userCancelled" : "completed" };
         }
       }
     }
@@ -701,9 +703,10 @@ export class JorEl {
    * @param text - The text to create an embedding for.
    * @param config - The configuration for the embedding.
    * @param config.model - The model to use for the embedding (optional).
+   * @param config.abortSignal - AbortSignal to cancel the embedding request (optional).
    */
-  async embed(text: string, config: { model?: string } = {}): Promise<number[]> {
-    return this._core.generateEmbedding(text, config.model);
+  async embed(text: string, config: { model?: string; abortSignal?: AbortSignal } = {}): Promise<number[]> {
+    return this._core.generateEmbedding(text, config.model, config.abortSignal);
   }
 
   /**
@@ -806,7 +809,6 @@ export class JorEl {
    * @param documentSystemMessage - The system message to use for documents (optional).
    * @param messageHistory - The message history to include (optional). If provided along with a dedicated system
    * message, the system message inside the messages will be ignored.
-   * @internal
    */
   async generateMessages(
     content: JorElTaskInput,

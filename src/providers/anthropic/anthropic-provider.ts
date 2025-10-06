@@ -1,5 +1,6 @@
 import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
 import Anthropic from "@anthropic-ai/sdk";
+import { Stream } from "@anthropic-ai/sdk/streaming";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
@@ -11,7 +12,7 @@ import {
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
-import { generateUniqueId, MaybeUndefined } from "../../shared";
+import { generateUniqueId, JorElAbortError, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
 import { convertLlmMessagesToAnthropicMessages } from "./convert-llm-message";
 
@@ -88,45 +89,61 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const temperature = config.temperature ?? undefined;
 
-    const response = await this.client.messages.create({
-      model,
-      messages: chatMessages,
-      temperature,
-      max_tokens: config.maxTokens || 4096,
-      system: systemMessage,
-      thinking: config.reasoningEffort === "minimal" ? { type: "disabled" } : undefined,
-      tool_choice:
-        config.toolChoice === "none" || !config.tools || !config.tools.hasTools
-          ? undefined
-          : config.toolChoice === "any"
-            ? {
-                type: "auto",
-                disable_parallel_tool_use: config.tools?.allowParallelCalls,
-              }
-            : config.toolChoice === "required"
-              ? {
-                  type: "auto",
-                  disable_parallel_tool_use: config.tools?.allowParallelCalls,
-                }
-              : config.toolChoice
+    let response: Anthropic.Messages.Message & {
+      _request_id?: string | null;
+    };
+
+    try {
+      response = await this.client.messages.create(
+        {
+          model,
+          messages: chatMessages,
+          temperature,
+          max_tokens: config.maxTokens || 4096,
+          system: systemMessage,
+          thinking: config.reasoningEffort === "minimal" ? { type: "disabled" } : undefined,
+          tool_choice:
+            config.toolChoice === "none" || !config.tools || !config.tools.hasTools
+              ? undefined
+              : config.toolChoice === "any"
                 ? {
-                    type: "tool",
-                    name: config.toolChoice,
+                    type: "auto",
                     disable_parallel_tool_use: config.tools?.allowParallelCalls,
                   }
-                : undefined,
-      tools:
-        config.toolChoice === "none"
-          ? undefined
-          : config.tools?.asLlmFunctions?.map<Anthropic.Messages.Tool>((tool) => ({
-              name: tool.function.name,
-              input_schema: {
-                ...tool.function.parameters?.properties,
-                type: "object",
-              },
-              description: tool.function.description,
-            })),
-    });
+                : config.toolChoice === "required"
+                  ? {
+                      type: "auto",
+                      disable_parallel_tool_use: config.tools?.allowParallelCalls,
+                    }
+                  : config.toolChoice
+                    ? {
+                        type: "tool",
+                        name: config.toolChoice,
+                        disable_parallel_tool_use: config.tools?.allowParallelCalls,
+                      }
+                    : undefined,
+          tools:
+            config.toolChoice === "none"
+              ? undefined
+              : config.tools?.asLlmFunctions?.map<Anthropic.Messages.Tool>((tool) => ({
+                  name: tool.function.name,
+                  input_schema: {
+                    ...tool.function.parameters?.properties,
+                    type: "object",
+                  },
+                  description: tool.function.description,
+                })),
+        },
+        {
+          signal: config.abortSignal,
+        },
+      );
+    } catch (error: any) {
+      if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+        throw new JorElAbortError("Request was aborted");
+      }
+      throw error;
+    }
 
     const durationMs = Date.now() - start;
 
@@ -181,46 +198,62 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const temperature = config.temperature ?? undefined;
 
-    const responseStream = await this.client.messages.create({
-      model,
-      messages: chatMessages,
-      temperature,
-      max_tokens: config.maxTokens || 4096,
-      system: systemMessage,
-      stream: true,
-      thinking: config.reasoningEffort === "minimal" ? { type: "disabled" } : undefined,
-      tool_choice:
-        config.toolChoice === "none" || !config.tools || !config.tools.hasTools
-          ? undefined
-          : config.toolChoice === "any"
-            ? {
-                type: "auto",
-                disable_parallel_tool_use: config.tools?.allowParallelCalls,
-              }
-            : config.toolChoice === "required"
-              ? {
-                  type: "auto",
-                  disable_parallel_tool_use: config.tools?.allowParallelCalls,
-                }
-              : config.toolChoice
+    let responseStream: Stream<Anthropic.Messages.RawMessageStreamEvent> & {
+      _request_id?: string | null;
+    };
+
+    try {
+      responseStream = await this.client.messages.create(
+        {
+          model,
+          messages: chatMessages,
+          temperature,
+          max_tokens: config.maxTokens || 4096,
+          system: systemMessage,
+          stream: true,
+          thinking: config.reasoningEffort === "minimal" ? { type: "disabled" } : undefined,
+          tool_choice:
+            config.toolChoice === "none" || !config.tools || !config.tools.hasTools
+              ? undefined
+              : config.toolChoice === "any"
                 ? {
-                    type: "tool",
-                    name: config.toolChoice,
+                    type: "auto",
                     disable_parallel_tool_use: config.tools?.allowParallelCalls,
                   }
-                : undefined,
-      tools:
-        config.toolChoice === "none"
-          ? undefined
-          : config.tools?.asLlmFunctions?.map<Anthropic.Messages.Tool>((tool) => ({
-              name: tool.function.name,
-              input_schema: {
-                ...tool.function.parameters?.properties,
-                type: "object",
-              },
-              description: tool.function.description,
-            })),
-    });
+                : config.toolChoice === "required"
+                  ? {
+                      type: "auto",
+                      disable_parallel_tool_use: config.tools?.allowParallelCalls,
+                    }
+                  : config.toolChoice
+                    ? {
+                        type: "tool",
+                        name: config.toolChoice,
+                        disable_parallel_tool_use: config.tools?.allowParallelCalls,
+                      }
+                    : undefined,
+          tools:
+            config.toolChoice === "none"
+              ? undefined
+              : config.tools?.asLlmFunctions?.map<Anthropic.Messages.Tool>((tool) => ({
+                  name: tool.function.name,
+                  input_schema: {
+                    ...tool.function.parameters?.properties,
+                    type: "object",
+                  },
+                  description: tool.function.description,
+                })),
+        },
+        {
+          signal: config.abortSignal,
+        },
+      );
+    } catch (error: any) {
+      if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+        throw new JorElAbortError("Request was aborted");
+      }
+      throw error;
+    }
 
     let inputTokens = undefined;
     let outputTokens = undefined;
@@ -323,7 +356,7 @@ export class AnthropicProvider implements LlmCoreProvider {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async createEmbedding(model: string, text: string): Promise<number[]> {
+  async createEmbedding(model: string, text: string, abortSignal?: AbortSignal): Promise<number[]> {
     throw new Error("Embeddings are not yet supported for Anthropic");
   }
 }

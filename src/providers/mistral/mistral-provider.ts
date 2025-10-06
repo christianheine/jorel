@@ -1,5 +1,7 @@
 import { Mistral } from "@mistralai/mistralai";
+import { EventStream } from "@mistralai/mistralai/lib/event-streams";
 import { RetryConfig } from "@mistralai/mistralai/lib/retries";
+import { ChatCompletionResponse, CompletionEvent } from "@mistralai/mistralai/models/components";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
@@ -11,7 +13,7 @@ import {
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
-import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
+import { firstEntry, generateUniqueId, JorElAbortError, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
 import { jsonResponseToMistral, toolChoiceToMistral } from "./convert-inputs";
 import { convertLlmMessagesToMistralMessages } from "./convert-llm-message";
@@ -54,26 +56,38 @@ export class MistralProvider implements LlmCoreProvider {
 
     const temperature = config.temperature ?? undefined;
 
-    const response = await this.client.chat.complete({
-      model,
-      messages: await convertLlmMessagesToMistralMessages(messages),
-      temperature,
-      responseFormat: jsonResponseToMistral(config.json),
-      maxTokens: config.maxTokens,
-      toolChoice: toolChoiceToMistral(config.toolChoice),
-      tools: config.tools?.asLlmFunctions?.map((f) => ({
-        type: "function",
-        function: {
-          name: f.function.name,
-          description: f.function.description,
-          parameters: {
-            type: f.function.parameters?.type ?? "object",
-            properties: f.function.parameters?.properties ?? ({} as Record<string, any>),
-            required: f.function.parameters?.required ?? [],
-          },
+    let response: ChatCompletionResponse;
+
+    try {
+      response = await this.client.chat.complete(
+        {
+          model,
+          messages: await convertLlmMessagesToMistralMessages(messages),
+          temperature,
+          responseFormat: jsonResponseToMistral(config.json),
+          maxTokens: config.maxTokens,
+          toolChoice: toolChoiceToMistral(config.toolChoice),
+          tools: config.tools?.asLlmFunctions?.map((f) => ({
+            type: "function",
+            function: {
+              name: f.function.name,
+              description: f.function.description,
+              parameters: {
+                type: f.function.parameters?.type ?? "object",
+                properties: f.function.parameters?.properties ?? ({} as Record<string, any>),
+                required: f.function.parameters?.required ?? [],
+              },
+            },
+          })),
         },
-      })),
-    });
+        config.abortSignal ? { fetchOptions: { signal: config.abortSignal } } : undefined,
+      );
+    } catch (error: any) {
+      if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+        throw new JorElAbortError("Request was aborted");
+      }
+      throw error;
+    }
 
     const durationMs = Date.now() - start;
 
@@ -132,27 +146,39 @@ export class MistralProvider implements LlmCoreProvider {
 
     const temperature = config.temperature ?? undefined;
 
-    const response = await this.client.chat.stream({
-      model,
-      messages: await convertLlmMessagesToMistralMessages(messages),
-      temperature,
-      responseFormat: jsonResponseToMistral(config.json),
-      maxTokens: config.maxTokens,
-      stream: true,
-      tools: config.tools?.asLlmFunctions?.map((f) => ({
-        type: "function",
-        function: {
-          name: f.function.name,
-          description: f.function.description,
-          parameters: {
-            type: f.function.parameters?.type ?? "object",
-            properties: f.function.parameters?.properties ?? ({} as Record<string, any>),
-            required: f.function.parameters?.required ?? [],
-          },
+    let response: EventStream<CompletionEvent>;
+
+    try {
+      response = await this.client.chat.stream(
+        {
+          model,
+          messages: await convertLlmMessagesToMistralMessages(messages),
+          temperature,
+          responseFormat: jsonResponseToMistral(config.json),
+          maxTokens: config.maxTokens,
+          stream: true,
+          tools: config.tools?.asLlmFunctions?.map((f) => ({
+            type: "function",
+            function: {
+              name: f.function.name,
+              description: f.function.description,
+              parameters: {
+                type: f.function.parameters?.type ?? "object",
+                properties: f.function.parameters?.properties ?? ({} as Record<string, any>),
+                required: f.function.parameters?.required ?? [],
+              },
+            },
+          })),
+          toolChoice: toolChoiceToMistral(config.toolChoice),
         },
-      })),
-      toolChoice: toolChoiceToMistral(config.toolChoice),
-    });
+        config.abortSignal ? { fetchOptions: { signal: config.abortSignal } } : undefined,
+      );
+    } catch (error: any) {
+      if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+        throw new JorElAbortError("Request was aborted");
+      }
+      throw error;
+    }
 
     let inputTokens: MaybeUndefined<number>;
     let outputTokens: MaybeUndefined<number>;
@@ -248,11 +274,14 @@ export class MistralProvider implements LlmCoreProvider {
     return models.data?.map((model) => model.id) ?? [];
   }
 
-  async createEmbedding(model: string, text: string): Promise<number[]> {
-    const response = await this.client.embeddings.create({
-      model,
-      inputs: text,
-    });
+  async createEmbedding(model: string, text: string, abortSignal?: AbortSignal): Promise<number[]> {
+    const response = await this.client.embeddings.create(
+      {
+        model,
+        inputs: text,
+      },
+      abortSignal ? { fetchOptions: { signal: abortSignal } } : undefined,
+    );
 
     if (!response || !response.data || !response.data || response.data.length === 0 || !response.data[0].embedding) {
       throw new Error("Failed to create embedding");

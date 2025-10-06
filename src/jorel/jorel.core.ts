@@ -192,7 +192,7 @@ export class JorElCoreStore {
     return {
       output: generation,
       messages: _messages,
-      stopReason: "completed",
+      stopReason: config.abortSignal?.aborted ? "userCancelled" : "completed",
     };
   }
 
@@ -241,7 +241,11 @@ export class JorElCoreStore {
     });
 
     // Apply buffering if configured
-    const bufferedStream = this.createBufferedStream(stream, configWithOverrides.streamBuffer);
+    const bufferedStream = this.createBufferedStream(
+      stream,
+      configWithOverrides.streamBuffer,
+      configWithOverrides.abortSignal,
+    );
 
     for await (const chunk of bufferedStream) {
       yield chunk;
@@ -322,6 +326,13 @@ export class JorElCoreStore {
       const processedToolCalls: LlmToolCall[] = [];
 
       for (const toolCall of response.toolCalls) {
+        // Check if the request was aborted
+        if (config.abortSignal?.aborted) {
+          this.setCallToError(toolCall, "Request was aborted");
+          processedToolCalls.push(toolCall);
+          continue;
+        }
+
         if (toolCallErrors >= maxToolCallErrors) {
           this.setCallToError(toolCall, "Too many tool call errors");
           processedToolCalls.push(toolCall);
@@ -377,7 +388,7 @@ export class JorElCoreStore {
     yield {
       type: "messages",
       messages,
-      stopReason: "completed",
+      stopReason: config.abortSignal?.aborted ? "userCancelled" : "completed",
     };
   }
 
@@ -409,6 +420,7 @@ export class JorElCoreStore {
       unknown
     >,
     bufferConfig?: StreamBufferConfig,
+    abortSignal?: AbortSignal,
   ): AsyncGenerator<
     | LlmStreamResponseChunk
     | LlmStreamResponse
@@ -445,6 +457,11 @@ export class JorElCoreStore {
 
     try {
       for await (const chunk of stream) {
+        // Check if the request was aborted
+        if (abortSignal?.aborted) {
+          throw new Error("Request was aborted");
+        }
+
         // Handle content chunks - these get buffered
         if (chunk.type === "chunk") {
           // Start timing if this is the first content in buffer
@@ -479,8 +496,9 @@ export class JorElCoreStore {
    * Generate an embedding for a given text
    * @param text - The text to generate an embedding for
    * @param model - The model to use for this generation (optional)
+   * @param abortSignal - AbortSignal to cancel the embedding request (optional)
    */
-  async generateEmbedding(text: string, model?: string) {
+  async generateEmbedding(text: string, model?: string, abortSignal?: AbortSignal) {
     const modelEntry = this.modelManager.getEmbeddingModel(model || this.modelManager.getDefaultEmbeddingModel());
     const provider = this.providerManager.getProvider(modelEntry.provider);
     this.logger.debug(
@@ -492,6 +510,6 @@ export class JorElCoreStore {
       provider: modelEntry.provider,
       text,
     });
-    return await provider.createEmbedding(modelEntry.model, text);
+    return await provider.createEmbedding(modelEntry.model, text, abortSignal);
   }
 }

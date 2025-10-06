@@ -1,5 +1,6 @@
 export * from "./array-utils";
 export * from "./date-reviver";
+export * from "./errors";
 export * from "./genrate-random-id";
 export * from "./object-utils";
 export * from "./type-utils";

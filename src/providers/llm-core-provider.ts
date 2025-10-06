@@ -9,7 +9,7 @@ export type Verbosity = "low" | "medium" | "high" | null;
 
 export type JsonSpecification = ZodObject<any> | Record<string, unknown>;
 
-export type LLmGenerationStopReason = "toolCallsRequireApproval" | "completed";
+export type LLmGenerationStopReason = "toolCallsRequireApproval" | "completed" | "userCancelled";
 
 /**
  * Classification types for tool calls
@@ -41,6 +41,8 @@ interface CoreLlmGenerationConfig {
   verbosity?: Verbosity;
   reasoningEffort?: ReasoningEffort;
   streamBuffer?: StreamBufferConfig;
+  /** AbortSignal to cancel the generation request */
+  abortSignal?: AbortSignal;
 }
 
 export interface LlmGenerationConfig extends CoreLlmGenerationConfig {
@@ -306,5 +308,5 @@ export interface LlmCoreProvider {
 
   getAvailableModels(): Promise<string[]>;
 
-  createEmbedding(model: string, text: string): Promise<number[]>;
+  createEmbedding(model: string, text: string, abortSignal?: AbortSignal): Promise<number[]>;
 }

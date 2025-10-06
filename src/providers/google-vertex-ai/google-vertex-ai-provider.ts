@@ -25,7 +25,13 @@ import {
   LlmToolCall,
   toolChoiceToVertexAi,
 } from "../../providers";
-import { generateRandomId, generateUniqueId, MaybeUndefined, zodSchemaToJsonSchema } from "../../shared";
+import {
+  generateRandomId,
+  generateUniqueId,
+  JorElAbortError,
+  MaybeUndefined,
+  zodSchemaToJsonSchema,
+} from "../../shared";
 import { convertLlmMessagesToVertexAiMessages } from "./convert-llm-message";
 
 const defaultSafetySettings = [
@@ -124,6 +130,12 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     let response: GenerateContentResponse;
 
     try {
+      // Note: Google Vertex AI SDK doesn't support AbortSignal directly
+      // Check for cancellation before making the request
+      if (config.abortSignal?.aborted) {
+        throw new JorElAbortError("Request was aborted");
+      }
+
       response = (
         await generativeModel.generateContent({
           contents: chatMessages,
@@ -154,6 +166,9 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         })
       ).response;
     } catch (error: unknown) {
+      if (error instanceof JorElAbortError) {
+        throw error;
+      }
       if (error instanceof ClientError) {
         throw new Error(`[GoogleVertexAiProvider] Error generating content: ${error.message}`);
       }
@@ -232,39 +247,67 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     const temperature = config.temperature ?? undefined;
     const maxTokens = config.maxTokens ?? undefined;
 
-    const response: StreamGenerateContentResult = await generativeModel.generateContentStream({
-      contents: chatMessages,
-      systemInstruction: systemMessage,
-      tools: config.tools?.asLlmFunctions?.map<Tool>((f) => {
-        const functionDeclarations: FunctionDeclaration[] = [
-          {
-            name: f.function.name,
-            description: f.function.description,
-            parameters: f.function.parameters as unknown as FunctionDeclarationSchema,
-          },
-        ];
-        return { functionDeclarations };
-      }),
-      generationConfig: {
-        temperature,
-        maxOutputTokens: maxTokens,
-        responseMimeType: config.json ? "application/json" : "text/plain",
-        responseSchema:
-          config.json && typeof config.json !== "boolean"
-            ? config.json instanceof ZodObject
-              ? zodSchemaToJsonSchema(config.json)
-              : (config.json as any)
-            : undefined,
-      },
-      toolConfig: toolChoiceToVertexAi(config.tools?.hasTools ?? false, config.toolChoice),
-      safetySettings: this.safetySettings,
-    });
+    // Note: Google Vertex AI SDK doesn't support AbortSignal directly
+    // Check for cancellation before making the request
+    if (config.abortSignal?.aborted) {
+      throw new JorElAbortError("Request was aborted");
+    }
+
+    let response: StreamGenerateContentResult;
+
+    try {
+      response = await generativeModel.generateContentStream({
+        contents: chatMessages,
+        systemInstruction: systemMessage,
+        tools: config.tools?.asLlmFunctions?.map<Tool>((f) => {
+          const functionDeclarations: FunctionDeclaration[] = [
+            {
+              name: f.function.name,
+              description: f.function.description,
+              parameters: f.function.parameters as unknown as FunctionDeclarationSchema,
+            },
+          ];
+          return { functionDeclarations };
+        }),
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+          responseMimeType: config.json ? "application/json" : "text/plain",
+          responseSchema:
+            config.json && typeof config.json !== "boolean"
+              ? config.json instanceof ZodObject
+                ? zodSchemaToJsonSchema(config.json)
+                : (config.json as any)
+              : undefined,
+        },
+        toolConfig: toolChoiceToVertexAi(config.tools?.hasTools ?? false, config.toolChoice),
+        safetySettings: this.safetySettings,
+      });
+    } catch (error: unknown) {
+      if (error instanceof JorElAbortError) {
+        throw error;
+      }
+      if (error instanceof ClientError) {
+        throw new Error(`[GoogleVertexAiProvider] Error generating content stream: ${error.message}`);
+      }
+      if (error instanceof GoogleApiError) {
+        throw new Error(
+          `[GoogleVertexAiProvider] Error generating content stream: ${error.message}, code: ${error.code}, status: ${error.status}, details: ${error.errorDetails}`,
+        );
+      }
+      throw error;
+    }
 
     const durationMs = Date.now() - start;
 
     const _toolCalls: ToolCall[] = [];
 
     for await (const res of response.stream) {
+      // Check for cancellation during streaming
+      if (config.abortSignal?.aborted) {
+        throw new JorElAbortError("Request was aborted");
+      }
+
       const content: Content =
         res.candidates && res.candidates.length > 0
           ? res.candidates[0].content
@@ -384,7 +427,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async createEmbedding(model: string, text: string): Promise<number[]> {
+  async createEmbedding(model: string, text: string, abortSignal?: AbortSignal): Promise<number[]> {
     throw new Error("Embeddings are not yet supported for Vertex AI");
   }
 }

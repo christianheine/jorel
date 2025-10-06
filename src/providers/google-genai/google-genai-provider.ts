@@ -1,6 +1,8 @@
 import {
+  EmbedContentResponse,
   FunctionCallingConfigMode,
   GenerateContentConfig,
+  GenerateContentResponse,
   GoogleGenAI,
   HarmBlockThreshold,
   HarmCategory,
@@ -19,7 +21,13 @@ import {
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "..";
-import { generateRandomId, generateUniqueId, MaybeUndefined, zodSchemaToJsonSchema } from "../../shared";
+import {
+  generateRandomId,
+  generateUniqueId,
+  JorElAbortError,
+  MaybeUndefined,
+  zodSchemaToJsonSchema,
+} from "../../shared";
 import { convertLlmMessagesToGoogleGenerativeAiMessages } from "./convert-llm-message";
 
 export interface GoogleGenerativeAIConfig {
@@ -73,11 +81,25 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
         requestConfig.systemInstruction = systemInstruction;
       }
 
-      const result = await this.client.models.generateContent({
-        model,
-        contents,
-        config: requestConfig,
-      });
+      // Add abort signal to config if present
+      if (config.abortSignal) {
+        requestConfig.abortSignal = config.abortSignal;
+      }
+
+      let result: GenerateContentResponse;
+
+      try {
+        result = await this.client.models.generateContent({
+          model,
+          contents,
+          config: requestConfig,
+        });
+      } catch (error: any) {
+        if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+          throw new JorElAbortError("Request was aborted");
+        }
+        throw new Error(`[GoogleGenerativeAIProvider] Error generating content: ${error}`);
+      }
 
       const content = result.text ?? "";
       const functionCalls = result.functionCalls ?? [];
@@ -115,8 +137,11 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           outputTokens: undefined,
         },
       };
-    } catch (error) {
-      throw new Error(`[GoogleGenerativeAIProvider] Error generating content: ${error}`);
+    } catch (error: any) {
+      if (error instanceof JorElAbortError) {
+        throw error;
+      }
+      throw error;
     }
   }
 
@@ -136,11 +161,25 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
         requestConfig.systemInstruction = systemInstruction;
       }
 
-      const streamResult = await this.client.models.generateContentStream({
-        model,
-        contents,
-        config: requestConfig,
-      });
+      // Add abort signal to config if present
+      if (config.abortSignal) {
+        requestConfig.abortSignal = config.abortSignal;
+      }
+
+      let streamResult: AsyncGenerator<GenerateContentResponse, any, any>;
+
+      try {
+        streamResult = await this.client.models.generateContentStream({
+          model,
+          contents,
+          config: requestConfig,
+        });
+      } catch (error: any) {
+        if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+          throw new JorElAbortError("Request was aborted");
+        }
+        throw new Error(`[GoogleGenerativeAIProvider] Error generating content stream: ${error}`);
+      }
 
       let fullContent = "";
       const toolCalls: LlmToolCall[] = [];
@@ -217,8 +256,11 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           meta,
         };
       }
-    } catch (error) {
-      throw new Error(`[GoogleGenerativeAIProvider] Error generating content stream: ${error}`);
+    } catch (error: any) {
+      if (error instanceof JorElAbortError) {
+        throw error;
+      }
+      throw error;
     }
   }
 
@@ -226,14 +268,25 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
     return initialGoogleGenAiModels;
   }
 
-  async createEmbedding(model: string, text: string): Promise<number[]> {
-    const result = await this.client.models.embedContent({
-      model,
-      contents: [{ role: "user", parts: [{ text }] }],
-    });
+  async createEmbedding(model: string, text: string, abortSignal?: AbortSignal): Promise<number[]> {
+    let result: EmbedContentResponse;
+    try {
+      result = await this.client.models.embedContent({
+        model,
+        contents: [{ role: "user", parts: [{ text }] }],
+        config: abortSignal ? { abortSignal } : undefined,
+      });
+    } catch (error: any) {
+      if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+        throw new JorElAbortError("Request was aborted");
+      }
+      throw error;
+    }
+
     if (!result.embeddings || result.embeddings.length === 0) {
       throw new Error("No embedding returned");
     }
+
     return result.embeddings[0].values ?? [];
   }
 

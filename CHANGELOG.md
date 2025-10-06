@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.15.1 (2025-10-01)
+## 0.16.0 (2025-10-06)
 
-**Note: This is planned to be the final 0.x release before JorEl 1.0.0, marking the transition to a stable API.**
+* Add cancellation support
+
+## 0.15.1 (2025-10-01)
 
 * Add missing json config when passing messages directly
 * Expose functionality to generate messages
