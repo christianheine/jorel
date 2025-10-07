@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.2 (2025-10-07)
+
+* Fix an issue that caused streaming to fail when tools require approval
+* Upgrade dependencies
+
 ## 0.16.1 (2025-10-06)
 
 * Gracefully end stream when cancelling a generation with stream buffer active

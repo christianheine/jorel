@@ -319,6 +319,23 @@ export class JorElCoreStore {
         };
       }
 
+      // Check if any tool calls require approval - if so, stop processing and return
+      const hasToolCallsRequiringApproval = response.toolCalls.some((tc) => tc.approvalState === "requiresApproval");
+
+      if (hasToolCallsRequiringApproval) {
+        // Stop processing and return messages with approval required reason
+        messages.push(generateAssistantMessage(response.content, response.toolCalls));
+
+        yield response;
+        yield {
+          type: "messages",
+          messages,
+          stopReason: "toolCallsRequireApproval",
+        };
+
+        return; // Stop processing - don't execute tools requiring approval
+      }
+
       const processedToolCalls: LlmToolCall[] = [];
 
       for (const toolCall of response.toolCalls) {
