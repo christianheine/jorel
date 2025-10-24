@@ -223,20 +223,49 @@ export class MistralProvider implements LlmCoreProvider {
 
     const provider = this.name;
 
-    const toolCalls: MaybeUndefined<LlmToolCall[]> = _toolCalls.map((call) => {
-      return {
+    const toolCalls: LlmToolCall[] = _toolCalls.map((call) => {
+      let parsedArgs: any = null;
+      let parseError: Error | null = null;
+      try {
+        parsedArgs = LlmToolKit.deserialize(call.function.arguments);
+      } catch (e: any) {
+        parseError = e instanceof Error ? e : new Error("Unable to parse tool call arguments");
+      }
+
+      const approvalState: LlmToolCall["approvalState"] = config.tools?.getTool(call.function.name)
+        ?.requiresConfirmation
+        ? "requiresApproval"
+        : "noApprovalRequired";
+
+      const base = {
         id: generateUniqueId(),
         request: {
           id: call.id,
           function: {
             name: call.function.name,
-            arguments: LlmToolKit.deserialize(call.function.arguments),
+            arguments: parsedArgs ?? {},
           },
         },
-        approvalState: config.tools?.getTool(call.function.name)?.requiresConfirmation
-          ? "requiresApproval"
-          : "noApprovalRequired",
-        executionState: "pending",
+        approvalState,
+      };
+
+      if (parseError) {
+        return {
+          ...base,
+          executionState: "error" as const,
+          result: null,
+          error: {
+            type: parseError.name || "ToolArgumentParseError",
+            message: parseError.message || "Invalid tool call arguments",
+            numberOfAttempts: 1,
+            lastAttempt: new Date(),
+          },
+        };
+      }
+
+      return {
+        ...base,
+        executionState: "pending" as const,
         result: null,
         error: null,
       };

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.3 (2025-10-24)
+
+* Improve error handling when tool call arguments cannot be parsed as JSON (affects OpenAi, Mistral, Anthropic only)
+* Upgrade dependencies
+
 ## 0.16.2 (2025-10-07)
 
 * Fix an issue that caused streaming to fail when tools require approval

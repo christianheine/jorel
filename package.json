@@ -1,6 +1,6 @@
 {
   "name": "jorel",
-  "version": "0.16.2",
+  "version": "0.16.3",
   "description": "The easiest way to use LLMs, including streams, images, documents, tools and various agent scenarios.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -54,19 +54,19 @@
   },
   "dependencies": {
     "@anthropic-ai/bedrock-sdk": "0.25.0",
-    "@anthropic-ai/sdk": "0.65.0",
+    "@anthropic-ai/sdk": "0.67.0",
     "@google-cloud/vertexai": "1.10.0",
-    "@google/genai": "1.22.0",
+    "@google/genai": "1.27.0",
     "@mistralai/mistralai": "1.7.5",
     "axios": "1.12.2",
     "dotenv": "17.2.2",
     "file-type": "16.5.4",
-    "groq-sdk": "0.33.0",
+    "groq-sdk": "0.34.0",
     "ollama": "0.6.0",
-    "openai": "6.2.0",
+    "openai": "6.6.0",
     "uuid": "11.1.0",
     "winston": "3.18.3",
-    "zod": "3.25.68",
+    "zod": "3.25.76",
     "zod-to-json-schema": "3.24.6"
   },
   "devDependencies": {

@@ -307,20 +307,52 @@ export class AnthropicProvider implements LlmCoreProvider {
       outputTokens,
     };
 
-    const toolCalls: MaybeUndefined<LlmToolCall[]> = Object.values(_toolCalls).map((c) => ({
-      id: generateUniqueId(),
-      request: {
-        id: c.id,
-        function: {
-          name: c.name,
-          arguments: LlmToolKit.deserialize(c.arguments),
+    const toolCalls: LlmToolCall[] = Object.values(_toolCalls).map((c) => {
+      let parsedArgs: any = null;
+      let parseError: Error | null = null;
+      try {
+        parsedArgs = LlmToolKit.deserialize(c.arguments);
+      } catch (e: any) {
+        parseError = e instanceof Error ? e : new Error("Unable to parse tool call arguments");
+      }
+
+      const approvalState: LlmToolCall["approvalState"] = config.tools?.getTool(c.name)?.requiresConfirmation
+        ? "requiresApproval"
+        : "noApprovalRequired";
+
+      const base = {
+        id: generateUniqueId(),
+        request: {
+          id: c.id,
+          function: {
+            name: c.name,
+            arguments: parsedArgs ?? {},
+          },
         },
-      },
-      approvalState: config.tools?.getTool(c.name)?.requiresConfirmation ? "requiresApproval" : "noApprovalRequired",
-      executionState: "pending",
-      result: null,
-      error: null,
-    }));
+        approvalState,
+      };
+
+      if (parseError) {
+        return {
+          ...base,
+          executionState: "error" as const,
+          result: null,
+          error: {
+            type: parseError.name || "ToolArgumentParseError",
+            message: parseError.message || "Invalid tool call arguments",
+            numberOfAttempts: 1,
+            lastAttempt: new Date(),
+          },
+        };
+      }
+
+      return {
+        ...base,
+        executionState: "pending" as const,
+        result: null,
+        error: null,
+      };
+    });
 
     if (toolCalls && toolCalls.length > 0) {
       yield {
