@@ -15,31 +15,48 @@ Each provider must implement the `LlmCoreProvider` interface. This interface def
 interface LlmCoreProvider {
   readonly name: string;
 
-  generateResponse(model: string, messages: CoreLlmMessage[], config?: LlmGenerationConfig): Promise<LlmResponse>;
+  generateResponse(
+    model: string, 
+    messages: LlmMessage[], 
+    config?: LlmGenerationConfig
+  ): Promise<LlmResponse>;
 
   generateResponseStream(
     model: string,
-    messages: CoreLlmMessage[],
+    messages: LlmMessage[],
     config?: LlmGenerationConfig,
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown>;
+  ): AsyncGenerator<
+    | LlmStreamResponseChunk 
+    | LlmStreamResponse 
+    | LlmStreamResponseWithToolCalls
+    | LlmStreamToolCallStarted
+    | LlmStreamToolCallCompleted, 
+    void, 
+    unknown
+  >;
 
   getAvailableModels(): Promise<string[]>;
 
-  createEmbedding(model: string, text: string): Promise<number[]>;
+  createEmbedding(model: string, text: string, abortSignal?: AbortSignal): Promise<number[]>;
 }
 ```
 
 The LlmGenerationConfig interface is defined as follows:
 
 ```typescript
-import {LogService, LogLevel, LlmToolKit, LlmToolChoice} from "jorel";
+import { LogService, LogLevel, LlmToolKit, LlmToolChoice, ReasoningEffort, Verbosity, StreamBufferConfig } from "jorel";
 
 interface LlmGenerationConfig {
-  temperature?: number;
+  temperature?: number | null;
   maxTokens?: number;
-  json?: boolean;
+  json?: boolean | JsonSpecification;
+  jsonDescription?: string;
   tools?: LlmToolKit;
   toolChoice?: LlmToolChoice;
+  reasoningEffort?: ReasoningEffort;
+  verbosity?: Verbosity;
+  streamBuffer?: StreamBufferConfig;
+  abortSignal?: AbortSignal;
   logLevel?: LogLevel;
   logger?: LogService;
 }
@@ -48,9 +65,12 @@ interface LlmGenerationConfig {
 ## Available providers
 
 JorEl ships with the following providers:
-- `AnthropicProvider`
-- `GoogleVertexAiProvider`
-- `GrokProvider`
-- `GroqProvider`
-- `OllamaProvider`
-- `OpenAIProvider`
+* `AnthropicProvider`
+* `GoogleGenerativeAIProvider`
+* `GoogleVertexAiProvider`
+* `GrokProvider`
+* `GroqProvider`
+* `MistralProvider`
+* `OllamaProvider`
+* `OpenAIProvider`
+* `OpenRouterProvider`

@@ -230,6 +230,98 @@ for await (const chunk of stream) {
 
 For more complex tool usage, including chaining tools and handling errors, see the [Tools section](./tools.md).
 
+## Stream Buffering
+
+Control the rate of chunk emission to optimize for different use cases:
+
+```typescript
+// Buffer chunks for 200ms before emitting (reduces overhead)
+const stream = jorEl.stream("Generate a long story", {
+  streamBuffer: { bufferTimeMs: 200 }
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk); // Fewer, larger chunks
+}
+
+// Disable buffering for real-time display
+const unbufferedStream = jorEl.stream("Generate text", {
+  streamBuffer: { disabled: true }
+});
+```
+
+Stream buffering is useful for:
+* Reducing update frequency in UIs
+* Managing backpressure in downstream systems
+* Optimizing network usage
+
+## Cancellation
+
+You can cancel ongoing generations using AbortSignal:
+
+```typescript
+const controller = new AbortController();
+
+// Start generation
+const promise = jorEl.text("Write a long essay", {
+  abortSignal: controller.signal
+});
+
+// Cancel after 5 seconds
+setTimeout(() => controller.abort(), 5000);
+
+try {
+  const response = await promise;
+} catch (error) {
+  if (error.name === 'AbortError') {
+    console.log("Request was cancelled");
+  }
+}
+```
+
+See the [Cancellation section](./cancellation.md) for more details.
+
+## Token Tracking
+
+When requesting metadata, JorEl tracks token usage across all generations, including when tools are used:
+
+```typescript
+const { response, meta } = await jorEl.text(
+  "What's the weather in Paris?",
+  { tools: [weatherTool] },
+  true
+);
+
+console.log({
+  inputTokens: meta.inputTokens,   // Total input tokens
+  outputTokens: meta.outputTokens, // Total output tokens
+  generations: meta.generations    // Individual generation details (if multiple)
+});
+```
+
+See the [Token Tracking section](./token-tracking.md) for more details.
+
+## Advanced Parameters
+
+JorEl supports model-specific parameters for fine-tuning behavior:
+
+```typescript
+// For reasoning models
+const response = await jorEl.text("Solve this puzzle", {
+  model: "o3-mini",
+  reasoningEffort: "high", // Increase computational effort
+  maxTokens: 2000
+});
+
+// For controlling response detail
+const response2 = await jorEl.text("Explain quantum computing", {
+  model: "gpt-4o",
+  verbosity: "low" // More concise responses
+});
+```
+
+See the [Advanced Configuration section](./advanced-configuration.md) for more details.
+
 ## Configuration options
 
 When using `text` , `json` , or `stream` , you can pass a configuration object with the following options:
@@ -242,18 +334,36 @@ interface GenerationConfig {
   // Message configuration
   systemMessage?: string;            // Override the default system message
   documentSystemMessage?: string;    // Override how documents are presented
+  messageHistory?: LlmMessage[];     // Previous messages for follow-up conversations
   
   // Generation parameters
-  temperature?: Nullable<number>;              // Controls randomness (0-1, use 'null' to explicityly unset it, e.g. for certain models w/o temperature support)
+  temperature?: Nullable<number>;    // Controls randomness (0-1, use 'null' to explicitly unset it)
+  maxTokens?: number;                // Maximum tokens in the response
+  reasoningEffort?: "minimal" | "low" | "medium" | "high";  // Computational effort (reasoning models only)
+  verbosity?: "low" | "medium" | "high";                     // Response detail level (OpenAI only)
+  
+  // Streaming configuration
+  streamBuffer?: {
+    bufferTimeMs?: number;           // Milliseconds to buffer chunks before emitting
+    disabled?: boolean;              // Disable buffering entirely
+  };
+  
+  // Cancellation
+  abortSignal?: AbortSignal;         // AbortSignal to cancel the generation
   
   // Context
   documents?: (LlmDocument | CreateLlmDocument)[] | LlmDocumentCollection;  // Reference documents
   
   // Tool configuration
-  tools?: LlmToolKit;               // Tools the LLM can use
-  toolChoice?: "none" | "auto" | "required" | string;  // How tools should be used
-  context?: LLmToolContextSegment;  // Context available to tools (will be pass as second argument to executor, not visible or controllable by the LLM)
-  secureContext?: LLmToolContextSegment;  // Secure context for tools (will be pass as third argument to executor, and will not be included in logs)
+  tools?: LlmToolKit | (LlmTool | LlmToolConfiguration)[];  // Tools the LLM can use
+  toolChoice?: "none" | "auto" | "required" | string;       // How tools should be used
+  maxToolCalls?: number;                                     // Maximum tool calls allowed
+  maxToolCallErrors?: number;                                // Maximum tool call errors allowed
+  context?: LLmToolContextSegment;                          // Context available to tools
+  secureContext?: LLmToolContextSegment;                    // Secure context (not logged)
+  
+  // JSON mode (for json method)
+  jsonSchema?: JsonSpecification;    // JSON schema for structured output
 }
 ```
 

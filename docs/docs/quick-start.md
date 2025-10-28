@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Quick Start
 
-Get started with JorEl, a unified interface for multiple LLM providers including OpenAI, Anthropic, Groq, Grok, Google Vertex AI, Mistral and Ollama.
+Get started with JorEl, a unified interface for multiple LLM providers including OpenAI, Anthropic, Google Vertex AI, Google Generative AI, Groq, Grok, Mistral, Ollama, and OpenRouter.
 
 ## Installation
 
@@ -47,15 +47,16 @@ const jorEl = new JorEl({
 Alternatively, you can just pass a boolean per provider and JorEl will use respective environment variables:
 
 ```typescript
-
 const jorEl = new JorEl({
-  openAI: true,     // Will use OPENAI_API_KEY environment variable
-  anthropic: true,  // Will use ANTHROPIC_API_KEY environment variable
-  groq: true,       // Will use GROQ_API_KEY environment variable
-  grok: true,       // Will use GROK_API_KEY environment variable
-  vertexAI: true,   // Will use GCP_PROJECT, GCP_LOCATION, GOOGLE_APPLICATION_CREDENTIALS environment variables
-  mistral: true,    // Will use MISTRAL_API_KEY environment variable
-  ollama: true     // No environment variables needed
+  openAI: true,      // Will use OPENAI_API_KEY environment variable
+  anthropic: true,   // Will use ANTHROPIC_API_KEY environment variable
+  googleGenAi: true, // Will use GOOGLE_API_KEY environment variable
+  vertexAi: true,    // Will use GCP_PROJECT, GCP_LOCATION, GOOGLE_APPLICATION_CREDENTIALS environment variables
+  groq: true,        // Will use GROQ_API_KEY environment variable
+  grok: true,        // Will use GROK_API_KEY environment variable
+  mistral: true,     // Will use MISTRAL_API_KEY environment variable
+  ollama: true,      // No environment variables needed
+  openRouter: true   // Will use OPEN_ROUTER_API_KEY environment variable
 });
 ```
 
@@ -301,3 +302,16 @@ console.log(executedTask.result);
 Tasks, Agents, and Tools are easily serializable. 
 
 Tasks can either be run to completion (or until a halt condition is met), or they be processed step-by-step.
+
+## Next Steps
+
+Now that you've seen the basics, explore these guides:
+
+* [Generating Responses](./basic-usage/generating-responses.md) - Complete guide to text, JSON, and streaming
+* [Using Tools](./basic-usage/tools.md) - Give your LLMs the ability to perform actions
+* [Working with Images](./basic-usage/images.md) - Use vision-capable models
+* [Working with Documents](./basic-usage/documents.md) - Provide context to your LLMs
+* [Token Tracking](./basic-usage/token-tracking.md) - Monitor and optimize costs (new in v1.0.0)
+* [Cancellation Support](./basic-usage/cancellation.md) - Cancel ongoing generations (new in v1.0.0)
+* [Advanced Configuration](./basic-usage/advanced-configuration.md) - Fine-tune model behavior (new in v1.0.0)
+* [Agents](./agents/intro.md) - Build complex multi-agent systems

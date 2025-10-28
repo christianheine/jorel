@@ -223,13 +223,31 @@ export interface LlmAssistantMessageWithToolCalls {
   createdAt?: number;
 }
 
-export interface LlmAssistantMessageMeta {
+export interface LlmGenerationAttempt {
   model: string;
   provider: string;
   temperature: number | undefined;
   durationMs: number;
   inputTokens?: number;
   outputTokens?: number;
+  /** Whether this generation included tool calls */
+  hadToolCalls: boolean;
+  /** Timestamp when this generation started */
+  timestamp: number;
+}
+
+export interface LlmAssistantMessageMeta {
+  model: string;
+  provider: string;
+  temperature: number | undefined;
+  /** Total duration across all generations in milliseconds */
+  durationMs: number;
+  /** Total input tokens across all generations */
+  inputTokens?: number;
+  /** Total output tokens across all generations */
+  outputTokens?: number;
+  /** Individual generation attempts (only present when multiple generations occurred) */
+  generations?: LlmGenerationAttempt[];
 }
 
 export type LlmMessage = LlmSystemMessage | LlmUserMessage | LlmAssistantMessage | LlmAssistantMessageWithToolCalls;

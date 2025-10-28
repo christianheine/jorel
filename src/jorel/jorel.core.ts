@@ -2,6 +2,7 @@ import { LogService } from "../logger";
 import {
   generateAssistantMessage,
   InitLlmGenerationConfig,
+  LlmGenerationAttempt,
   LLmGenerationStopReason,
   LlmMessage,
   LlmStreamResponse,
@@ -144,9 +145,34 @@ export class JorElCoreStore {
     let toolCallErrors = 0;
     let toolCalls = 0;
 
+    // Track cumulative token usage across all generations
+    const generations: LlmGenerationAttempt[] = [];
+
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let totalDurationMs = 0;
+
     let generation: MaybeUndefined<JorElGenerationOutput>;
     for (let i = 0; i < maxAttempts; i++) {
       generation = await this.generate(_messages, config);
+
+      // Track this generation attempt
+      generations.push({
+        model: generation.meta.model,
+        provider: generation.meta.provider,
+        temperature: generation.meta.temperature,
+        durationMs: generation.meta.durationMs,
+        inputTokens: generation.meta.inputTokens,
+        outputTokens: generation.meta.outputTokens,
+        hadToolCalls: generation.role === "assistant_with_tools",
+        timestamp: Date.now(),
+      });
+
+      // Accumulate token counts
+      totalInputTokens += generation.meta.inputTokens || 0;
+      totalOutputTokens += generation.meta.outputTokens || 0;
+      totalDurationMs += generation.meta.durationMs;
+
       if (generation.role === "assistant" || !config.tools) {
         break;
       } else {
@@ -174,6 +200,21 @@ export class JorElCoreStore {
         const classification = config.tools.classifyToolCalls(generation.toolCalls);
         if (classification === "approvalPending") {
           this.logger.debug("Core", "Tool calls require approval - stopping processing");
+
+          // Update meta with cumulative token usage if there were multiple generations
+          if (generations.length > 1) {
+            generation = {
+              ...generation,
+              meta: {
+                ...generation.meta,
+                inputTokens: totalInputTokens || undefined,
+                outputTokens: totalOutputTokens || undefined,
+                durationMs: totalDurationMs,
+                generations,
+              },
+            };
+          }
+
           return {
             output: generation,
             messages: _messages,
@@ -185,6 +226,20 @@ export class JorElCoreStore {
 
     if (!generation) {
       throw new Error("Unable to generate a response");
+    }
+
+    // Update meta with cumulative token usage if there were multiple generations
+    if (generations.length > 1) {
+      generation = {
+        ...generation,
+        meta: {
+          ...generation.meta,
+          inputTokens: totalInputTokens || undefined,
+          outputTokens: totalOutputTokens || undefined,
+          durationMs: totalDurationMs,
+          generations,
+        },
+      };
     }
 
     _messages.push(generateAssistantMessage(generation.content));
@@ -286,6 +341,13 @@ export class JorElCoreStore {
     let toolCallErrors = 0;
     let toolCalls = 0;
 
+    // Track cumulative token usage across all generations
+    const generations: LlmGenerationAttempt[] = [];
+
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let totalDurationMs = 0;
+
     let response: MaybeUndefined<LlmStreamResponse | LlmStreamResponseWithToolCalls> = undefined;
     for (let i = 0; i < maxAttempts; i++) {
       const stream = this.generateContentStream(messages, config);
@@ -295,6 +357,23 @@ export class JorElCoreStore {
           yield chunk;
         } else if (chunk.type === "response") {
           response = chunk;
+
+          // Track this generation attempt
+          generations.push({
+            model: chunk.meta.model,
+            provider: chunk.meta.provider,
+            temperature: chunk.meta.temperature,
+            durationMs: chunk.meta.durationMs,
+            inputTokens: chunk.meta.inputTokens,
+            outputTokens: chunk.meta.outputTokens,
+            hadToolCalls: chunk.role === "assistant_with_tools",
+            timestamp: Date.now(),
+          });
+
+          // Accumulate token counts
+          totalInputTokens += chunk.meta.inputTokens || 0;
+          totalOutputTokens += chunk.meta.outputTokens || 0;
+          totalDurationMs += chunk.meta.durationMs;
         }
       }
 
@@ -325,6 +404,20 @@ export class JorElCoreStore {
       if (hasToolCallsRequiringApproval) {
         // Stop processing and return messages with approval required reason
         messages.push(generateAssistantMessage(response.content, response.toolCalls));
+
+        // Update meta with cumulative token usage
+        if (generations.length > 1) {
+          response = {
+            ...response,
+            meta: {
+              ...response.meta,
+              inputTokens: totalInputTokens || undefined,
+              outputTokens: totalOutputTokens || undefined,
+              durationMs: totalDurationMs,
+              generations,
+            },
+          };
+        }
 
         yield response;
         yield {
@@ -394,6 +487,20 @@ export class JorElCoreStore {
     }
 
     if (response) {
+      // Update meta with cumulative token usage if there were multiple generations
+      if (generations.length > 1) {
+        response = {
+          ...response,
+          meta: {
+            ...response.meta,
+            inputTokens: totalInputTokens || undefined,
+            outputTokens: totalOutputTokens || undefined,
+            durationMs: totalDurationMs,
+            generations,
+          },
+        };
+      }
+
       yield response;
       messages.push(generateAssistantMessage(response.content));
     }

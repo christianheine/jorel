@@ -1,5 +1,5 @@
 ---
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 # Using Tools
@@ -236,6 +236,26 @@ const response = await jorEl.text("What's the weather?", {
   maxToolCalls: 3,  // Maximum attempts per tool call
 });
 ```
+
+## Token Tracking with Tools
+
+When tools are used, multiple LLM generations may occur (initial tool call, then final response). JorEl automatically tracks cumulative token usage across all these generations:
+
+```typescript
+const { response, meta } = await jorEl.text(
+  "What's the weather?",
+  { tools: [weatherTool] },
+  true
+);
+
+console.log({
+  totalInput: meta.inputTokens,
+  totalOutput: meta.outputTokens,
+  generations: meta.generations?.length || 1
+});
+```
+
+See the [Token Tracking section](./token-tracking.md) for more details.
 
 ## Working with Agents
 

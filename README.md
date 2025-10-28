@@ -63,16 +63,13 @@ To run the example, use:
 npm run start
 ```
 
-## What's new in v0.16.x
+## What's New in v1.0.0
 
-* **Cancellation support**: Added initial support to pass an AbortController to the generation (not equally supported by all providers)
-
-## What's New in v0.15.x
-
-* **🛠️ Enhanced Tool Handling**: New `LlmToolKit` class with approval workflows and advanced tool management utilities
-* **📊 Stream Buffering**: Control chunk emission rates with configurable buffering for better performance
-* **🔧 Improved Tool Approvals**: Built-in support for tool confirmation and approval workflows
-* **🧹 API Cleanup**: Removed deprecated `ask` method (use `text` instead)
+* **📊 Token Tracking**: Accurate tracking of input/output tokens across multiple generations when using tools
+* **🚫 Cancellation Support**: Pass AbortSignal to cancel ongoing generations (provider support varies)
+* **🎯 Model-Specific Parameters**: Support for `reasoningEffort` and `verbosity` on compatible models
+* **⚙️ Model-Specific Defaults**: Configure default parameters for individual models
+* **🏭 Production Ready**: Stable API for production use with comprehensive documentation
 
 See the [full changelog](CHANGELOG.md) for complete details.
 
@@ -412,12 +409,12 @@ mainAgent.addDelegate({
 JorEl supports multiple LLM providers out of the box:
 * OpenAI
 * Anthropic
+* Google Vertex AI
+* Google Generative AI
 * Groq
 * Grok
-* Google Vertex AI
-* Google Generative AI (experimental)
-* Ollama
 * Mistral
+* Ollama
 * OpenRouter
 
 Each provider can be configured during initialization or registered later:

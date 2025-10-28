@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-rc.0 (2025-10-28)
+
+* Add token tracking across multiple generations
+  + New `LlmGenerationAttempt` type to track individual generation attempts
+  + Accurately track total input/output tokens across all generations when tool calls are involved
+  + Works for both streaming and non-streaming requests
+  + Backward compatible - `generations` array only included when multiple generations occur
+* Bump version to 1.0.0-rc.0 (Release Candidate) for final validation before stable 1.0.0 release
+
 ## 0.16.3 (2025-10-24)
 
 * Improve error handling when tool call arguments cannot be parsed as JSON (affects OpenAi, Mistral, Anthropic only)

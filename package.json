@@ -1,6 +1,6 @@
 {
   "name": "jorel",
-  "version": "0.16.3",
+  "version": "1.0.0-rc.0",
   "description": "The easiest way to use LLMs, including streams, images, documents, tools and various agent scenarios.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -35,7 +35,7 @@
   "author": "Christian Heine",
   "repository": {
     "type": "git",
-    "url": "https://github.com/christianheine/jorel.git"
+    "url": "git+https://github.com/christianheine/jorel.git"
   },
   "homepage": "https://christianheine.github.io/jorel/",
   "bugs": {
