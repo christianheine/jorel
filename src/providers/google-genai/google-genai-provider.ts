@@ -305,7 +305,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
         requestConfig.responseMimeType = "application/json";
 
         if (typeof config.json !== "boolean") {
-          requestConfig.responseSchema =
+          requestConfig.responseJsonSchema =
             config.json instanceof ZodObject ? zodSchemaToJsonSchema(config.json) : config.json;
         }
       }
