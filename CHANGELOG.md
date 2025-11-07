@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1 (2025-11-07)
+
+* Update dependencies
+* Switch to improved JSON schema support for Google GenAI provider
+* Update examples to remove dotenv message
+
 ## 1.0.0 (2025-11-02)
 
 * Release 1.0.0
