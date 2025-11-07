@@ -1,7 +1,4 @@
 import { Mistral } from "@mistralai/mistralai";
-import { EventStream } from "@mistralai/mistralai/lib/event-streams";
-import { RetryConfig } from "@mistralai/mistralai/lib/retries";
-import { ChatCompletionResponse, CompletionEvent } from "@mistralai/mistralai/models/components";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
@@ -28,7 +25,16 @@ interface ToolCall {
 
 export interface MistralConfig {
   apiKey?: string;
-  retryConfig?: RetryConfig;
+  retryConfig?: {
+    strategy: "backoff";
+    backoff?: {
+      initialInterval: number;
+      maxInterval: number;
+      exponent: number;
+      maxElapsedTime: number;
+    };
+    retryConnectionErrors?: boolean;
+  };
   timeout?: number;
 }
 
@@ -56,7 +62,7 @@ export class MistralProvider implements LlmCoreProvider {
 
     const temperature = config.temperature ?? undefined;
 
-    let response: ChatCompletionResponse;
+    let response: Awaited<ReturnType<typeof this.client.chat.complete>>;
 
     try {
       response = await this.client.chat.complete(
@@ -146,7 +152,7 @@ export class MistralProvider implements LlmCoreProvider {
 
     const temperature = config.temperature ?? undefined;
 
-    let response: EventStream<CompletionEvent>;
+    let response: Awaited<ReturnType<typeof this.client.chat.stream>>;
 
     try {
       response = await this.client.chat.stream(

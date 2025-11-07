@@ -1,7 +1,11 @@
-import { ResponseFormat, ToolChoice, ToolChoiceEnum } from "@mistralai/mistralai/models/components";
+import { Mistral } from "@mistralai/mistralai";
 import { ZodObject } from "zod";
 import { zodSchemaToJsonSchema } from "../../shared";
 import { JsonSpecification, LlmToolChoice } from "../llm-core-provider";
+
+type MistralChatRequest = Parameters<InstanceType<typeof Mistral>["chat"]["complete"]>[0];
+type ResponseFormat = NonNullable<MistralChatRequest["responseFormat"]>;
+type ToolChoice = NonNullable<MistralChatRequest["toolChoice"]>;
 
 export const jsonResponseToMistral = (
   format?: boolean | JsonSpecification,
@@ -30,7 +34,7 @@ export const jsonResponseToMistral = (
   throw new Error("Invalid format");
 };
 
-export const toolChoiceToMistral = (toolChoice?: LlmToolChoice): ToolChoice | ToolChoiceEnum | undefined => {
+export const toolChoiceToMistral = (toolChoice?: LlmToolChoice): ToolChoice | undefined => {
   if (!toolChoice) {
     return undefined;
   }

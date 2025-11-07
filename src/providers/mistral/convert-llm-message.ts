@@ -1,14 +1,17 @@
-import { ChatCompletionRequest } from "@mistralai/mistralai/models/components/chatcompletionrequest";
-import { ContentChunk } from "@mistralai/mistralai/models/components/contentchunk";
+import { Mistral } from "@mistralai/mistralai";
 import { LlmMessage } from "../../providers";
 import { LlmToolKit } from "../../tools";
+
+type MistralChatRequest = Parameters<InstanceType<typeof Mistral>["chat"]["complete"]>[0];
+type MistralMessages = NonNullable<MistralChatRequest["messages"]>;
+type MistralMessage = MistralMessages[number];
 
 /** Convert unified LLM messages to Mistral messages */
 export const convertLlmMessagesToMistralMessages = async (
   messages: LlmMessage[],
   detail?: "low" | "high",
-): Promise<ChatCompletionRequest["messages"]> => {
-  const convertedMessages: ChatCompletionRequest["messages"] = [];
+): Promise<MistralMessages> => {
+  const convertedMessages: MistralMessages = [];
 
   for (const message of messages) {
     switch (message.role) {
@@ -68,12 +71,16 @@ export const convertLlmMessagesToMistralMessages = async (
 async function convertUserMessage(
   message: Extract<LlmMessage, { role: "user" }>,
   detail?: "low" | "high",
-): Promise<ChatCompletionRequest["messages"][number]> {
+): Promise<MistralMessage> {
   if (!Array.isArray(message.content)) {
     throw new Error("User message content must be string or array");
   }
 
-  const content: Array<ContentChunk> = [];
+  type ContentItem =
+    | { type: "text"; text: string }
+    | { type: "image_url"; imageUrl: { url: string; detail?: "low" | "high" } };
+
+  const content: ContentItem[] = [];
 
   for (const entry of message.content) {
     switch (entry.type) {
@@ -93,9 +100,9 @@ async function convertUserMessage(
         });
         break;
       default:
-        throw new Error(`Unsupported content type: ${(entry as any).type}`);
+        throw new Error(`Unsupported content type: ${(entry as { type: string }).type}`);
     }
   }
 
-  return { role: "user", content };
+  return { role: "user", content } as MistralMessage;
 }
