@@ -4,7 +4,7 @@ import { config } from "dotenv";
 import { generateUserMessage, JorEl, LlmMessage, LlmToolKit } from "../../../src";
 import { getWeather } from "../../_utilities/get-weather";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 const main = async () => {
   // Create instance

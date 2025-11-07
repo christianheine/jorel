@@ -4,7 +4,7 @@ import { config } from "dotenv";
 import { z } from "zod";
 import { JorEl, LlmMessage } from "../../../src";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 // Mock executors for testing
 const readFileExecutor = async (args: { filename: string }) => {

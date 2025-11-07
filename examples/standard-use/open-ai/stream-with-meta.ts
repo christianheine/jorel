@@ -3,7 +3,7 @@
 import { config } from "dotenv";
 import { JorEl, LlmMessage } from "../../../src";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 const main = async () => {
   // Create instance

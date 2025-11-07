@@ -5,7 +5,7 @@ import { JorEl, LlmToolKit } from "../../../src";
 import { getStockValue } from "../../_utilities/get-stock-value";
 import { getWeather } from "../../_utilities/get-weather";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 const main = async () => {
   const jorEl = new JorEl({ openAI: true, logger: "console", logLevel: "silly" });

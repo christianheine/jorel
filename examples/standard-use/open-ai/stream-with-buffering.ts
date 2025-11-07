@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { JorEl } from "../../../src";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 /**
  * Example demonstrating stream buffering to control chunk emission rate

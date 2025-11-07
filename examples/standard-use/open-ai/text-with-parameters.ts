@@ -3,7 +3,7 @@
 import { config } from "dotenv";
 import { JorEl } from "../../../src";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 const main = async () => {
   const jorEl = new JorEl({ openAI: true });

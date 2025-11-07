@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { JorEl } from "../../../src";
 import { LlmToolKit } from "../../../src/tools";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 /**
  * Example demonstrating the new token tracking feature for multi-generation requests.

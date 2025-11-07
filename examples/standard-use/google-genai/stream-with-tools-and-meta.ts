@@ -6,7 +6,7 @@ import { JorEl } from "../../../src";
 
 import { getWeather } from "../../_utilities/get-weather";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 const getCityInfo = async (city: string) => {
   return {

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { JorEl } from "../../../src";
 import { getStockValue } from "../../_utilities/get-stock-value";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 const main = async () => {
   // Create instance

@@ -3,7 +3,7 @@
 import { config } from "dotenv";
 import { JorEl, LlmToolKit } from "../../../src";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 // Create tools with approval requirements
 const tools = new LlmToolKit([

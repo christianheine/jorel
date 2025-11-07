@@ -4,7 +4,7 @@ import { config } from "dotenv";
 import z from "zod";
 import { JorEl } from "../../../src";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 const main = async () => {
   // Create instance

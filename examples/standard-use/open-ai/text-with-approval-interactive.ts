@@ -4,7 +4,7 @@ import { config } from "dotenv";
 import * as readline from "readline";
 import { JorEl, LlmToolKit } from "../../../src";
 
-config({ path: "../../../.env" });
+config({ path: "../../../.env", quiet: true });
 
 // Create readline interface for interactive prompts
 const rl = readline.createInterface({
