@@ -6,6 +6,7 @@ import { LLmToolContextSegment, LlmToolKit } from "../tools";
 export type LlmToolChoice = "none" | "auto" | "required" | string;
 export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | null;
 export type Verbosity = "low" | "medium" | "high" | null;
+export type ReasoningSummaryVerbosity = "auto" | "concise" | "detailed" | null;
 
 export type JsonSpecification = ZodObject<any> | Record<string, unknown>;
 
@@ -33,6 +34,7 @@ export type LlmModelParameterOverridesLookup = { [model: string]: Partial<LlmMod
 interface CoreLlmGenerationConfig {
   temperature?: Nullable<number>;
   maxTokens?: number;
+  maxCompletionTokens?: number;
   json?: boolean | JsonSpecification;
   jsonDescription?: string;
   tools?: LlmToolKit;
@@ -40,6 +42,7 @@ interface CoreLlmGenerationConfig {
   logLevel?: LogLevel;
   verbosity?: Verbosity;
   reasoningEffort?: ReasoningEffort;
+  reasoningSummaryVerbosity?: ReasoningSummaryVerbosity;
   streamBuffer?: StreamBufferConfig;
   /** AbortSignal to cancel the generation request */
   abortSignal?: AbortSignal;
@@ -246,6 +249,8 @@ export interface LlmAssistantMessageMeta {
   inputTokens?: number;
   /** Total output tokens across all generations */
   outputTokens?: number;
+  /** Total reasoning tokens across all generations */
+  reasoningTokens?: number;
   /** Individual generation attempts (only present when multiple generations occurred) */
   generations?: LlmGenerationAttempt[];
 }

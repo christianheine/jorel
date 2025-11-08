@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { Stream } from "@anthropic-ai/sdk/streaming";
 import {
   generateAssistantMessage,
+  LlmAssistantMessageMeta,
   LlmCoreProvider,
   LlmGenerationConfig,
   LlmMessage,
@@ -138,8 +139,8 @@ export class AnthropicProvider implements LlmCoreProvider {
           signal: config.abortSignal,
         },
       );
-    } catch (error: any) {
-      if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
         throw new JorElAbortError("Request was aborted");
       }
       throw error;
@@ -147,8 +148,9 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const durationMs = Date.now() - start;
 
-    const inputTokens = response.usage.input_tokens;
-    const outputTokens = response.usage.output_tokens;
+    const inputTokens: MaybeUndefined<number> = response.usage.input_tokens;
+    const outputTokens: MaybeUndefined<number> = response.usage.output_tokens;
+    const reasoningTokens: MaybeUndefined<number> = undefined;
 
     const content = response.content
       .map((c) => (c.type === "text" ? c.text : ""))
@@ -183,6 +185,7 @@ export class AnthropicProvider implements LlmCoreProvider {
         durationMs,
         inputTokens,
         outputTokens,
+        reasoningTokens,
       },
     };
   }
@@ -248,15 +251,16 @@ export class AnthropicProvider implements LlmCoreProvider {
           signal: config.abortSignal,
         },
       );
-    } catch (error: any) {
-      if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
         throw new JorElAbortError("Request was aborted");
       }
       throw error;
     }
 
-    let inputTokens = undefined;
-    let outputTokens = undefined;
+    let inputTokens: MaybeUndefined<number> = undefined;
+    let outputTokens: MaybeUndefined<number> = undefined;
+    const reasoningTokens: MaybeUndefined<number> = undefined;
 
     let content = "";
 
@@ -298,21 +302,22 @@ export class AnthropicProvider implements LlmCoreProvider {
 
     const provider = this.name;
 
-    const meta = {
+    const meta: LlmAssistantMessageMeta = {
       model,
       provider,
       temperature,
       durationMs,
       inputTokens,
       outputTokens,
+      reasoningTokens,
     };
 
     const toolCalls: LlmToolCall[] = Object.values(_toolCalls).map((c) => {
-      let parsedArgs: any = null;
+      let parsedArgs: unknown = null;
       let parseError: Error | null = null;
       try {
         parsedArgs = LlmToolKit.deserialize(c.arguments);
-      } catch (e: any) {
+      } catch (e: unknown) {
         parseError = e instanceof Error ? e : new Error("Unable to parse tool call arguments");
       }
 

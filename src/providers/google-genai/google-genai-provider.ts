@@ -94,8 +94,8 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           contents,
           config: requestConfig,
         });
-      } catch (error: any) {
-        if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
           throw new JorElAbortError("Request was aborted");
         }
         throw new Error(`[GoogleGenerativeAIProvider] Error generating content: ${error}`);
@@ -137,7 +137,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           outputTokens: undefined,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof JorElAbortError) {
         throw error;
       }
@@ -166,7 +166,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
         requestConfig.abortSignal = config.abortSignal;
       }
 
-      let streamResult: AsyncGenerator<GenerateContentResponse, any, any>;
+      let streamResult: AsyncGenerator<GenerateContentResponse, void, unknown>;
 
       try {
         streamResult = await this.client.models.generateContentStream({
@@ -174,8 +174,8 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           contents,
           config: requestConfig,
         });
-      } catch (error: any) {
-        if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
           throw new JorElAbortError("Request was aborted");
         }
         throw new Error(`[GoogleGenerativeAIProvider] Error generating content stream: ${error}`);
@@ -256,7 +256,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           meta,
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof JorElAbortError) {
         throw error;
       }

@@ -2,6 +2,7 @@ import { AzureOpenAI, OpenAI, OpenAIError } from "openai";
 import { Stream } from "openai/core/streaming";
 import {
   generateAssistantMessage,
+  LlmAssistantMessageMeta,
   LlmCoreProvider,
   LlmGenerationConfig,
   LlmMessage,
@@ -69,6 +70,7 @@ export class OpenAIProvider implements LlmCoreProvider {
           temperature,
           response_format: jsonResponseToOpenAi(config.json, config.jsonDescription),
           max_tokens: config.maxTokens,
+          max_completion_tokens: config.maxCompletionTokens,
           parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
           tool_choice: toolChoiceToOpenAi(config.toolChoice),
           tools: config.tools?.asLlmFunctions,
@@ -79,7 +81,7 @@ export class OpenAIProvider implements LlmCoreProvider {
           signal: config.abortSignal,
         },
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof OpenAIError && error.message.toLowerCase().includes("aborted")) {
         throw new JorElAbortError("Request was aborted");
       }
@@ -90,6 +92,7 @@ export class OpenAIProvider implements LlmCoreProvider {
 
     const inputTokens: MaybeUndefined<number> = response.usage?.prompt_tokens;
     const outputTokens: MaybeUndefined<number> = response.usage?.completion_tokens;
+    const reasoningTokens: MaybeUndefined<number> = response.usage?.completion_tokens_details?.reasoning_tokens;
 
     const message = response.choices[0].message;
 
@@ -126,6 +129,7 @@ export class OpenAIProvider implements LlmCoreProvider {
         durationMs,
         inputTokens,
         outputTokens,
+        reasoningTokens,
       },
     };
   }
@@ -151,6 +155,7 @@ export class OpenAIProvider implements LlmCoreProvider {
           temperature,
           response_format: jsonResponseToOpenAi(config.json, config.jsonDescription),
           max_tokens: config.maxTokens,
+          max_completion_tokens: config.maxCompletionTokens,
           stream: true,
           tools: config.tools?.asLlmFunctions,
           parallel_tool_calls: config.tools && config.tools.hasTools ? config.tools.allowParallelCalls : undefined,
@@ -165,7 +170,7 @@ export class OpenAIProvider implements LlmCoreProvider {
           signal: config.abortSignal,
         },
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof OpenAIError && error.message.toLowerCase().includes("aborted")) {
         throw new JorElAbortError("Request was aborted");
       }
@@ -174,6 +179,7 @@ export class OpenAIProvider implements LlmCoreProvider {
 
     let inputTokens: MaybeUndefined<number>;
     let outputTokens: MaybeUndefined<number>;
+    let reasoningTokens: MaybeUndefined<number>;
 
     const _toolCalls: OpenAiToolCall[] = [];
 
@@ -198,8 +204,9 @@ export class OpenAIProvider implements LlmCoreProvider {
       }
 
       if (chunk.usage) {
-        inputTokens = chunk.usage?.prompt_tokens;
-        outputTokens = chunk.usage?.completion_tokens;
+        inputTokens = (inputTokens || 0) + (chunk.usage?.prompt_tokens ?? 0);
+        outputTokens = (outputTokens || 0) + (chunk.usage?.completion_tokens ?? 0);
+        reasoningTokens = (reasoningTokens || 0) + (chunk.usage?.completion_tokens_details?.reasoning_tokens ?? 0);
       }
     }
 
@@ -208,11 +215,11 @@ export class OpenAIProvider implements LlmCoreProvider {
     const provider = this.name;
 
     const toolCalls: LlmToolCall[] = _toolCalls.map((call) => {
-      let parsedArgs: any = null;
+      let parsedArgs: unknown = null;
       let parseError: Error | null = null;
       try {
         parsedArgs = LlmToolKit.deserialize(call.function.arguments);
-      } catch (e: any) {
+      } catch (e: unknown) {
         parseError = e instanceof Error ? e : new Error("Unable to parse tool call arguments");
       }
 
@@ -255,13 +262,14 @@ export class OpenAIProvider implements LlmCoreProvider {
       };
     });
 
-    const meta = {
+    const meta: LlmAssistantMessageMeta = {
       model,
       provider,
       temperature,
       durationMs,
-      inputTokens,
-      outputTokens,
+      inputTokens: inputTokens ?? undefined,
+      outputTokens: outputTokens ?? undefined,
+      reasoningTokens: reasoningTokens ?? undefined,
     };
 
     if (_toolCalls.length > 0) {
