@@ -1,7 +1,7 @@
 #!/usr/bin/env ts-node
 
 import { config } from "dotenv";
-import { ImageContent, JorEl } from "../../src";
+import { ImageContent, JorEl } from "../../../src";
 
 config({ path: "../../../.env", quiet: true });
 

@@ -2,8 +2,8 @@
 
 import { config } from "dotenv";
 import { z } from "zod";
-import { JorEl } from "../../src";
-import { getWeather } from "../_utilities/get-weather";
+import { JorEl } from "../../../src";
+import { getWeather } from "../../_utilities/get-weather";
 
 config({ path: "../../../.env", quiet: true });
 
