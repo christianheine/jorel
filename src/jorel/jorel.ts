@@ -46,7 +46,9 @@ import {
   OpenAiAzureConfig,
   OpenAIConfig,
   OpenAIProvider,
+  OpenRouterConfig,
   OpenRouterProvider,
+  OpenRouterProviderNative,
   ReasoningEffort,
   StreamBufferConfig,
   Verbosity,
@@ -66,7 +68,7 @@ interface InitialConfig {
   ollama?: OllamaConfig | true;
   openAI?: OpenAIConfig | true;
   openAiAzure?: Omit<OpenAiAzureConfig, "azure"> | true;
-  openRouter?: OpenAIConfig | true;
+  openRouter?: OpenRouterConfig | true;
   vertexAi?: GoogleVertexAiConfig | true;
   systemMessage?: Nullable<string>;
   documentSystemMessage?: string;
@@ -280,8 +282,8 @@ export class JorEl {
       const provider = new OpenAIProvider({ ...config, azure: true });
       this._core.providerManager.registerProvider(provider.name, provider);
     },
-    registerOpenRouter: (config?: OpenAIConfig, withoutInitialModels?: boolean) => {
-      const provider = new OpenRouterProvider(config);
+    registerOpenRouter: (config?: OpenRouterConfig, withoutInitialModels?: boolean) => {
+      const provider = config?.useNativeSDK ? new OpenRouterProviderNative(config) : new OpenRouterProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
       if (!withoutInitialModels) {
         for (const model of initialOpenRouterModels) {
@@ -549,19 +551,29 @@ export class JorEl {
    * @param messages - The messages to generate a response for.
    * @param config - Configuration for the specific generation.
    * @param includeMeta - Whether to include the metadata and all previous messages in the response.
+   * @param strict - Whether to parse the response strictly as JSON (default: false).
+   * If true, the response will be parsed as JSON using the JSON.parse method.
+   * If false, the response may also be wrapped in ```json ... ```.
    * @returns The JSON response, or an object with the response, metadata, and messages.
    * @throws Error - If the response is not valid JSON.
    */
-  async json(messages: LlmMessage[], config?: JorElMessagesJsonGenerationConfig, includeMeta?: false): Promise<object>;
+  async json(
+    messages: LlmMessage[],
+    config?: JorElMessagesJsonGenerationConfig,
+    includeMeta?: false,
+    strict?: boolean,
+  ): Promise<object>;
   async json(
     messages: LlmMessage[],
     config?: JorElMessagesJsonGenerationConfig,
     includeMeta?: true,
+    strict?: boolean,
   ): Promise<LlmJsonResponseWithMeta>;
   async json(
     taskOrMessages: JorElTaskInput | LlmMessage[],
     config: JorElJsonGenerationConfigWithTools | JorElMessagesJsonGenerationConfig = {},
     includeMeta = false,
+    strict = false,
   ): Promise<object | LlmJsonResponseWithMeta> {
     let _messages: LlmMessage[];
     let jsonSchema: JsonSpecification | boolean;
@@ -592,7 +604,7 @@ export class JorEl {
         : undefined,
     };
     const { output, messages, stopReason } = await this._core.generateAndProcessTools(_messages, _config);
-    const parsed = output.content ? LlmToolKit.deserialize(output.content) : {};
+    const parsed = output.content ? LlmToolKit.deserialize(output.content, strict) : {};
     return includeMeta ? { response: parsed, meta: output.meta, messages, stopReason } : parsed;
   }
 

@@ -48,8 +48,19 @@ export class LlmToolKit {
    * Deserialize strings
    * @param input
    */
-  static deserialize(input: string): object {
-    return JSON.parse(input, dateReviver);
+  static deserialize(input: string, strict: boolean = false): object {
+    const raw = (input ?? "").trim();
+    if (strict || raw.startsWith("{") || raw.startsWith("[")) {
+      return JSON.parse(raw, dateReviver);
+    }
+    const match = raw.match(/```(?:json|json5|jsonc|application\/json)?\s*([\s\S]*?)\s*```/i);
+    if (match) {
+      const inner = (match[1] || "").trim();
+      if (inner.startsWith("{") || inner.startsWith("[")) {
+        return JSON.parse(inner, dateReviver);
+      }
+    }
+    return JSON.parse(raw, dateReviver);
   }
 
   /**
