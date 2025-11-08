@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2 (2025-11-08)
+
+* Downgrade Mistral to avoid Typescript build errors in consumers
+
 ## 1.0.1 (2025-11-07)
 
 * Update dependencies

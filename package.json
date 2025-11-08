@@ -1,6 +1,6 @@
 {
   "name": "jorel",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "The easiest way to use LLMs, including streams, images, documents, tools and various agent scenarios.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -57,7 +57,7 @@
     "@anthropic-ai/sdk": "0.68.0",
     "@google-cloud/vertexai": "1.10.0",
     "@google/genai": "1.29.0",
-    "@mistralai/mistralai": "1.10.0",
+    "@mistralai/mistralai": "1.7.5",
     "axios": "1.13.2",
     "dotenv": "17.2.3",
     "file-type": "16.5.4",

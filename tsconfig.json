@@ -6,8 +6,7 @@
     "removeComments": false,
     "stripInternal": true,
     "outDir": "./dist",
-    "strict": true,
-    "skipLibCheck": true
+    "strict": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/__tests__/**/*"]
