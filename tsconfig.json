@@ -6,7 +6,8 @@
     "removeComments": false,
     "stripInternal": true,
     "outDir": "./dist",
-    "strict": true
+    "strict": true,
+    "lib": ["ES2020", "DOM"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/__tests__/**/*"]
