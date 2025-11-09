@@ -9,6 +9,7 @@ import {
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseReasoningChunk,
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
@@ -119,9 +120,10 @@ export class OpenAIProvider implements LlmCoreProvider {
     });
 
     const provider = this.name;
+    const reasoningContent = null;
 
     return {
-      ...generateAssistantMessage(message.content, toolCalls),
+      ...generateAssistantMessage(message.content, reasoningContent, toolCalls),
       meta: {
         model,
         provider,
@@ -138,7 +140,15 @@ export class OpenAIProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
+  ): AsyncGenerator<
+    | LlmStreamResponseChunk
+    | LlmStreamResponseReasoningChunk
+    | LlmStreamResponseReasoningChunk
+    | LlmStreamResponse
+    | LlmStreamResponseWithToolCalls,
+    void,
+    unknown
+  > {
     const start = Date.now();
 
     const temperature = config.temperature ?? undefined;
@@ -184,11 +194,14 @@ export class OpenAIProvider implements LlmCoreProvider {
     const _toolCalls: OpenAiToolCall[] = [];
 
     let content = "";
+    const reasoningContent = "";
+
     for await (const chunk of response) {
       const delta = firstEntry(chunk.choices)?.delta;
       if (delta?.content) {
         content += delta.content;
-        yield { type: "chunk", content: delta.content };
+        const chunkId = generateUniqueId();
+        yield { type: "chunk", content: delta.content, chunkId };
       }
 
       if (delta?.tool_calls) {
@@ -277,6 +290,7 @@ export class OpenAIProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant_with_tools",
         content,
+        reasoningContent: reasoningContent || null,
         toolCalls,
         meta,
       };
@@ -285,6 +299,7 @@ export class OpenAIProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant",
         content,
+        reasoningContent: reasoningContent || null,
         meta,
       };
     }

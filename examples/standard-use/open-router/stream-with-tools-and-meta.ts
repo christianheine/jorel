@@ -23,17 +23,13 @@ const main = async () => {
         params: z.object({ city: z.string() }),
       },
     ],
+    reasoningEffort: "medium",
+    // streamBuffer: { disabled: true },
   });
 
   // Print each chunk
   for await (const chunk of stream) {
-    if (chunk.type === "chunk") {
-      process.stdout.write(chunk.content);
-    } else {
-      process.stdout.write("\n" + chunk.type + ":\n");
-      process.stdout.write(JSON.stringify(chunk, null, 2));
-      process.stdout.write("\n");
-    }
+    process.stdout.write(JSON.stringify(chunk, null, 2));
   }
 
   process.stdout.write("\n");

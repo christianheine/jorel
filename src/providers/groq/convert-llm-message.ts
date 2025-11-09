@@ -19,11 +19,13 @@ export const convertLlmMessagesToGroqMessages = async (
       convertedMessages.push({
         role: "assistant",
         content: message.content,
-      });
+        reasoning: message.reasoningContent ?? undefined,
+      } as ChatCompletionMessageParam);
     } else if (message.role === "assistant_with_tools") {
       convertedMessages.push({
         role: "assistant",
         content: message.content,
+        reasoning: message.reasoningContent ?? undefined,
         tool_calls: message.toolCalls.map((toolCall) => ({
           id: toolCall.request.id,
           type: "function",
@@ -32,7 +34,7 @@ export const convertLlmMessagesToGroqMessages = async (
             arguments: LlmToolKit.serialize(toolCall.request.function.arguments),
           },
         })),
-      });
+      } as ChatCompletionMessageParam);
       for (const toolCall of message.toolCalls) {
         if (toolCall.executionState === "completed") {
           convertedMessages.push({

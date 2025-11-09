@@ -7,6 +7,7 @@ import {
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseReasoningChunk,
   LlmToolCall,
 } from "..";
 import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
@@ -83,7 +84,7 @@ export class GroqProviderNative implements LlmCoreProvider {
     const provider = this.name;
 
     return {
-      ...generateAssistantMessage(message.content, toolCalls),
+      ...generateAssistantMessage(message.content, message.reasoning ?? null, toolCalls),
       meta: {
         model,
         provider,
@@ -99,7 +100,7 @@ export class GroqProviderNative implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse, void, unknown> {
+  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse, void, unknown> {
     const start = Date.now();
 
     const temperature = config.temperature ?? undefined;
@@ -114,11 +115,20 @@ export class GroqProviderNative implements LlmCoreProvider {
     });
 
     let content = "";
+    let reasoningContent = "";
+
     for await (const chunk of response) {
       const contentChunk = firstEntry(chunk.choices)?.delta?.content;
       if (contentChunk) {
         content += contentChunk;
-        yield { type: "chunk", content: contentChunk };
+        const chunkId = generateUniqueId();
+        yield { type: "chunk", content: contentChunk, chunkId };
+      }
+      const reasoningChunk = firstEntry(chunk.choices)?.delta?.reasoning;
+      if (reasoningChunk) {
+        reasoningContent += reasoningChunk;
+        const chunkId = generateUniqueId();
+        yield { type: "reasoningChunk", content: reasoningChunk, chunkId };
       }
     }
 
@@ -133,6 +143,7 @@ export class GroqProviderNative implements LlmCoreProvider {
       type: "response",
       role: "assistant",
       content,
+      reasoningContent,
       meta: {
         model,
         provider,

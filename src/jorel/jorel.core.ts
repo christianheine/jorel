@@ -8,6 +8,7 @@ import {
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmStreamResponseMessages,
+  LlmStreamResponseReasoningChunk,
   LlmStreamResponseWithToolCalls,
   LlmStreamToolCallCompleted,
   LlmStreamToolCallStarted,
@@ -196,7 +197,7 @@ export class JorElCoreStore {
         this.logger.silly("Core", `Tool call outputs`, {
           generation,
         });
-        _messages.push(generateAssistantMessage(generation.content, generation.toolCalls));
+        _messages.push(generateAssistantMessage(generation.content, generation.reasoningContent, generation.toolCalls));
         const classification = config.tools.classifyToolCalls(generation.toolCalls);
         if (classification === "approvalPending") {
           this.logger.debug("Core", "Tool calls require approval - stopping processing");
@@ -242,7 +243,7 @@ export class JorElCoreStore {
       };
     }
 
-    _messages.push(generateAssistantMessage(generation.content));
+    _messages.push(generateAssistantMessage(generation.content, generation.reasoningContent));
 
     return {
       output: generation,
@@ -262,6 +263,7 @@ export class JorElCoreStore {
   ): AsyncGenerator<
     | LlmStreamResponseChunk
     | LlmStreamResponse
+    | LlmStreamResponseReasoningChunk
     | LlmStreamResponseWithToolCalls
     | LlmStreamToolCallStarted
     | LlmStreamToolCallCompleted,
@@ -322,6 +324,7 @@ export class JorElCoreStore {
   ): AsyncGenerator<
     | LlmStreamResponseChunk
     | LlmStreamResponse
+    | LlmStreamResponseReasoningChunk
     | LlmStreamResponseWithToolCalls
     | LlmStreamResponseMessages
     | LlmStreamToolCallStarted
@@ -354,6 +357,8 @@ export class JorElCoreStore {
 
       for await (const chunk of stream) {
         if (chunk.type === "chunk") {
+          yield chunk;
+        } else if (chunk.type === "reasoningChunk") {
           yield chunk;
         } else if (chunk.type === "response") {
           response = chunk;
@@ -403,7 +408,7 @@ export class JorElCoreStore {
 
       if (hasToolCallsRequiringApproval) {
         // Stop processing and return messages with approval required reason
-        messages.push(generateAssistantMessage(response.content, response.toolCalls));
+        messages.push(generateAssistantMessage(response.content, response.reasoningContent, response.toolCalls));
 
         // Update meta with cumulative token usage
         if (generations.length > 1) {
@@ -483,7 +488,7 @@ export class JorElCoreStore {
 
       this.logger.debug("Core", "Finished processing tool calls");
 
-      messages.push(generateAssistantMessage(response.content, response.toolCalls));
+      messages.push(generateAssistantMessage(response.content, response.reasoningContent, response.toolCalls));
     }
 
     if (response) {
@@ -502,7 +507,8 @@ export class JorElCoreStore {
       }
 
       yield response;
-      messages.push(generateAssistantMessage(response.content));
+
+      messages.push(generateAssistantMessage(response.content, response.reasoningContent));
     }
 
     yield {
@@ -533,6 +539,7 @@ export class JorElCoreStore {
     stream: AsyncGenerator<
       | LlmStreamResponseChunk
       | LlmStreamResponse
+      | LlmStreamResponseReasoningChunk
       | LlmStreamResponseWithToolCalls
       | LlmStreamToolCallStarted
       | LlmStreamToolCallCompleted,
@@ -543,6 +550,7 @@ export class JorElCoreStore {
   ): AsyncGenerator<
     | LlmStreamResponseChunk
     | LlmStreamResponse
+    | LlmStreamResponseReasoningChunk
     | LlmStreamResponseWithToolCalls
     | LlmStreamToolCallStarted
     | LlmStreamToolCallCompleted,
@@ -556,7 +564,10 @@ export class JorElCoreStore {
     }
 
     let buffer = "";
+    let reasoningBuffer = "";
+
     let bufferStartTime: number | null = null;
+    let reasoningBufferStartTime: number | null = null;
 
     const flushBuffer = function* () {
       if (buffer) {
@@ -569,9 +580,24 @@ export class JorElCoreStore {
       }
     };
 
+    const flushReasoningBuffer = function* () {
+      if (reasoningBuffer) {
+        yield {
+          type: "reasoningChunk" as const,
+          content: reasoningBuffer,
+        };
+        reasoningBuffer = "";
+      }
+    };
+
     const shouldFlushBuffer = (): boolean => {
       if (!buffer || bufferStartTime === null) return false;
       return Date.now() - bufferStartTime >= bufferConfig.bufferTimeMs!;
+    };
+
+    const shouldFlushReasoningBuffer = (): boolean => {
+      if (!reasoningBuffer || reasoningBufferStartTime === null) return false;
+      return Date.now() - reasoningBufferStartTime >= bufferConfig.bufferTimeMs!;
     };
 
     try {
@@ -589,11 +615,25 @@ export class JorElCoreStore {
           if (shouldFlushBuffer()) {
             yield* flushBuffer();
           }
+        } else if (chunk.type === "reasoningChunk") {
+          // Start timing if this is the first reasoning chunk in buffer
+          if (!reasoningBuffer) {
+            reasoningBufferStartTime = Date.now();
+          }
+
+          reasoningBuffer += chunk.content;
+
+          if (shouldFlushReasoningBuffer()) {
+            yield* flushReasoningBuffer();
+          }
         } else {
           // For non-content chunks (response, toolCallStarted, toolCallCompleted)
           // Flush any buffered content first, then emit the chunk
           if (buffer) {
             yield* flushBuffer();
+          }
+          if (reasoningBuffer) {
+            yield* flushReasoningBuffer();
           }
           yield chunk;
         }
@@ -602,6 +642,9 @@ export class JorElCoreStore {
       // Ensure any remaining buffer is flushed when stream ends
       if (buffer) {
         yield* flushBuffer();
+      }
+      if (reasoningBuffer) {
+        yield* flushReasoningBuffer();
       }
     }
   }

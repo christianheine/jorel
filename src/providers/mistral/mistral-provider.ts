@@ -7,6 +7,7 @@ import {
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseReasoningChunk,
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
@@ -106,6 +107,10 @@ export class MistralProvider implements LlmCoreProvider {
       ? message.content.map((c) => (c.type === "text" ? c.text : "")).join("")
       : (message?.content ?? null);
 
+    const reasoningContent = Array.isArray(message?.content)
+      ? message.content.map((c) => (c.type === "thinking" ? c.thinking : "")).join("")
+      : null;
+
     const toolCalls: MaybeUndefined<LlmToolCall[]> = message?.toolCalls?.map((call) => {
       return {
         id: generateUniqueId(),
@@ -131,7 +136,7 @@ export class MistralProvider implements LlmCoreProvider {
     const provider = this.name;
 
     return {
-      ...generateAssistantMessage(content, toolCalls),
+      ...generateAssistantMessage(content, reasoningContent, toolCalls),
       meta: {
         model,
         provider,
@@ -147,7 +152,11 @@ export class MistralProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
+  ): AsyncGenerator<
+    LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls,
+    void,
+    unknown
+  > {
     const start = Date.now();
 
     const temperature = config.temperature ?? undefined;
@@ -192,17 +201,36 @@ export class MistralProvider implements LlmCoreProvider {
     const _toolCalls: ToolCall[] = [];
 
     let content = "";
+    let reasoningContent = "";
+
     for await (const chunk of response) {
       const delta = firstEntry(chunk.data.choices)?.delta;
       if (delta?.content) {
-        content += delta.content;
-        yield {
-          type: "chunk",
-          content:
-            typeof delta.content === "string"
-              ? delta.content
-              : delta.content.map((c) => (c.type === "text" ? c.text : "")).join(""),
-        };
+        const contentChunk = Array.isArray(delta.content)
+          ? delta.content.map((c) => (c.type === "text" ? c.text : "")).join("")
+          : delta.content;
+        const reasoningChunk = Array.isArray(delta.content)
+          ? delta.content.map((c) => (c.type === "thinking" ? c.thinking : "")).join("")
+          : null;
+
+        if (contentChunk) {
+          content += contentChunk;
+          const chunkId = generateUniqueId();
+          yield {
+            type: "chunk",
+            content: contentChunk,
+            chunkId,
+          };
+        }
+        if (reasoningChunk) {
+          reasoningContent += reasoningChunk;
+          const chunkId = generateUniqueId();
+          yield {
+            type: "reasoningChunk",
+            content: reasoningChunk,
+            chunkId,
+          };
+        }
       }
 
       if (delta?.toolCalls) {
@@ -291,6 +319,7 @@ export class MistralProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant_with_tools",
         content,
+        reasoningContent,
         toolCalls,
         meta,
       };
@@ -299,6 +328,7 @@ export class MistralProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant",
         content,
+        reasoningContent,
         meta,
       };
     }

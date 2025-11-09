@@ -34,6 +34,7 @@ import {
   LlmStreamResponse,
   LlmStreamResponseChunk,
   LlmStreamResponseMessages,
+  LlmStreamResponseReasoningChunk,
   LlmStreamResponseWithToolCalls,
   LlmStreamToolCallCompleted,
   LlmStreamToolCallStarted,
@@ -646,6 +647,7 @@ export class JorEl {
   ): AsyncGenerator<
     | LlmStreamResponseChunk
     | LlmStreamResponse
+    | LlmStreamResponseReasoningChunk
     | LlmStreamResponseWithToolCalls
     | LlmStreamResponseMessages
     | LlmStreamToolCallStarted
@@ -692,6 +694,7 @@ export class JorEl {
               id: generateUniqueId(),
               role: "assistant",
               content: chunk.content,
+              reasoningContent: chunk.reasoningContent,
               createdAt: Date.now(),
             });
           } else {
@@ -700,6 +703,7 @@ export class JorEl {
               role: "assistant_with_tools",
               content: chunk.content,
               toolCalls: chunk.toolCalls,
+              reasoningContent: chunk.reasoningContent,
               createdAt: Date.now(),
             });
           }

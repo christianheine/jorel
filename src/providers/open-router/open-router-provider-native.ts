@@ -11,6 +11,7 @@ import {
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseReasoningChunk,
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
@@ -118,9 +119,10 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
 
     // Extract text content (handles both string and array formats)
     const textContent = extractTextContent(message.content);
+    const reasoningContent = message.reasoning ?? null;
 
     return {
-      ...generateAssistantMessage(textContent, toolCalls),
+      ...generateAssistantMessage(textContent, reasoningContent, toolCalls),
       meta: {
         model,
         provider,
@@ -137,7 +139,11 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
+  ): AsyncGenerator<
+    LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls,
+    void,
+    unknown
+  > {
     const start = Date.now();
 
     const temperature = config.temperature ?? undefined;
@@ -185,14 +191,21 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
     const _toolCalls: OpenRouterToolCall[] = [];
 
     let content = "";
-    for await (const chunk of stream) {
-      const chunkData = chunk as ChatStreamingResponseChunkData;
+    let reasoningContent = "";
 
-      const delta = firstEntry(chunkData.choices)?.delta;
+    for await (const chunk of stream) {
+      const delta = firstEntry(chunk.choices)?.delta;
 
       if (delta?.content) {
         content += delta.content;
-        yield { type: "chunk", content: delta.content };
+        const chunkId = generateUniqueId();
+        yield { type: "chunk", content: delta.content, chunkId };
+      }
+
+      if (delta?.reasoning) {
+        reasoningContent += delta.reasoning;
+        const chunkId = generateUniqueId();
+        yield { type: "reasoningChunk", content: delta.reasoning, chunkId };
       }
 
       if (delta?.toolCalls) {
@@ -207,10 +220,10 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
         }
       }
 
-      if (chunkData.usage) {
-        inputTokens = (inputTokens || 0) + (chunkData.usage?.promptTokens ?? 0);
-        outputTokens = (outputTokens || 0) + (chunkData.usage?.completionTokens ?? 0);
-        reasoningTokens = (reasoningTokens || 0) + (chunkData.usage?.completionTokensDetails?.reasoningTokens ?? 0);
+      if (chunk.usage) {
+        inputTokens = (inputTokens || 0) + (chunk.usage?.promptTokens ?? 0);
+        outputTokens = (outputTokens || 0) + (chunk.usage?.completionTokens ?? 0);
+        reasoningTokens = (reasoningTokens || 0) + (chunk.usage?.completionTokensDetails?.reasoningTokens ?? 0);
       }
     }
 
@@ -281,6 +294,7 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
         type: "response",
         role: "assistant_with_tools",
         content,
+        reasoningContent,
         toolCalls,
         meta,
       };
@@ -289,6 +303,7 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
         type: "response",
         role: "assistant",
         content,
+        reasoningContent,
         meta,
       };
     }

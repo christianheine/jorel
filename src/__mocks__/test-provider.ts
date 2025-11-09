@@ -1,8 +1,8 @@
 import {
-  LlmMessage,
   generateAssistantMessage,
   LlmCoreProvider,
   LlmGenerationConfig,
+  LlmMessage,
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
@@ -54,7 +54,7 @@ export class TestProvider implements LlmCoreProvider {
       const tool = config.tools.tools[0]; // Use first available tool
       if (tool) {
         return {
-          ...generateAssistantMessage(null, [
+          ...generateAssistantMessage(null, null, [
             {
               id: "test-tool-call",
               request: {
@@ -83,7 +83,7 @@ export class TestProvider implements LlmCoreProvider {
     }
 
     return {
-      ...generateAssistantMessage(this.defaultResponse),
+      ...generateAssistantMessage(this.defaultResponse, null),
       meta: {
         model,
         provider: this.name,
@@ -113,6 +113,7 @@ export class TestProvider implements LlmCoreProvider {
       type: "response",
       role: "assistant",
       content: this.defaultStreamResponse.join(""),
+      reasoningContent: null,
       meta: {
         model,
         provider: this.name,

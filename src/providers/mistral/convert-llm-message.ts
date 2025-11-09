@@ -16,17 +16,58 @@ export const convertLlmMessagesToMistralMessages = async (
   for (const message of messages) {
     switch (message.role) {
       case "system":
-      case "assistant":
         convertedMessages.push({
           role: message.role,
           content: message.content,
         });
         break;
 
-      case "assistant_with_tools":
+      case "assistant": {
+        // Build content array with optional reasoning
+        type MistralContentItem =
+          | { type: "text"; text: string }
+          | { type: "thinking"; thinking: Array<{ type: "text"; text: string }> };
+
+        const contentItems: MistralContentItem[] = [];
+
+        if (message.reasoningContent) {
+          contentItems.push({
+            type: "thinking",
+            thinking: [{ type: "text", text: message.reasoningContent }],
+          });
+        }
+
+        contentItems.push({ type: "text", text: message.content });
+
+        convertedMessages.push({
+          role: message.role,
+          content: contentItems,
+        });
+        break;
+      }
+
+      case "assistant_with_tools": {
+        // Build content array with optional reasoning
+        type MistralContentItem =
+          | { type: "text"; text: string }
+          | { type: "thinking"; thinking: Array<{ type: "text"; text: string }> };
+
+        const contentItems: MistralContentItem[] = [];
+
+        if (message.reasoningContent) {
+          contentItems.push({
+            type: "thinking",
+            thinking: [{ type: "text", text: message.reasoningContent }],
+          });
+        }
+
+        if (message.content) {
+          contentItems.push({ type: "text", text: message.content });
+        }
+
         convertedMessages.push({
           role: "assistant",
-          content: message.content,
+          content: contentItems.length > 0 ? contentItems : message.content,
           toolCalls: message.toolCalls.map((toolCall) => ({
             id: toolCall.request.id,
             type: "function" as const,
@@ -54,6 +95,7 @@ export const convertLlmMessagesToMistralMessages = async (
           }
         }
         break;
+      }
 
       case "user":
         convertedMessages.push(await convertUserMessage(message, detail));

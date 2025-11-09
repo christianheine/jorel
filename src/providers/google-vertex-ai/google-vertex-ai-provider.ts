@@ -21,6 +21,7 @@ import {
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseReasoningChunk,
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
   toolChoiceToVertexAi,
@@ -188,6 +189,8 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         ? response.candidates[0].content
         : { role: "model", parts: [{ text: "" }] };
 
+    const reasoningContent = null;
+
     const content = responseContent.parts
       .filter((p) => !!p.text)
       .map((p) => p.text)
@@ -219,7 +222,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     const provider = this.name;
 
     return {
-      ...generateAssistantMessage(content, toolCalls),
+      ...generateAssistantMessage(content, reasoningContent, toolCalls),
       meta: {
         model,
         provider,
@@ -235,7 +238,11 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
+  ): AsyncGenerator<
+    LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls,
+    void,
+    unknown
+  > {
     const start = Date.now();
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToVertexAiMessages(messages);
@@ -330,7 +337,8 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         // Handle text content
         const textContent = content.parts.map((part) => ("text" in part ? part.text : "")).join("");
         if (textContent.length > 0) {
-          yield { type: "chunk", content: textContent };
+          const chunkId = generateUniqueId();
+          yield { type: "chunk", content: textContent, chunkId };
         }
       }
     }
@@ -343,6 +351,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     const outputTokens = r.usageMetadata?.candidatesTokenCount;
 
     const content = rawContent.parts.map((p) => p.text).join("");
+    const reasoningContent = null;
 
     const provider = this.name;
 
@@ -379,6 +388,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant_with_tools",
         content,
+        reasoningContent,
         toolCalls,
         meta,
       };
@@ -387,6 +397,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant",
         content,
+        reasoningContent,
         meta,
       };
     }

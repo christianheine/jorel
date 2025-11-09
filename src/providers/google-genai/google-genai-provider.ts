@@ -102,6 +102,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
       }
 
       const content = result.text ?? "";
+      const reasoningContent = null;
       const functionCalls = result.functionCalls ?? [];
 
       const toolCalls: MaybeUndefined<LlmToolCall[]> =
@@ -127,7 +128,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
       const durationMs = Date.now() - start;
 
       return {
-        ...generateAssistantMessage(content, toolCalls),
+        ...generateAssistantMessage(content, reasoningContent, toolCalls),
         meta: {
           model,
           provider: this.name,
@@ -182,10 +183,12 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
       }
 
       let fullContent = "";
+      const reasoningContent = "";
       const toolCalls: LlmToolCall[] = [];
 
       for await (const chunk of streamResult) {
         const chunkText = chunk.text ?? "";
+
         fullContent += chunkText;
 
         // Check for function calls in each chunk
@@ -245,6 +248,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           type: "response",
           role: "assistant_with_tools",
           content: fullContent,
+          reasoningContent: reasoningContent || null,
           toolCalls,
           meta,
         };
@@ -253,6 +257,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           type: "response",
           role: "assistant",
           content: fullContent,
+          reasoningContent: reasoningContent || null,
           meta,
         };
       }

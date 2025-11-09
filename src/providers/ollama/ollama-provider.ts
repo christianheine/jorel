@@ -8,6 +8,7 @@ import {
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseReasoningChunk,
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
@@ -93,7 +94,7 @@ export class OllamaProvider implements LlmCoreProvider {
     const provider = this.name;
 
     return {
-      ...generateAssistantMessage(message.content, toolCalls),
+      ...generateAssistantMessage(message.content, message.thinking ?? null, toolCalls),
       meta: {
         model,
         provider,
@@ -109,7 +110,11 @@ export class OllamaProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
+  ): AsyncGenerator<
+    LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls,
+    void,
+    unknown
+  > {
     const start = Date.now();
 
     const temperature = config.temperature ?? undefined;
@@ -119,7 +124,7 @@ export class OllamaProvider implements LlmCoreProvider {
       throw new JorElAbortError("Request was aborted");
     }
 
-    let stream: AbortableAsyncIterator<any>;
+    let stream: AbortableAsyncIterator<ChatResponse>;
 
     try {
       stream = await ollama.chat({
@@ -154,12 +159,21 @@ export class OllamaProvider implements LlmCoreProvider {
     let outputTokens: MaybeUndefined<number> = undefined;
 
     let content = "";
+    let reasoningContent = "";
+
     try {
       for await (const chunk of stream) {
         const contentChunk = chunk.message.content;
-        if (contentChunk) {
+        if (contentChunk && typeof contentChunk === "string") {
           content += contentChunk;
-          yield { type: "chunk", content: contentChunk };
+          const chunkId = generateUniqueId();
+          yield { type: "chunk", content: contentChunk, chunkId };
+        }
+
+        if (chunk.message.thinking) {
+          reasoningContent += chunk.message.thinking;
+          const chunkId = generateUniqueId();
+          yield { type: "reasoningChunk", content: chunk.message.thinking, chunkId };
         }
 
         if (chunk.message.tool_calls) {
@@ -220,6 +234,7 @@ export class OllamaProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant_with_tools",
         content,
+        reasoningContent: reasoningContent || null,
         toolCalls: toolCalls,
         meta,
       };
@@ -228,6 +243,7 @@ export class OllamaProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant",
         content,
+        reasoningContent: reasoningContent || null,
         meta,
       };
     }

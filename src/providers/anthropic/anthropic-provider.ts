@@ -10,6 +10,7 @@ import {
   LlmResponse,
   LlmStreamResponse,
   LlmStreamResponseChunk,
+  LlmStreamResponseReasoningChunk,
   LlmStreamResponseWithToolCalls,
   LlmToolCall,
 } from "../../providers";
@@ -157,6 +158,12 @@ export class AnthropicProvider implements LlmCoreProvider {
       .join("")
       .trim();
 
+    const reasoningContent = response.content
+      .filter((c) => c.type === "thinking" || c.type === "redacted_thinking")
+      .map((c) => (c.type === "thinking" ? c.thinking : c.data))
+      .join("")
+      .trim();
+
     const toolCalls: MaybeUndefined<LlmToolCall[]> = response.content
       .filter((c) => c.type === "tool_use")
       .map((c) => ({
@@ -177,7 +184,7 @@ export class AnthropicProvider implements LlmCoreProvider {
     const provider = this.name;
 
     return {
-      ...generateAssistantMessage(content, toolCalls),
+      ...generateAssistantMessage(content, reasoningContent, toolCalls),
       meta: {
         model,
         provider,
@@ -194,7 +201,11 @@ export class AnthropicProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
+  ): AsyncGenerator<
+    LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls,
+    void,
+    unknown
+  > {
     const start = Date.now();
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToAnthropicMessages(messages);
@@ -263,6 +274,7 @@ export class AnthropicProvider implements LlmCoreProvider {
     const reasoningTokens: MaybeUndefined<number> = undefined;
 
     let content = "";
+    let reasoningContent = "";
 
     const _toolCalls: { [index: number]: Anthropic.Messages.ToolUseBlock & { arguments: string } } = {};
 
@@ -270,7 +282,13 @@ export class AnthropicProvider implements LlmCoreProvider {
       if (chunk.type === "content_block_delta") {
         if (chunk.delta.type === "text_delta") {
           content += chunk.delta.text;
-          yield { type: "chunk", content: chunk.delta.text };
+          const chunkId = generateUniqueId();
+          yield { type: "chunk", content: chunk.delta.text, chunkId };
+        }
+        if (chunk.delta.type === "thinking_delta") {
+          reasoningContent += chunk.delta.thinking;
+          const chunkId = generateUniqueId();
+          yield { type: "reasoningChunk", content: chunk.delta.thinking, chunkId };
         }
       }
 
@@ -364,6 +382,7 @@ export class AnthropicProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant_with_tools",
         content,
+        reasoningContent,
         toolCalls,
         meta,
       };
@@ -372,6 +391,7 @@ export class AnthropicProvider implements LlmCoreProvider {
         type: "response",
         role: "assistant",
         content,
+        reasoningContent,
         meta,
       };
     }

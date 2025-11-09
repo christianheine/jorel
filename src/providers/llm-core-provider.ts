@@ -213,6 +213,7 @@ export interface LlmAssistantMessage {
   id: string;
   role: "assistant";
   content: string;
+  reasoningContent?: Nullable<string>;
   meta?: LlmAssistantMessageMeta;
   createdAt?: number;
 }
@@ -221,6 +222,7 @@ export interface LlmAssistantMessageWithToolCalls {
   id: string;
   role: "assistant_with_tools";
   content: Nullable<string>;
+  reasoningContent?: Nullable<string>;
   toolCalls: LlmToolCall[];
   meta?: LlmAssistantMessageMeta;
   createdAt?: number;
@@ -276,12 +278,20 @@ export interface LlmJsonResponseWithMeta {
 export interface LlmStreamResponseChunk {
   type: "chunk";
   content: string;
+  chunkId?: string;
+}
+
+export interface LlmStreamResponseReasoningChunk {
+  type: "reasoningChunk";
+  content: string;
+  chunkId?: string;
 }
 
 export interface LlmStreamResponse {
   type: "response";
   role: "assistant";
   content: string;
+  reasoningContent: Nullable<string>;
   meta: LlmAssistantMessageMeta;
 }
 
@@ -289,6 +299,7 @@ export interface LlmStreamResponseWithToolCalls {
   type: "response";
   role: "assistant_with_tools";
   content: Nullable<string>;
+  reasoningContent: Nullable<string>;
   toolCalls: LlmToolCall[];
   meta: LlmAssistantMessageMeta;
 }
@@ -302,11 +313,13 @@ export interface LlmStreamResponseMessages {
 export interface LlmStreamToolCallStarted {
   type: "toolCallStarted";
   toolCall: LlmToolCall__Pending;
+  toolCallId?: string;
 }
 
 export interface LlmStreamToolCallCompleted {
   type: "toolCallCompleted";
   toolCall: LlmToolCall__Completed | LlmToolCall__Error;
+  toolCallId?: string;
 }
 
 export interface LlmCoreProvider {
@@ -322,6 +335,7 @@ export interface LlmCoreProvider {
   ): AsyncGenerator<
     | LlmStreamResponseChunk
     | LlmStreamResponse
+    | LlmStreamResponseReasoningChunk
     | LlmStreamResponseWithToolCalls
     | LlmStreamToolCallStarted
     | LlmStreamToolCallCompleted,

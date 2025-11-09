@@ -31,9 +31,17 @@ export const convertLlmMessagesToAnthropicMessages = async (
 
   for (const message of chatMessages) {
     if (message.role === "assistant") {
-      convertedChatMessages.push(message);
+      // Note: Anthropic's thinking blocks cannot be passed back as input (they require a signature field)
+      // We only send the main content back
+      convertedChatMessages.push({
+        role: "assistant",
+        content: message.content,
+      });
     } else if (message.role === "assistant_with_tools") {
       const content: Anthropic.ContentBlockParam[] = [];
+
+      // Note: Anthropic's thinking blocks cannot be passed back as input (they require a signature field)
+      // We only send the main content and tool calls back
 
       if (message.content) {
         content.push({
@@ -100,12 +108,12 @@ export const convertLlmMessagesToAnthropicMessages = async (
         } else {
           throw new Error(`Unsupported content type`);
         }
-
-        convertedChatMessages.push({
-          role: message.role,
-          content,
-        });
       }
+
+      convertedChatMessages.push({
+        role: message.role,
+        content,
+      });
     }
   }
 

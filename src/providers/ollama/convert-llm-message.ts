@@ -17,11 +17,13 @@ export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[])
       convertedMessages.push({
         role: "assistant",
         content: message.content,
+        thinking: message.reasoningContent ?? undefined,
       });
     } else if (message.role === "assistant_with_tools") {
       convertedMessages.push({
         role: "assistant",
         content: message.content || "",
+        thinking: message.reasoningContent ?? undefined,
         tool_calls: message.toolCalls.map(
           (toolCall): ToolCall => ({
             function: {
@@ -60,13 +62,13 @@ export const convertLlmMessagesToOllamaMessages = async (messages: LlmMessage[])
         } else {
           throw new Error(`Unsupported content type`);
         }
-
-        convertedMessages.push({
-          role: message.role,
-          content: content.join(""),
-          images: images.length > 0 ? images : undefined,
-        });
       }
+
+      convertedMessages.push({
+        role: message.role,
+        content: content.join(""),
+        images: images.length > 0 ? images : undefined,
+      });
     }
   }
 

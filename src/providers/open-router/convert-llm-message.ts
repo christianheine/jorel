@@ -53,11 +53,13 @@ export const convertLlmMessagesToOpenRouterMessages = async (messages: LlmMessag
       converted.push({
         role: "assistant",
         content: message.content,
+        reasoning: message.reasoningContent ?? undefined,
       });
     } else if (message.role === "assistant_with_tools") {
       converted.push({
         role: "assistant",
         content: message.content,
+        reasoning: message.reasoningContent ?? undefined,
         toolCalls: message.toolCalls
           .filter((call) => call.executionState === "completed" || call.executionState === "error")
           .map((call) => ({
