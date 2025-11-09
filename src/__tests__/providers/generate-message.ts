@@ -1,3 +1,4 @@
+import { LlmDocument, LlmDocumentCollection } from "../../documents";
 import {
   generateAssistantMessage,
   generateSystemMessage,
@@ -5,7 +6,6 @@ import {
   LLmMessageTextContent,
   LlmToolCall,
 } from "../../providers";
-import { LlmDocument, LlmDocumentCollection } from "../../documents";
 
 describe("generateUserMessage", () => {
   it("should generate a user message with the given content", async () => {
@@ -124,7 +124,7 @@ describe("generateAssistantMessage", () => {
       },
     ];
 
-    const result = generateAssistantMessage(content, toolCalls);
+    const result = generateAssistantMessage(content, null, toolCalls);
 
     expect(result.role).toBe("assistant_with_tools");
     expect(result.content).toBe(content);

@@ -19,10 +19,8 @@ import {
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
-  LlmStreamResponse,
-  LlmStreamResponseChunk,
-  LlmStreamResponseReasoningChunk,
-  LlmStreamResponseWithToolCalls,
+  LlmStreamProviderResponseChunkEvent,
+  LlmStreamResponseEvent,
   LlmToolCall,
   toolChoiceToVertexAi,
 } from "../../providers";
@@ -238,11 +236,7 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<
-    LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls,
-    void,
-    unknown
-  > {
+  ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown> {
     const start = Date.now();
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToVertexAiMessages(messages);

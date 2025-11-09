@@ -16,9 +16,8 @@ import {
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
-  LlmStreamResponse,
-  LlmStreamResponseChunk,
-  LlmStreamResponseWithToolCalls,
+  LlmStreamProviderResponseChunkEvent,
+  LlmStreamResponseEvent,
   LlmToolCall,
 } from "..";
 import {
@@ -150,7 +149,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls> {
+  ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown> {
     const start = Date.now();
 
     try {
@@ -228,7 +227,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
         }
 
         if (chunkText) {
-          yield { type: "chunk", content: chunkText };
+          yield { type: "chunk", content: chunkText, chunkId: generateUniqueId() };
         }
       }
 

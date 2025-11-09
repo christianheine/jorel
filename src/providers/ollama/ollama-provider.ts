@@ -6,10 +6,8 @@ import {
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
-  LlmStreamResponse,
-  LlmStreamResponseChunk,
-  LlmStreamResponseReasoningChunk,
-  LlmStreamResponseWithToolCalls,
+  LlmStreamProviderResponseChunkEvent,
+  LlmStreamResponseEvent,
   LlmToolCall,
 } from "../../providers";
 import { generateRandomId, generateUniqueId, JorElAbortError, MaybeUndefined } from "../../shared";
@@ -110,11 +108,7 @@ export class OllamaProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<
-    LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls,
-    void,
-    unknown
-  > {
+  ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown> {
     const start = Date.now();
 
     const temperature = config.temperature ?? undefined;

@@ -5,19 +5,23 @@ import {
   LlmGenerationAttempt,
   LLmGenerationStopReason,
   LlmMessage,
+  LlmStreamEvent,
+  LlmStreamProviderResponseChunk,
+  LlmStreamProviderResponseChunkEvent,
+  LlmStreamProviderResponseReasoningChunk,
   LlmStreamResponse,
-  LlmStreamResponseChunk,
-  LlmStreamResponseMessages,
+  LlmStreamResponseEvent,
   LlmStreamResponseReasoningChunk,
   LlmStreamResponseWithToolCalls,
   LlmStreamToolCallCompleted,
+  LlmStreamToolCallEvent,
   LlmStreamToolCallStarted,
   LlmToolCall,
   StreamBufferConfig,
 } from "../providers";
 import { getModelOverrides } from "../providers/get-overrides";
 import { modelParameterOverrides } from "../providers/model-parameter-overrides";
-import { maskAll, MaybeUndefined, omit, shallowFilterUndefined } from "../shared";
+import { generateUniqueId, maskAll, MaybeUndefined, omit, shallowFilterUndefined } from "../shared";
 import { JorElGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
 import { JorElModelManager, ModelEntry } from "./jorel.models";
 import { JorElProviderManager } from "./jorel.providers";
@@ -261,12 +265,7 @@ export class JorElCoreStore {
     messages: LlmMessage[],
     config: JorElGenerationConfigWithTools = {},
   ): AsyncGenerator<
-    | LlmStreamResponseChunk
-    | LlmStreamResponse
-    | LlmStreamResponseReasoningChunk
-    | LlmStreamResponseWithToolCalls
-    | LlmStreamToolCallStarted
-    | LlmStreamToolCallCompleted,
+    LlmStreamProviderResponseChunkEvent | LlmStreamToolCallEvent | LlmStreamResponseEvent,
     void,
     unknown
   > {
@@ -321,17 +320,7 @@ export class JorElCoreStore {
     messages: LlmMessage[],
     config: JorElGenerationConfigWithTools = {},
     autoApprove = false,
-  ): AsyncGenerator<
-    | LlmStreamResponseChunk
-    | LlmStreamResponse
-    | LlmStreamResponseReasoningChunk
-    | LlmStreamResponseWithToolCalls
-    | LlmStreamResponseMessages
-    | LlmStreamToolCallStarted
-    | LlmStreamToolCallCompleted,
-    void,
-    unknown
-  > {
+  ): AsyncGenerator<LlmStreamEvent, void, unknown> {
     if (config.tools && config.tools.tools.some((t) => t.type !== "function")) {
       throw new Error("Only tools with a function executor can be used in this context");
     }
@@ -352,14 +341,16 @@ export class JorElCoreStore {
     let totalDurationMs = 0;
 
     let response: MaybeUndefined<LlmStreamResponse | LlmStreamResponseWithToolCalls> = undefined;
+    let messageId: string = generateUniqueId();
     for (let i = 0; i < maxAttempts; i++) {
+      yield { type: "messageStart", messageId };
       const stream = this.generateContentStream(messages, config);
 
       for await (const chunk of stream) {
         if (chunk.type === "chunk") {
-          yield chunk;
+          yield { ...chunk, messageId };
         } else if (chunk.type === "reasoningChunk") {
-          yield chunk;
+          yield { ...chunk, messageId };
         } else if (chunk.type === "response") {
           response = chunk;
 
@@ -408,7 +399,15 @@ export class JorElCoreStore {
 
       if (hasToolCallsRequiringApproval) {
         // Stop processing and return messages with approval required reason
-        messages.push(generateAssistantMessage(response.content, response.reasoningContent, response.toolCalls));
+        const message = generateAssistantMessage(
+          response.content,
+          response.reasoningContent,
+          response.toolCalls,
+          messageId,
+        );
+        yield { type: "messageEnd", messageId, message };
+        messages.push(message);
+        messageId = generateUniqueId();
 
         // Update meta with cumulative token usage
         if (generations.length > 1) {
@@ -488,7 +487,15 @@ export class JorElCoreStore {
 
       this.logger.debug("Core", "Finished processing tool calls");
 
-      messages.push(generateAssistantMessage(response.content, response.reasoningContent, response.toolCalls));
+      const message = generateAssistantMessage(
+        response.content,
+        response.reasoningContent,
+        response.toolCalls,
+        messageId,
+      );
+      yield { type: "messageEnd", messageId, message };
+      messages.push(message);
+      messageId = generateUniqueId();
     }
 
     if (response) {
@@ -506,9 +513,11 @@ export class JorElCoreStore {
         };
       }
 
-      yield response;
+      const message = generateAssistantMessage(response.content, response.reasoningContent, undefined, messageId);
+      yield { type: "messageEnd", messageId, message };
+      messages.push(message);
 
-      messages.push(generateAssistantMessage(response.content, response.reasoningContent));
+      yield response;
     }
 
     yield {
@@ -537,7 +546,8 @@ export class JorElCoreStore {
    */
   private async *createBufferedStream(
     stream: AsyncGenerator<
-      | LlmStreamResponseChunk
+      | LlmStreamProviderResponseChunk
+      | LlmStreamProviderResponseReasoningChunk
       | LlmStreamResponse
       | LlmStreamResponseReasoningChunk
       | LlmStreamResponseWithToolCalls
@@ -548,7 +558,8 @@ export class JorElCoreStore {
     >,
     bufferConfig?: StreamBufferConfig,
   ): AsyncGenerator<
-    | LlmStreamResponseChunk
+    | LlmStreamProviderResponseChunk
+    | LlmStreamProviderResponseReasoningChunk
     | LlmStreamResponse
     | LlmStreamResponseReasoningChunk
     | LlmStreamResponseWithToolCalls
@@ -574,6 +585,7 @@ export class JorElCoreStore {
         yield {
           type: "chunk" as const,
           content: buffer,
+          chunkId: generateUniqueId(),
         };
         buffer = "";
         bufferStartTime = null;
@@ -585,6 +597,7 @@ export class JorElCoreStore {
         yield {
           type: "reasoningChunk" as const,
           content: reasoningBuffer,
+          chunkId: generateUniqueId(),
         };
         reasoningBuffer = "";
       }

@@ -31,13 +31,7 @@ import {
   LlmCoreProvider,
   LlmJsonResponseWithMeta,
   LlmMessage,
-  LlmStreamResponse,
-  LlmStreamResponseChunk,
-  LlmStreamResponseMessages,
-  LlmStreamResponseReasoningChunk,
-  LlmStreamResponseWithToolCalls,
-  LlmStreamToolCallCompleted,
-  LlmStreamToolCallStarted,
+  LlmStreamEvent,
   LlmTextResponseWithMeta,
   LlmToolChoice,
   MistralConfig,
@@ -644,17 +638,7 @@ export class JorEl {
   async *streamWithMeta(
     taskOrMessages: JorElTaskInput | LlmMessage[],
     config: JorElTextGenerationConfigWithTools | JorElMessagesGenerationConfig = {},
-  ): AsyncGenerator<
-    | LlmStreamResponseChunk
-    | LlmStreamResponse
-    | LlmStreamResponseReasoningChunk
-    | LlmStreamResponseWithToolCalls
-    | LlmStreamResponseMessages
-    | LlmStreamToolCallStarted
-    | LlmStreamToolCallCompleted,
-    void,
-    unknown
-  > {
+  ): AsyncGenerator<LlmStreamEvent, void, unknown> {
     let messages: LlmMessage[];
 
     if (isLlmMessageArray(taskOrMessages)) {
@@ -683,30 +667,39 @@ export class JorEl {
       yield* this._core.generateStreamAndProcessTools(messages, _config);
     } else {
       const stream = this._core.generateContentStream(messages, _config);
+      const messageId: string = generateUniqueId();
+      yield { type: "messageStart", messageId };
       for await (const chunk of stream) {
         if (chunk.type === "chunk") {
-          yield chunk;
+          yield { ...chunk, messageId };
+        } else if (chunk.type === "reasoningChunk") {
+          yield { ...chunk, messageId };
         }
         if (chunk.type === "response") {
-          yield chunk;
           if (chunk.role === "assistant") {
-            messages.push({
-              id: generateUniqueId(),
+            const message: LlmAssistantMessage = {
+              id: messageId,
               role: "assistant",
               content: chunk.content,
               reasoningContent: chunk.reasoningContent,
               createdAt: Date.now(),
-            });
+            };
+            yield { type: "messageEnd", messageId, message };
+            messages.push(message);
           } else {
-            messages.push({
-              id: generateUniqueId(),
+            const message: LlmAssistantMessageWithToolCalls = {
+              id: messageId,
               role: "assistant_with_tools",
               content: chunk.content,
               toolCalls: chunk.toolCalls,
               reasoningContent: chunk.reasoningContent,
+              meta: chunk.meta,
               createdAt: Date.now(),
-            });
+            };
+            yield { type: "messageEnd", messageId, message };
+            messages.push(message);
           }
+          yield chunk;
           yield { type: "messages", messages, stopReason: config.abortSignal?.aborted ? "userCancelled" : "completed" };
         }
       }

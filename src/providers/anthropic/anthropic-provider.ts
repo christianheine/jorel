@@ -8,10 +8,8 @@ import {
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
-  LlmStreamResponse,
-  LlmStreamResponseChunk,
-  LlmStreamResponseReasoningChunk,
-  LlmStreamResponseWithToolCalls,
+  LlmStreamProviderResponseChunkEvent,
+  LlmStreamResponseEvent,
   LlmToolCall,
 } from "../../providers";
 import { generateUniqueId, JorElAbortError, MaybeUndefined } from "../../shared";
@@ -201,11 +199,7 @@ export class AnthropicProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<
-    LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls,
-    void,
-    unknown
-  > {
+  ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown> {
     const start = Date.now();
 
     const { chatMessages, systemMessage } = await convertLlmMessagesToAnthropicMessages(messages);

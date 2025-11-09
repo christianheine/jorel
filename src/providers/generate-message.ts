@@ -67,8 +67,9 @@ export const generateAssistantMessage = (
   content: Nullable<string>,
   reasoningContent: Nullable<string> = null,
   toolCalls?: LlmToolCall[],
+  messageId?: string,
 ): LlmAssistantMessage | LlmAssistantMessageWithToolCalls => {
-  const id = generateUniqueId();
+  const id = messageId ?? generateUniqueId();
   const createdAt = Date.now();
   if (!toolCalls || toolCalls.length === 0) {
     return { id, role: "assistant", content: content || "", reasoningContent, createdAt };

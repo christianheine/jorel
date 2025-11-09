@@ -4,10 +4,11 @@ import {
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
+  LlmStreamProviderResponseChunkEvent,
   LlmStreamResponse,
-  LlmStreamResponseChunk,
   LlmStreamResponseWithToolCalls,
 } from "../providers";
+import { generateUniqueId } from "../shared";
 
 export interface TestProviderConfig {
   name?: string;
@@ -99,14 +100,18 @@ export class TestProvider implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: LlmGenerationConfig = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponse | LlmStreamResponseWithToolCalls, void, unknown> {
+  ): AsyncGenerator<
+    LlmStreamProviderResponseChunkEvent | LlmStreamResponse | LlmStreamResponseWithToolCalls,
+    void,
+    unknown
+  > {
     if (this.failOnModels.includes(model)) {
       throw new Error(`Model ${model} is configured to fail`);
     }
 
     for (const chunk of this.defaultStreamResponse) {
       await this.delay();
-      yield { type: "chunk", content: chunk };
+      yield { type: "chunk", content: chunk, chunkId: generateUniqueId() };
     }
 
     yield {

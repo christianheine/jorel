@@ -275,16 +275,41 @@ export interface LlmJsonResponseWithMeta {
   stopReason: LLmGenerationStopReason;
 }
 
+export interface LlmStreamMessageStart {
+  type: "messageStart";
+  messageId: string;
+}
+
+export interface LlmStreamMessageEnd {
+  type: "messageEnd";
+  messageId: string;
+  message: LlmMessage;
+}
+
+export interface LlmStreamProviderResponseChunk {
+  type: "chunk";
+  content: string;
+  chunkId: string;
+}
+
+export interface LlmStreamProviderResponseReasoningChunk {
+  type: "reasoningChunk";
+  content: string;
+  chunkId: string;
+}
+
 export interface LlmStreamResponseChunk {
   type: "chunk";
   content: string;
-  chunkId?: string;
+  chunkId: string;
+  messageId: string;
 }
 
 export interface LlmStreamResponseReasoningChunk {
   type: "reasoningChunk";
   content: string;
-  chunkId?: string;
+  chunkId: string;
+  messageId: string;
 }
 
 export interface LlmStreamResponse {
@@ -322,6 +347,27 @@ export interface LlmStreamToolCallCompleted {
   toolCallId?: string;
 }
 
+export type LlmStreamProviderResponseChunkEvent =
+  | LlmStreamProviderResponseChunk
+  | LlmStreamProviderResponseReasoningChunk;
+
+/** Response events are emitted when a new response chunk starts or ends */
+export type LlmStreamResponseChunkEvent = LlmStreamResponseChunk | LlmStreamResponseReasoningChunk;
+/** Response events are emitted when a new response starts or ends */
+export type LlmStreamResponseEvent = LlmStreamResponse | LlmStreamResponseWithToolCalls;
+
+/** Message events are emitted when a new message starts or ends */
+export type LlmStreamMessageEvent = LlmStreamMessageStart | LlmStreamMessageEnd | LlmStreamResponseMessages;
+/** Tool call events are emitted when a new tool call starts or completes */
+export type LlmStreamToolCallEvent = LlmStreamToolCallStarted | LlmStreamToolCallCompleted;
+
+/** All stream events */
+export type LlmStreamEvent =
+  | LlmStreamMessageEvent
+  | LlmStreamResponseChunkEvent
+  | LlmStreamToolCallEvent
+  | LlmStreamResponseEvent;
+
 export interface LlmCoreProvider {
   readonly defaultName?: string;
   readonly name: string;
@@ -332,16 +378,7 @@ export interface LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config?: LlmGenerationConfig,
-  ): AsyncGenerator<
-    | LlmStreamResponseChunk
-    | LlmStreamResponse
-    | LlmStreamResponseReasoningChunk
-    | LlmStreamResponseWithToolCalls
-    | LlmStreamToolCallStarted
-    | LlmStreamToolCallCompleted,
-    void,
-    unknown
-  >;
+  ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown>;
 
   getAvailableModels(): Promise<string[]>;
 

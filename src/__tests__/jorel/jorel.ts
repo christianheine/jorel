@@ -210,25 +210,35 @@ describe("JorEl", () => {
         chunks.push(chunk);
       }
 
-      // Should have 7 chunks: 5 content chunks, 1 final response, and 1 messages
-      expect(chunks.length).toBe(7);
+      // Should have 9 chunks: 1 messageStart, 5 content chunks, 1 messageEnd, 1 response, and 1 messages
+      expect(chunks.length).toBe(9);
+
+      // Check messageStart
+      expect(chunks[0]).toHaveProperty("type", "messageStart");
+      expect(chunks[0]).toHaveProperty("messageId");
 
       // Check content chunks
-      for (let i = 0; i < 5; i++) {
+      for (let i = 1; i <= 5; i++) {
         expect(chunks[i]).toHaveProperty("type", "chunk");
         expect(chunks[i]).toHaveProperty("content");
+        expect(chunks[i]).toHaveProperty("messageId");
       }
 
+      // Check messageEnd
+      expect(chunks[6]).toHaveProperty("type", "messageEnd");
+      expect(chunks[6]).toHaveProperty("messageId");
+      expect(chunks[6]).toHaveProperty("message");
+
       // Check final response
-      expect(chunks[5]).toHaveProperty("type", "response");
-      expect(chunks[5]).toHaveProperty("role", "assistant");
-      expect(chunks[5]).toHaveProperty("content", "This is a test response");
-      expect(chunks[5]).toHaveProperty("meta");
+      expect(chunks[7]).toHaveProperty("type", "response");
+      expect(chunks[7]).toHaveProperty("role", "assistant");
+      expect(chunks[7]).toHaveProperty("content", "This is a test response");
+      expect(chunks[7]).toHaveProperty("meta");
 
       // Check messages
-      expect(chunks[6]).toHaveProperty("type", "messages");
-      expect(chunks[6]).toHaveProperty("messages");
-      expect(Array.isArray(chunks[6].messages)).toBe(true);
+      expect(chunks[8]).toHaveProperty("type", "messages");
+      expect(chunks[8]).toHaveProperty("messages");
+      expect(Array.isArray(chunks[8].messages)).toBe(true);
     });
   });
 

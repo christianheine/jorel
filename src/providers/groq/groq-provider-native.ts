@@ -5,9 +5,8 @@ import {
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
-  LlmStreamResponse,
-  LlmStreamResponseChunk,
-  LlmStreamResponseReasoningChunk,
+  LlmStreamProviderResponseChunkEvent,
+  LlmStreamResponseEvent,
   LlmToolCall,
 } from "..";
 import { firstEntry, generateUniqueId, MaybeUndefined } from "../../shared";
@@ -100,7 +99,7 @@ export class GroqProviderNative implements LlmCoreProvider {
     model: string,
     messages: LlmMessage[],
     config: Omit<LlmGenerationConfig, "tools" | "toolChoice"> = {},
-  ): AsyncGenerator<LlmStreamResponseChunk | LlmStreamResponseReasoningChunk | LlmStreamResponse, void, unknown> {
+  ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown> {
     const start = Date.now();
 
     const temperature = config.temperature ?? undefined;
