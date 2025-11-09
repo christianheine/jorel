@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0-beta.0 (2025-11-09)
+
+* Add full support for reasoning content across all providers
+  + Expose reasoning content in generation results
+  + Support reasoning in supported providers (Anthropic, Mistral, Ollama, Groq, and OpenRouter - via native provider)
+* Add native OpenRouter SDK support via `@openrouter/sdk`
+  + Optional opt-in via `openRouter.useNativeSDK`
+  + Includes streaming, tool use, and reasoning support
+* Add strict/loose JSON parsing mode for improved error handling
+* Switch to UUID v7 (time ordered) for unique ID generation
+* Improve type definitions for Anthropic, Google GenAI, and OpenAI providers
+* Fix example file paths for Groq and Ollama
+
 ## 1.0.2 (2025-11-08)
 
 * Downgrade Mistral to avoid Typescript build errors in consumers

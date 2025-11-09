@@ -63,13 +63,11 @@ To run the example, use:
 npm run start
 ```
 
-## What's New in v1.0.0
+## What's New in v1.1.0
 
-* **📊 Token Tracking**: Accurate tracking of input/output tokens across multiple generations when using tools
-* **🚫 Cancellation Support**: Pass AbortSignal to cancel ongoing generations (provider support varies)
-* **🎯 Model-Specific Parameters**: Support for `reasoningEffort` and `verbosity` on compatible models
-* **⚙️ Model-Specific Defaults**: Configure default parameters for individual models
-* **🏭 Production Ready**: Stable API for production use with comprehensive documentation
+* **🧠 Reasoning Content Support**: Access reasoning/thinking processes from supported models (Anthropic, Mistral, Ollama, Groq, OpenRouter)
+* **🔌 Native OpenRouter SDK**: Optional native `@openrouter/sdk` integration with full streaming and reasoning support
+* **🔒 JSON Parsing Modes**: Strict/loose parsing options for better error handling
 
 See the [full changelog](CHANGELOG.md) for complete details.
 
@@ -327,9 +325,17 @@ console.log(followUpResponse);
 JorEl supports OpenRouter, which gives you access to various models from different providers through a single API:
 
 ```typescript
-// Initialize with OpenRouter
+// Initialize with OpenRouter (default: uses OpenAI SDK compatibility)
 const jorEl = new JorEl({
   openRouter: true, // Uses OPEN_ROUTER_API_KEY environment variable
+});
+
+// Or use the native OpenRouter SDK for full feature support (recommended)
+const jorElNative = new JorEl({
+  openRouter: { 
+    useNativeSDK: true, // Enable native SDK
+    apiKey: "your-api-key" 
+  }
 });
 
 // Register a model from Anthropic via OpenRouter
@@ -340,6 +346,40 @@ const response = await jorEl.text("What is the capital of France?", {
   model: "anthropic/claude-3-7-sonnet",
 });
 // Paris
+```
+
+The native SDK provides additional features like reasoning content support and improved streaming performance.
+
+#### 10. **Reasoning Content**
+
+Access the model's internal reasoning process (supported by Anthropic, Mistral, Ollama, Groq, and OpenRouter via native SDK):
+
+```typescript
+const { response, meta, messages } = await jorEl.text(
+  "Solve this math problem: If a train travels 120 miles in 2 hours, what is its speed?",
+  {
+    reasoningEffort: "high" // Available: minimal, low, medium, high
+  },
+  true // Include metadata
+);
+
+console.log(response);
+// "The train's speed is 60 miles per hour."
+
+// Access the reasoning process from the last assistant message
+const lastMessage = messages[messages.length - 1];
+if (lastMessage.role === "assistant" && lastMessage.reasoningContent) {
+  console.log(lastMessage.reasoningContent);
+  // "Let me think through this step by step:
+  //  1. Speed = Distance / Time
+  //  2. Distance = 120 miles
+  //  3. Time = 2 hours
+  //  4. Speed = 120 / 2 = 60 mph"
+}
+
+// Check reasoning token usage
+console.log(meta.reasoningTokens);
+// 45
 ```
 
 ### Advanced Features
