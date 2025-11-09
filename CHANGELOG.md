@@ -1,10 +1,11 @@
 # Changelog
 
-## 1.1.0-beta.0 (2025-11-09)
+## 1.1.0-beta.1 (2025-11-10)
 
 * Add full support for reasoning content across all providers
   + Expose reasoning content in generation results
   + Support reasoning in supported providers (Anthropic, Mistral, Ollama, Groq, and OpenRouter - via native provider)
+* Add message start & end events to stream & extend content & reasoning chunkgs with current message id
 * Add native OpenRouter SDK support via `@openrouter/sdk`
   + Optional opt-in via `openRouter.useNativeSDK`
   + Includes streaming, tool use, and reasoning support

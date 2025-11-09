@@ -63,9 +63,10 @@ To run the example, use:
 npm run start
 ```
 
-## What's New in v1.1.0
+## What's New in v1.1.0 (beta)
 
 * **🧠 Reasoning Content Support**: Access reasoning/thinking processes from supported models (Anthropic, Mistral, Ollama, Groq, OpenRouter)
+* **📊 Stream Message Tracking**: Track message boundaries and IDs in real-time with `messageStart`,  `messageEnd` events
 * **🔌 Native OpenRouter SDK**: Optional native `@openrouter/sdk` integration with full streaming and reasoning support
 * **🔒 JSON Parsing Modes**: Strict/loose parsing options for better error handling
 
@@ -120,7 +121,68 @@ for await (const chunk of stream) {
 }
 ```
 
-#### 3a. **Stream Buffering**
+#### 3a. **Streaming with Message Tracking**
+
+The `streamWithMeta` method provides enhanced streaming with message tracking, metadata, and support for automatic tool processing:
+
+```typescript
+const stream = jorEl.streamWithMeta("What's the weather in Sydney?", {
+  tools: [weatherTool] // Tools are automatically processed
+});
+
+for await (const event of stream) {
+  switch (event.type) {
+    case "messageStart":
+      // A new message generation has started
+      console.log(`Starting message ${event.messageId}`);
+      break;
+      
+    case "reasoningChunk":
+      // Reasoning/thinking chunk (if supported by model)
+      console.log(`Thinking: ${event.content}`);
+      console.log(`Message ID: ${event.messageId}`);
+      break;
+
+    case "toolCallStarted":
+      // Tool call initiated
+      console.log(`Calling tool: ${event.toolCall.request.function.name}`);
+      break;
+      
+    case "toolCallCompleted":
+      // Tool call finished
+      console.log(`Tool result: ${JSON.stringify(event.toolCall.result)}`);
+      break;
+    
+    case "chunk":
+      // Regular content chunk with message ID
+      process.stdout.write(event.content);
+      console.log(`Message ID: ${event.messageId}`);
+      break;
+      
+    case "messageEnd":
+      // Message generation completed
+      console.log(`\nCompleted message ${event.messageId}`);
+      console.log(event.message); // Full message object
+      break;
+      
+    case "response":
+      // Final response with metadata
+      console.log(`Model: ${event.meta.model}`);
+      console.log(`Tokens: ${event.meta.inputTokens}/${event.meta.outputTokens}`);
+      break;
+      
+    case "messages":
+      // Complete conversation history
+      console.log(`Total messages: ${event.messages.length}`);
+      console.log(`Stop reason: ${event.stopReason}`);
+      break;
+  }
+}
+```
+
+Each content and reasoning chunk includes a `messageId` that corresponds to the message being generated, allowing you to track which chunks belong to which message in real-time. This is especially useful when handling multiple tool calls, as each iteration produces a new message with a unique ID.
+
+#### 3b. **Stream Buffering**
 
 Control the rate of chunk emission to help with backpressure in downstream systems:
 
