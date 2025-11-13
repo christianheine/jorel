@@ -35,11 +35,10 @@ export const convertLlmMessagesToOpenRouterMessages = async (messages: LlmMessag
               },
             });
           } else if (item.type === "imageData") {
-            const dataUrl = `data:${item.mimeType || "image/png"};base64,${item.data}`;
             contentItems.push({
               type: "image_url",
               imageUrl: {
-                url: dataUrl,
+                url: item.data,
               },
             });
           }
