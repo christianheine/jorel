@@ -63,7 +63,7 @@ To run the example, use:
 npm run start
 ```
 
-## What's New in v1.1.0 (beta)
+## What's New in v1.1.0
 
 * **🧠 Reasoning Content Support**: Access reasoning/thinking processes from supported models (Anthropic, Mistral, Ollama, Groq, OpenRouter)
 * **📊 Stream Message Tracking**: Track message boundaries and IDs in real-time with `messageStart`,  `messageEnd` events

@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0-beta.1 (2025-11-10)
+## 1.1.0 (2025-11-13)
 
 * Add full support for reasoning content across all providers
   + Expose reasoning content in generation results
