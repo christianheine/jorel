@@ -1,8 +1,8 @@
+import { fileTypeFromBuffer } from "file-type";
 import { promises } from "fs";
-import { fromBuffer } from "file-type";
-import { fetchFileAsBuffer } from "./utils";
 import { LLmMessageImageDataUrlContent, LLmMessageImageUrlContent } from "../providers";
 import { shallowFilterUndefined } from "../shared";
+import { fetchFileAsBuffer } from "./utils";
 
 interface BufferImage {
   type: "buffer";
@@ -114,7 +114,7 @@ export class ImageContent {
    * @throws Error - Error if the MIME type cannot be detected
    */
   static async fromBuffer(buffer: Buffer, mimeType?: string, metadata?: ImageMetadata): Promise<ImageContent> {
-    const type = mimeType || (await fromBuffer(buffer))?.mime;
+    const type = mimeType || (await fileTypeFromBuffer(buffer))?.mime;
     if (!type) {
       throw new Error("Unsupported image type. Unable to detect MIME type from the buffer.");
     }

@@ -1,7 +1,7 @@
+import { fileTypeFromBuffer } from "file-type";
 import { promises as fs } from "fs";
-import { fetchFileAsBuffer } from "../../media/utils";
 import { ImageContent } from "../../media";
-import { fromBuffer } from "file-type";
+import { fetchFileAsBuffer } from "../../media/utils";
 
 jest.mock("fs", () => ({
   promises: {
@@ -13,7 +13,7 @@ jest.mock("file-type");
 
 const mockedFs = fs as jest.Mocked<typeof fs>;
 const mockedFetchFileAsBuffer = fetchFileAsBuffer as jest.MockedFunction<typeof fetchFileAsBuffer>;
-const mockedFromBuffer = fromBuffer as jest.MockedFunction<typeof fromBuffer>;
+const mockedFileTypeFromBuffer = fileTypeFromBuffer as jest.MockedFunction<typeof fileTypeFromBuffer>;
 
 describe("ImageContent", () => {
   describe("fromDataUrl", () => {
@@ -47,7 +47,7 @@ describe("ImageContent", () => {
     it("should create an ImageContent instance from a buffer", async () => {
       const buffer = Buffer.from("file data");
       const mimeType = "image/png";
-      mockedFromBuffer.mockResolvedValue({ mime: mimeType, ext: "png" });
+      mockedFileTypeFromBuffer.mockResolvedValue({ mime: mimeType, ext: "png" });
 
       const imageContent = await ImageContent.fromBuffer(buffer, mimeType);
       expect(imageContent).toBeInstanceOf(ImageContent);
@@ -55,7 +55,7 @@ describe("ImageContent", () => {
 
     it("should throw an error if MIME type cannot be detected", async () => {
       const buffer = Buffer.from("file data");
-      mockedFromBuffer.mockResolvedValue(undefined);
+      mockedFileTypeFromBuffer.mockResolvedValue(undefined);
 
       await expect(ImageContent.fromBuffer(buffer)).rejects.toThrow(
         "Unsupported image type. Unable to detect MIME type from the buffer.",
@@ -69,7 +69,7 @@ describe("ImageContent", () => {
       const buffer = Buffer.from("file data");
       const mimeType = "image/png";
       mockedFs.readFile.mockResolvedValue(buffer);
-      mockedFromBuffer.mockResolvedValue({ mime: mimeType, ext: "png" });
+      mockedFileTypeFromBuffer.mockResolvedValue({ mime: mimeType, ext: "png" });
 
       const imageContent = await ImageContent.fromFile(filePath, mimeType);
       expect(imageContent).toBeInstanceOf(ImageContent);
@@ -91,7 +91,7 @@ describe("ImageContent", () => {
       const buffer = Buffer.from("file data");
       const mimeType = "image/png";
       mockedFs.readFile.mockResolvedValue(buffer);
-      mockedFromBuffer.mockResolvedValue({ mime: mimeType, ext: "png" });
+      mockedFileTypeFromBuffer.mockResolvedValue({ mime: mimeType, ext: "png" });
 
       const imageContents = await ImageContent.fromFiles(filePaths, mimeType);
       expect(imageContents).toHaveLength(2);
