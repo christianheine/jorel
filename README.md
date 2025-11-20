@@ -63,6 +63,12 @@ To run the example, use:
 npm run start
 ```
 
+## What's New in v1.2.0
+
+* **🤖 Gemini 3 Pro Support**: Full support for Gemini 3 Pro, including `thought_signature` handling for reliable tool use
+* **🧠 Google GenAI Thinking**: Access reasoning traces from Google's thinking models
+* **🛠️ Improved Stability**: Fixes for mixed content handling in Google GenAI responses
+
 ## What's New in v1.1.0
 
 * **🧠 Reasoning Content Support**: Access reasoning/thinking processes from supported models (Anthropic, Mistral, Ollama, Groq, OpenRouter)
