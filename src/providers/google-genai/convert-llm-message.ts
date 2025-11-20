@@ -27,12 +27,18 @@ function convertContentToGenerativeAiPart(content: LlmUserMessageContent): Part 
  * Converts a tool call to a Google Generative AI function call part
  */
 function convertToolCallToFunctionCallPart(toolCall: LlmToolCall): Part {
-  return {
+  const part: Part = {
     functionCall: {
       name: toolCall.request.function.name,
       args: toolCall.request.function.arguments as Record<string, unknown>,
     },
   };
+
+  if (toolCall.request.providerMetadata?.google?.thoughtSignature) {
+    part.thoughtSignature = toolCall.request.providerMetadata.google.thoughtSignature;
+  }
+
+  return part;
 }
 
 /**
@@ -93,16 +99,28 @@ export function convertLlmMessagesToGoogleGenerativeAiMessages(messages: LlmMess
         break;
       }
 
-      case "assistant":
+      case "assistant": {
+        const parts: Part[] = [];
+        if (message.reasoningContent) {
+          parts.push({ text: message.reasoningContent, thought: true });
+        }
+        if (message.content) {
+          parts.push({ text: message.content });
+        }
         contents.push({
           role: "model",
-          parts: [{ text: message.content }],
+          parts,
         });
         break;
+      }
 
       case "assistant_with_tools": {
         // First add the assistant's text response if it exists
         const parts: Part[] = [];
+
+        if (message.reasoningContent) {
+          parts.push({ text: message.reasoningContent, thought: true });
+        }
 
         if (message.content) {
           parts.push({ text: message.content });

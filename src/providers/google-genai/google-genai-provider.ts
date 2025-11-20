@@ -7,6 +7,7 @@ import {
   HarmBlockThreshold,
   HarmCategory,
   Schema,
+  ThinkingLevel,
 } from "@google/genai";
 import { ZodObject } from "zod";
 import {
@@ -100,34 +101,45 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
         throw new Error(`[GoogleGenerativeAIProvider] Error generating content: ${error}`);
       }
 
-      const content = result.text ?? "";
-      const reasoningContent = null;
-      const functionCalls = result.functionCalls ?? [];
+      const candidate = result.candidates?.[0];
+      const contentParts = candidate?.content?.parts || [];
 
-      const toolCalls: MaybeUndefined<LlmToolCall[]> =
-        functionCalls.length > 0
-          ? functionCalls.map((functionCall) => ({
-              id: generateUniqueId(),
-              request: {
-                id: generateRandomId(),
-                function: {
-                  name: functionCall.name ?? "",
-                  arguments: functionCall.args ?? {},
-                },
+      const textParts = contentParts.filter((p) => p.text && !p.thought);
+      const content = textParts.map((p) => p.text).join("");
+
+      const reasoningParts = contentParts.filter((p) => p.thought);
+      const reasoningContent = reasoningParts.length > 0 ? reasoningParts.map((p) => p.text).join("") : null;
+
+      const toolCalls: MaybeUndefined<LlmToolCall[]> = [];
+
+      for (const part of contentParts) {
+        if (part.functionCall) {
+          toolCalls.push({
+            id: generateUniqueId(),
+            request: {
+              id: generateRandomId(),
+              function: {
+                name: part.functionCall.name ?? "",
+                arguments: part.functionCall.args ?? {},
               },
-              approvalState: config.tools?.getTool(functionCall.name ?? "")?.requiresConfirmation
-                ? "requiresApproval"
-                : "noApprovalRequired",
-              executionState: "pending",
-              result: null,
-              error: null,
-            }))
-          : undefined;
+              providerMetadata: part.thoughtSignature
+                ? { google: { thoughtSignature: part.thoughtSignature } }
+                : undefined,
+            },
+            approvalState: config.tools?.getTool(part.functionCall.name ?? "")?.requiresConfirmation
+              ? "requiresApproval"
+              : "noApprovalRequired",
+            executionState: "pending",
+            result: null,
+            error: null,
+          });
+        }
+      }
 
       const durationMs = Date.now() - start;
 
       return {
-        ...generateAssistantMessage(content, reasoningContent, toolCalls),
+        ...generateAssistantMessage(content, reasoningContent, toolCalls.length > 0 ? toolCalls : undefined),
         meta: {
           model,
           provider: this.name,
@@ -182,52 +194,63 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
       }
 
       let fullContent = "";
-      const reasoningContent = "";
+      let fullReasoningContent = "";
       const toolCalls: LlmToolCall[] = [];
 
       for await (const chunk of streamResult) {
-        const chunkText = chunk.text ?? "";
+        const candidate = chunk.candidates?.[0];
+        const parts = candidate?.content?.parts || [];
+
+        const textParts = parts.filter((p) => p.text && !p.thought);
+        const chunkText = textParts.map((p) => p.text).join("");
 
         fullContent += chunkText;
 
-        // Check for function calls in each chunk
-        const functionCalls = chunk.functionCalls ?? [];
+        // Extract reasoning from parts
+        const reasoningParts = parts.filter((p) => p.thought);
+        const chunkReasoning = reasoningParts.map((p) => p.text).join("");
+        fullReasoningContent += chunkReasoning;
 
-        if (functionCalls && functionCalls.length > 0) {
-          // Process new function calls that haven't been seen before
-          for (const functionCall of functionCalls) {
+        // Check for function calls
+        for (const part of parts) {
+          if (part.functionCall) {
             // Check if this function call is already in our toolCalls array
             const existingToolCall = toolCalls.find(
               (tc) =>
-                tc.request.function.name === (functionCall.name ?? "") &&
-                JSON.stringify(tc.request.function.arguments) === JSON.stringify(functionCall.args ?? {}),
+                tc.request.function.name === (part.functionCall!.name ?? "") &&
+                JSON.stringify(tc.request.function.arguments) === JSON.stringify(part.functionCall!.args ?? {}),
             );
 
             if (!existingToolCall) {
-              const newToolCall: LlmToolCall = {
+              toolCalls.push({
                 id: generateUniqueId(),
                 request: {
                   id: generateRandomId(),
                   function: {
-                    name: functionCall.name ?? "",
-                    arguments: functionCall.args ?? {},
+                    name: part.functionCall.name ?? "",
+                    arguments: part.functionCall.args ?? {},
                   },
+                  providerMetadata: part.thoughtSignature
+                    ? { google: { thoughtSignature: part.thoughtSignature } }
+                    : undefined,
                 },
-                approvalState: config.tools?.getTool(functionCall.name ?? "")?.requiresConfirmation
+                approvalState: config.tools?.getTool(part.functionCall.name ?? "")?.requiresConfirmation
                   ? "requiresApproval"
                   : "noApprovalRequired",
                 executionState: "pending",
                 result: null,
                 error: null,
-              };
-
-              toolCalls.push(newToolCall);
+              });
             }
           }
         }
 
         if (chunkText) {
           yield { type: "chunk", content: chunkText, chunkId: generateUniqueId() };
+        }
+
+        if (chunkReasoning) {
+          yield { type: "reasoningChunk", content: chunkReasoning, chunkId: generateUniqueId() };
         }
       }
 
@@ -247,7 +270,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           type: "response",
           role: "assistant_with_tools",
           content: fullContent,
-          reasoningContent: reasoningContent || null,
+          reasoningContent: fullReasoningContent || null,
           toolCalls,
           meta,
         };
@@ -256,7 +279,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           type: "response",
           role: "assistant",
           content: fullContent,
-          reasoningContent: reasoningContent || null,
+          reasoningContent: fullReasoningContent || null,
           meta,
         };
       }
@@ -299,6 +322,17 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
     const requestConfig: GenerateContentConfig = {
       safetySettings: this.safetySettings,
     };
+
+    if (config.reasoningEffort) {
+      requestConfig.thinkingConfig = {
+        includeThoughts: true,
+        thinkingBudget: config.reasoningEffort === "minimal" ? 0 : undefined,
+        thinkingLevel:
+          config.reasoningEffort === "high" || config.reasoningEffort === "medium"
+            ? ThinkingLevel.HIGH
+            : ThinkingLevel.LOW,
+      };
+    }
 
     // Add generation config
     if (config.temperature !== undefined || config.maxTokens !== undefined || config.json) {

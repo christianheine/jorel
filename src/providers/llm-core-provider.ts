@@ -134,6 +134,7 @@ export interface LlmToolCallRequest {
     name: string;
     arguments: object;
   };
+  providerMetadata?: Record<string, any>;
 }
 
 export type LlmToolExecutionInputs = any;
