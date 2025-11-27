@@ -1,5 +1,5 @@
-import { generateUniqueId, shallowFilterUndefined } from "../shared";
 import * as fs from "fs";
+import { generateUniqueId, shallowFilterUndefined } from "../shared";
 
 export type CreateLlmDocument = Pick<LlmDocument, "title" | "content"> &
   Partial<LlmDocument> & { attributes?: Record<string, string | number | boolean | null> };
@@ -149,10 +149,13 @@ export class LlmDocument {
   }
 }
 
-const getDocumentType = (path: string): "text" | "markdown" => {
+const getDocumentType = (path: string): "TextFile" | "MarkdownFile" | "Document" => {
   const ext = path.split(".").pop();
   if (ext === "md") {
-    return "markdown";
+    return "MarkdownFile";
   }
-  return "text";
+  if (ext === "txt") {
+    return "TextFile";
+  }
+  return "Document";
 };

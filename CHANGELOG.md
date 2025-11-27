@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2 (2025-11-27)
+
+* Allow dynamic document tags for document collections via the document type (e.g. "<Product>" instead of "<Document>)
+* Updated all dependencies
+
 ## 1.2.0 (2025-11-20)
 
 * Add support for provider-specific metadata in tool use, in particular the `thought_signature` (required for tool use in Gemini 3 Pro)

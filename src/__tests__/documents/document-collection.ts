@@ -236,5 +236,81 @@ describe("LlmDocumentCollection", () => {
 
       expect(collection.systemMessageRepresentation).toBe(`${sampleDoc1.id}: ${sampleDoc1.content}`);
     });
+
+    it("should use semantic tag name when type starts with capital letter", () => {
+      const productDoc = new LlmDocument({
+        id: "product-1",
+        title: "Product Document",
+        content: "Product content",
+        type: "Product",
+      });
+
+      const collection = new LlmDocumentCollection([productDoc]);
+      const representation = collection.systemMessageRepresentation;
+
+      // Should use <Product> instead of <Document>
+      expect(representation).toContain("<Product id='product-1'");
+      expect(representation).toContain("</Product>");
+      // Should NOT include type attribute when using semantic tag
+      expect(representation).not.toContain("type='Product'");
+    });
+
+    it("should use Document tag with type attribute when type starts with lowercase", () => {
+      const collection = new LlmDocumentCollection([sampleDoc1]);
+      const representation = collection.systemMessageRepresentation;
+
+      // Should use <Document> with type attribute
+      expect(representation).toContain("<Document id='doc1'");
+      expect(representation).toContain("type='text'");
+      expect(representation).toContain("</Document>");
+    });
+
+    it("should handle mixed semantic and non-semantic types in same collection", () => {
+      const productDoc = new LlmDocument({
+        id: "product-1",
+        title: "Product",
+        content: "Product content",
+        type: "Product",
+      });
+      const customerDoc = new LlmDocument({
+        id: "customer-1",
+        title: "Customer",
+        content: "Customer content",
+        type: "CustomerProfile",
+      });
+      const textDoc = new LlmDocument({
+        id: "text-1",
+        title: "Text",
+        content: "Text content",
+        type: "text",
+      });
+
+      const collection = new LlmDocumentCollection([productDoc, customerDoc, textDoc]);
+      const representation = collection.systemMessageRepresentation;
+
+      expect(representation).toContain("<Product id='product-1'");
+      expect(representation).toContain("<CustomerProfile id='customer-1'");
+      expect(representation).toContain("<Document id='text-1'");
+      expect(representation).toContain("type='text'");
+    });
+
+    it("should support {{tagName}} placeholder in custom templates", () => {
+      const productDoc = new LlmDocument({
+        id: "product-1",
+        title: "Product",
+        content: "Product content",
+        type: "Product",
+      });
+
+      const collection = new LlmDocumentCollection([productDoc], {
+        documentToText: {
+          template: "<{{tagName}} id='{{id}}'>{{content}}</{{tagName}}>",
+          separator: "\n",
+        },
+      });
+
+      const representation = collection.systemMessageRepresentation;
+      expect(representation).toBe("<Product id='product-1'>Product content</Product>");
+    });
   });
 });

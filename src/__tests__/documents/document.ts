@@ -1,5 +1,5 @@
-import { LlmDocument } from "../../documents";
 import * as fs from "fs";
+import { LlmDocument } from "../../documents";
 
 describe("LlmDocument", () => {
   describe("constructor", () => {
@@ -102,7 +102,7 @@ describe("LlmDocument", () => {
       const doc = await LlmDocument.fromFile("src/__tests__/documents/testfile.md");
 
       expect(doc.id).toBeDefined();
-      expect(doc.type).toBe("markdown");
+      expect(doc.type).toBe("MarkdownFile");
       expect(doc.title).toBe("testfile.md");
       expect(doc.content).toBe("# headline\n\nSome content");
       expect(doc.source).toBe("src/__tests__/documents/testfile.md");
@@ -112,7 +112,7 @@ describe("LlmDocument", () => {
       const doc = await LlmDocument.fromFile("src/__tests__/documents/testfile.txt");
 
       expect(doc.id).toBeDefined();
-      expect(doc.type).toBe("text");
+      expect(doc.type).toBe("TextFile");
       expect(doc.title).toBe("testfile.txt");
       expect(doc.content).toBe("Some content");
       expect(doc.source).toBe("src/__tests__/documents/testfile.txt");
@@ -198,7 +198,7 @@ describe("LlmDocument", () => {
       const doc = await LlmDocument.fromLocalFile("src/__tests__/documents/testfile.md");
 
       expect(doc.id).toBeDefined();
-      expect(doc.type).toBe("markdown");
+      expect(doc.type).toBe("MarkdownFile");
       expect(doc.title).toBe("testfile.md");
       expect(doc.content).toBe("# headline\n\nSome content");
       expect(doc.source).toBe("src/__tests__/documents/testfile.md");

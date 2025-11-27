@@ -1,7 +1,11 @@
 import { CreateLlmDocument, LlmDocument } from "./document";
 
-const xmlDocumentToTextTemplate =
-  "<Document id='{{id}}' type='{{type}}' title='{{title}}' source='{{source}}'{{attributes}}>{{content}}</Document>";
+/**
+ * Check if a document type should be used as a semantic XML tag name.
+ * Types starting with a capital letter (e.g., "Product", "CustomerProfile")
+ * will be used as the XML tag name directly for better LLM performance.
+ */
+const isSemanticType = (type: string): boolean => /^[A-Z]/.test(type);
 
 type DocumentToTextTemplate =
   | "xml"
@@ -63,19 +67,54 @@ export class LlmDocumentCollection {
 
     if (this.documentToTextTemplate === "json") return JSON.stringify(this.definition);
 
-    const template =
-      this.documentToTextTemplate === "xml" ? xmlDocumentToTextTemplate : this.documentToTextTemplate.template;
+    // Default XML mode with semantic tag names
+    if (this.documentToTextTemplate === "xml") {
+      const rendered = this.all.map((document) => {
+        // Use type as tag name if it starts with a capital letter (e.g., "Product", "CustomerProfile")
+        // Otherwise use generic "Document" tag with type attribute
+        const usesSemanticTag = document.type && isSemanticType(document.type);
+        const tagName = usesSemanticTag ? document.type : "Document";
+
+        const extraAttributes = document.attributes ? Object.entries(document.attributes) : [];
+        const extraAttrsString = extraAttributes.map(([key, value]) => `${key}='${value}'`).join(" ");
+
+        // Build attributes - only include type when using generic Document tag
+        let attrs = `id='${document.id}'`;
+        if (!usesSemanticTag) {
+          attrs += ` type='${document.type}'`;
+        }
+        attrs += ` title='${document.title}'`;
+        attrs += ` source='${document.source || "n/a"}'`;
+        if (extraAttrsString) {
+          attrs += ` ${extraAttrsString}`;
+        }
+
+        return `<${tagName} ${attrs}>${document.content}</${tagName}>`;
+      });
+
+      return `<Documents>\n${rendered.join("\n")}\n</Documents>`;
+    }
+
+    // Custom template handling
+    const template = this.documentToTextTemplate.template;
 
     const rendered = this.all.map((document) => {
       if (!template.includes("{{id}}")) throw new Error("Document template must include '{{id}}' placeholder.");
       if (!template.includes("{{content}}"))
         throw new Error("Document template must include '{{content}}' placeholder.");
+
       const _attributes = document.attributes ? Object.entries(document.attributes) : [];
       const attributes = _attributes
         .map(([key, value]) => `${key}='${value}'`)
         .join(" ")
         .trim();
+
+      // Calculate semantic tag name for custom templates that want to use it
+      const usesSemanticTag = document.type && isSemanticType(document.type);
+      const tagName = usesSemanticTag ? document.type : "Document";
+
       return template
+        .replace(/\{\{tagName\}\}/g, tagName)
         .replace("{{id}}", document.id)
         .replace("{{type}}", document.type)
         .replace("{{title}}", document.title)
@@ -83,8 +122,6 @@ export class LlmDocumentCollection {
         .replace("{{attributes}}", attributes ? ` ${attributes}` : "")
         .replace("{{source}}", document.source || "n/a");
     });
-
-    if (this.documentToTextTemplate === "xml") return `<Documents>\n${rendered.join("\n")}\n</Documents>`;
 
     return rendered.join(this.documentToTextTemplate.separator);
   }
