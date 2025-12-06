@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.3 (2025-12-06)
+
+* Improve cancellation support during tool calls
+* Updated all dependencies
+
 ## 1.2.2 (2025-11-27)
 
 * Allow dynamic document tags for document collections via the document type (e.g. "<Product>" instead of "<Document>)

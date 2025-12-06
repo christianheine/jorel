@@ -10,7 +10,7 @@
 
 # JorEl
 
-JorEl is a powerful TypeScript library that provides a unified interface for working with multiple Large Language Models (LLMs). It simplifies complex LLM interactions like tool calling, image processing, and agent workflows while maintaining full flexibility.
+JorEl provides a unified interface for working with multiple Large Language Models (LLMs). It simplifies complex LLM interactions like tool calling, image processing, and agent workflows while maintaining full flexibility.
 
 The full documentation is available at [https://christianheine.github.io/jorel/](https://christianheine.github.io/jorel/).
 
