@@ -321,6 +321,7 @@ export class LlmToolKit {
       secureContext?: LLmToolContextSegment;
       maxErrors?: number;
       maxCalls?: number;
+      abortSignal?: AbortSignal;
     },
   ): Promise<T> {
     let errors = 0;
@@ -378,6 +379,22 @@ export class LlmToolKit {
           },
         });
       } else {
+        // Check for abort signal before processing each tool call
+        if (config?.abortSignal?.aborted) {
+          toolCalls.push({
+            ...call,
+            executionState: "cancelled",
+            result: null,
+            error: {
+              message: "Request was aborted",
+              type: "ToolExecutionError",
+              numberOfAttempts: call.error ? call.error.numberOfAttempts + 1 : 1,
+              lastAttempt: new Date(),
+            },
+          });
+          continue;
+        }
+
         const { toolCall } = await this.processToolCall(call, config);
         toolCalls.push(toolCall);
         if (toolCall.error) {

@@ -453,6 +453,8 @@ export class JorEl {
    *
    * @param messages - The messages to generate a response for.
    * @param config - The configuration for the generation.
+   * @remarks When providing message arrays, you can set `cacheControl` on
+   * system/user messages to hint provider-specific prompt caching (e.g., Anthropic).
    * @param config.model - Model to use for this generation (optional).
    * @param config.systemMessage - System message to include in this request (optional).
    * @param config.temperature - Temperature for this request (optional).
@@ -729,6 +731,7 @@ export class JorEl {
    * @param config.secureContext - Secure context to pass to tool executors (optional).
    * @param config.maxErrors - Maximum number of tool call errors allowed (optional, defaults to 3).
    * @param config.maxCalls - Maximum number of tool calls to process (optional, defaults to 5).
+   * @param config.abortSignal - AbortSignal to cancel tool processing (optional).
    * @returns Updated messages with processed tool calls.
    */
   async processToolCalls(
@@ -739,6 +742,7 @@ export class JorEl {
       secureContext?: LLmToolContextSegment;
       maxErrors?: number;
       maxCalls?: number;
+      abortSignal?: AbortSignal;
     },
   ): Promise<LlmMessage[]> {
     const tools = config.tools instanceof LlmToolKit ? config.tools : new LlmToolKit(config.tools);
@@ -766,6 +770,7 @@ export class JorEl {
       secureContext: config.secureContext,
       maxErrors: config.maxErrors || 3,
       maxCalls: config.maxCalls || 5,
+      abortSignal: config.abortSignal,
     });
 
     this.logger.debug("JorEl", "Finished processing pending tool calls");
