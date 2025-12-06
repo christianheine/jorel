@@ -40,9 +40,7 @@ export class JorElAgentManager {
         description: "Ask another agent to handle a task for you",
         params: z.object({
           agentName: z.string(),
-          taskDescription: z.string({
-            description: "The description of the task that you want the agent to handle",
-          }),
+          taskDescription: z.string().describe("The description of the task that you want the agent to handle"),
         }),
         executor: "subTask",
       },
