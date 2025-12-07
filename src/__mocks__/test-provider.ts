@@ -2,6 +2,7 @@ import {
   generateAssistantMessage,
   LlmCoreProvider,
   LlmGenerationConfig,
+  LLmGenerationStopReason,
   LlmMessage,
   LlmResponse,
   LlmStreamProviderResponseChunkEvent,
@@ -16,6 +17,10 @@ export interface TestProviderConfig {
   defaultStreamResponse?: string[];
   simulateDelay?: number;
   failOnModels?: string[];
+  /** If set, will simulate an error after this many chunks */
+  errorAfterChunks?: number;
+  /** The error message to use when simulating errors */
+  errorMessage?: string;
 }
 
 export class TestProvider implements LlmCoreProvider {
@@ -24,6 +29,8 @@ export class TestProvider implements LlmCoreProvider {
   private defaultStreamResponse: string[];
   private simulateDelay: number;
   private failOnModels: string[];
+  private errorAfterChunks?: number;
+  private errorMessage: string;
 
   constructor(config: TestProviderConfig = {}) {
     this.name = config.name || "test-provider";
@@ -31,6 +38,8 @@ export class TestProvider implements LlmCoreProvider {
     this.defaultStreamResponse = config.defaultStreamResponse || ["This ", "is ", "a ", "test ", "response"];
     this.simulateDelay = config.simulateDelay || 0;
     this.failOnModels = config.failOnModels || [];
+    this.errorAfterChunks = config.errorAfterChunks;
+    this.errorMessage = config.errorMessage || "Simulated error";
   }
 
   private async delay() {
@@ -105,28 +114,65 @@ export class TestProvider implements LlmCoreProvider {
     void,
     unknown
   > {
-    if (this.failOnModels.includes(model)) {
-      throw new Error(`Model ${model} is configured to fail`);
+    let content = "";
+    let caughtError: Error | null = null;
+    let chunksEmitted = 0;
+
+    try {
+      for (const chunk of this.defaultStreamResponse) {
+        // Check for abort signal
+        if (config.abortSignal?.aborted) {
+          break;
+        }
+
+        // Simulate error after N chunks if configured
+        if (this.errorAfterChunks !== undefined && chunksEmitted >= this.errorAfterChunks) {
+          throw new Error(this.errorMessage);
+        }
+
+        // Check for model failure
+        if (this.failOnModels.includes(model)) {
+          throw new Error(`Model ${model} is configured to fail`);
+        }
+
+        await this.delay();
+        content += chunk;
+        chunksEmitted++;
+        yield { type: "chunk", content: chunk, chunkId: generateUniqueId() };
+      }
+    } catch (error: unknown) {
+      caughtError = error instanceof Error ? error : new Error(String(error));
     }
 
-    for (const chunk of this.defaultStreamResponse) {
-      await this.delay();
-      yield { type: "chunk", content: chunk, chunkId: generateUniqueId() };
+    // Determine stop reason and error
+    let stopReason: LLmGenerationStopReason = "completed";
+    let errorMessage: string | undefined;
+
+    if (config.abortSignal?.aborted) {
+      stopReason = "userCancelled";
+    } else if (caughtError) {
+      stopReason = "generationError";
+      errorMessage = caughtError.message;
+      // Log the error
+      config.logger?.error("TestProvider", `Stream error: ${errorMessage}`);
     }
 
     yield {
       type: "response",
       role: "assistant",
-      content: this.defaultStreamResponse.join(""),
+      content,
       reasoningContent: null,
       meta: {
         model,
         provider: this.name,
         temperature: config.temperature ?? undefined,
-        durationMs: this.simulateDelay * this.defaultStreamResponse.length,
+        durationMs: this.simulateDelay * chunksEmitted,
         inputTokens: 10,
-        outputTokens: 10,
+        outputTokens: chunksEmitted * 2,
       },
+      stopReason,
+      error:
+        stopReason === "generationError" ? { message: errorMessage || "Unknown error", type: "unknown" } : undefined,
     };
   }
 
@@ -135,8 +181,23 @@ export class TestProvider implements LlmCoreProvider {
     return ["test-model-1", "test-model-2", "test-model-3"];
   }
 
-  async createEmbedding(model: string, text: string): Promise<number[]> {
-    await this.delay();
+  async createEmbedding(model: string, text: string, abortSignal?: AbortSignal): Promise<number[]> {
+    // Check for pre-aborted signal
+    if (abortSignal?.aborted) {
+      throw new Error("Request was aborted");
+    }
+
+    // Create a promise that resolves after delay but can be aborted
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(resolve, this.simulateDelay);
+
+      if (abortSignal) {
+        abortSignal.addEventListener("abort", () => {
+          clearTimeout(timeout);
+          reject(new Error("Request was aborted"));
+        });
+      }
+    });
 
     if (this.failOnModels.includes(model)) {
       throw new Error(`Model ${model} is configured to fail`);

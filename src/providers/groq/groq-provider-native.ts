@@ -2,6 +2,7 @@ import Groq from "groq-sdk";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
+  LlmError,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -104,31 +105,75 @@ export class GroqProviderNative implements LlmCoreProvider {
 
     const temperature = config.temperature ?? undefined;
 
-    const response = await this.client.chat.completions.create({
-      model,
-      messages: await convertLlmMessagesToGroqMessages(messages),
-      temperature,
-      response_format: config.json ? { type: "json_object" } : { type: "text" },
-      max_tokens: config.maxTokens || undefined,
-      stream: true,
-    });
+    let response: Awaited<ReturnType<typeof this.client.chat.completions.create>>;
+
+    try {
+      response = await this.client.chat.completions.create({
+        model,
+        messages: await convertLlmMessagesToGroqMessages(messages),
+        temperature,
+        response_format: config.json ? { type: "json_object" } : { type: "text" },
+        max_tokens: config.maxTokens || undefined,
+        stream: true,
+      });
+    } catch (error: unknown) {
+      const isAbort =
+        error instanceof Error && (error.message.toLowerCase().includes("aborted") || error.name === "AbortError");
+
+      const stopReason = isAbort ? "userCancelled" : "generationError";
+
+      yield {
+        type: "response",
+        role: "assistant",
+        content: "",
+        reasoningContent: "",
+        meta: {
+          model,
+          provider: this.name,
+          temperature,
+          durationMs: 0,
+          inputTokens: undefined,
+          outputTokens: undefined,
+        },
+        stopReason,
+        error:
+          stopReason === "generationError"
+            ? {
+                message: error instanceof Error ? error.message : String(error),
+                type: "unknown",
+              }
+            : undefined,
+      };
+      return;
+    }
 
     let content = "";
     let reasoningContent = "";
 
-    for await (const chunk of response) {
-      const contentChunk = firstEntry(chunk.choices)?.delta?.content;
-      if (contentChunk) {
-        content += contentChunk;
-        const chunkId = generateUniqueId();
-        yield { type: "chunk", content: contentChunk, chunkId };
+    let error: LlmError | undefined;
+
+    const provider = this.name;
+
+    try {
+      for await (const chunk of response) {
+        const contentChunk = firstEntry(chunk.choices)?.delta?.content;
+        if (contentChunk) {
+          content += contentChunk;
+          const chunkId = generateUniqueId();
+          yield { type: "chunk", content: contentChunk, chunkId };
+        }
+        const reasoningChunk = firstEntry(chunk.choices)?.delta?.reasoning;
+        if (reasoningChunk) {
+          reasoningContent += reasoningChunk;
+          const chunkId = generateUniqueId();
+          yield { type: "reasoningChunk", content: reasoningChunk, chunkId };
+        }
       }
-      const reasoningChunk = firstEntry(chunk.choices)?.delta?.reasoning;
-      if (reasoningChunk) {
-        reasoningContent += reasoningChunk;
-        const chunkId = generateUniqueId();
-        yield { type: "reasoningChunk", content: reasoningChunk, chunkId };
-      }
+    } catch (e: unknown) {
+      error = {
+        message: e instanceof Error ? e.message : String(e),
+        type: "unknown",
+      };
     }
 
     const durationMs = Date.now() - start;
@@ -136,7 +181,13 @@ export class GroqProviderNative implements LlmCoreProvider {
     const inputTokens = undefined;
     const outputTokens = undefined;
 
-    const provider = this.name;
+    // Determine stop reason and error message
+    const stopReason = config.abortSignal?.aborted ? "userCancelled" : error ? "generationError" : "completed";
+
+    // Log non-abort errors
+    if (error && stopReason === "generationError") {
+      config.logger?.error("GroqProviderNative", `Stream error: ${error.message}`);
+    }
 
     yield {
       type: "response",
@@ -151,6 +202,8 @@ export class GroqProviderNative implements LlmCoreProvider {
         inputTokens,
         outputTokens,
       },
+      stopReason,
+      error: stopReason === "generationError" ? error : undefined,
     };
   }
 

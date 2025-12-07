@@ -5,6 +5,7 @@ import {
   generateAssistantMessage,
   LlmAssistantMessageMeta,
   LlmCoreProvider,
+  LlmError,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -257,10 +258,35 @@ export class AnthropicProvider implements LlmCoreProvider {
         },
       );
     } catch (error: unknown) {
-      if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
-        throw new JorElAbortError("Request was aborted");
-      }
-      throw error;
+      const isAbort =
+        error instanceof Error && (error.message.toLowerCase().includes("aborted") || error.name === "AbortError");
+
+      const stopReason = isAbort ? "userCancelled" : "generationError";
+
+      yield {
+        type: "response",
+        role: "assistant",
+        content: "",
+        reasoningContent: null,
+        meta: {
+          model,
+          provider: this.name,
+          temperature,
+          durationMs: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          reasoningTokens: undefined,
+        },
+        stopReason,
+        error:
+          stopReason === "generationError"
+            ? {
+                message: error instanceof Error ? error.message : String(error),
+                type: "unknown",
+              }
+            : undefined,
+      };
+      return;
     }
 
     let inputTokens: MaybeUndefined<number> = undefined;
@@ -270,49 +296,66 @@ export class AnthropicProvider implements LlmCoreProvider {
     let content = "";
     let reasoningContent = "";
 
+    let error: LlmError | undefined;
+
     const _toolCalls: { [index: number]: Anthropic.Messages.ToolUseBlock & { arguments: string } } = {};
 
-    for await (const chunk of responseStream) {
-      if (chunk.type === "content_block_delta") {
-        if (chunk.delta.type === "text_delta") {
-          content += chunk.delta.text;
-          const chunkId = generateUniqueId();
-          yield { type: "chunk", content: chunk.delta.text, chunkId };
-        }
-        if (chunk.delta.type === "thinking_delta") {
-          reasoningContent += chunk.delta.thinking;
-          const chunkId = generateUniqueId();
-          yield { type: "reasoningChunk", content: chunk.delta.thinking, chunkId };
-        }
-      }
+    const provider = this.name;
 
-      if (chunk.type === "message_start") {
-        inputTokens = (inputTokens || 0) + chunk.message.usage.input_tokens;
-        outputTokens = (outputTokens || 0) + chunk.message.usage.output_tokens;
-      }
+    try {
+      for await (const chunk of responseStream) {
+        if (chunk.type === "content_block_delta") {
+          if (chunk.delta.type === "text_delta") {
+            content += chunk.delta.text;
+            const chunkId = generateUniqueId();
+            yield { type: "chunk", content: chunk.delta.text, chunkId };
+          }
+          if (chunk.delta.type === "thinking_delta") {
+            reasoningContent += chunk.delta.thinking;
+            const chunkId = generateUniqueId();
+            yield { type: "reasoningChunk", content: chunk.delta.thinking, chunkId };
+          }
+        }
 
-      if (chunk.type === "content_block_start") {
-        if (chunk.content_block.type === "tool_use") {
-          _toolCalls[chunk.index] = { ...chunk.content_block, arguments: "" };
+        if (chunk.type === "message_start") {
+          inputTokens = (inputTokens || 0) + chunk.message.usage.input_tokens;
+          outputTokens = (outputTokens || 0) + chunk.message.usage.output_tokens;
+        }
+
+        if (chunk.type === "content_block_start") {
+          if (chunk.content_block.type === "tool_use") {
+            _toolCalls[chunk.index] = { ...chunk.content_block, arguments: "" };
+          }
+        }
+
+        if (chunk.type === "content_block_delta") {
+          if (chunk.delta.type === "input_json_delta") {
+            const index = chunk.index;
+            const toolCall = _toolCalls[index];
+            toolCall.arguments += chunk.delta.partial_json;
+          }
+        }
+
+        if (chunk.type === "message_delta") {
+          outputTokens = (outputTokens || 0) + chunk.usage.output_tokens;
         }
       }
-
-      if (chunk.type === "content_block_delta") {
-        if (chunk.delta.type === "input_json_delta") {
-          const index = chunk.index;
-          const toolCall = _toolCalls[index];
-          toolCall.arguments += chunk.delta.partial_json;
-        }
-      }
-
-      if (chunk.type === "message_delta") {
-        outputTokens = (outputTokens || 0) + chunk.usage.output_tokens;
-      }
+    } catch (e: unknown) {
+      error = {
+        message: e instanceof Error ? e.message : String(e),
+        type: "unknown",
+      };
     }
 
     const durationMs = Date.now() - start;
 
-    const provider = this.name;
+    // Determine stop reason and error message
+    const stopReason = config.abortSignal?.aborted ? "userCancelled" : error ? "generationError" : "completed";
+
+    // Log non-abort errors
+    if (error && stopReason === "generationError") {
+      config.logger?.error("AnthropicProvider", `Stream error: ${error.message}`);
+    }
 
     const meta: LlmAssistantMessageMeta = {
       model,
@@ -379,6 +422,8 @@ export class AnthropicProvider implements LlmCoreProvider {
         reasoningContent,
         toolCalls,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     } else {
       yield {
@@ -387,6 +432,8 @@ export class AnthropicProvider implements LlmCoreProvider {
         content,
         reasoningContent,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     }
   }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0-alpha.0 (2025-12-07)
+
+* Handle errors during streaming more gracefully 
+
 ## 1.2.3 (2025-12-06)
 
 * Improve cancellation support during tool calls

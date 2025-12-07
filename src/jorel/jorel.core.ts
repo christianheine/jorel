@@ -2,6 +2,8 @@ import { LogService } from "../logger";
 import {
   generateAssistantMessage,
   InitLlmGenerationConfig,
+  LlmError,
+  LlmErrorType,
   LlmGenerationAttempt,
   LLmGenerationStopReason,
   LlmMessage,
@@ -21,7 +23,7 @@ import {
 } from "../providers";
 import { getModelOverrides } from "../providers/get-overrides";
 import { modelParameterOverrides } from "../providers/model-parameter-overrides";
-import { generateUniqueId, maskAll, MaybeUndefined, omit, shallowFilterUndefined } from "../shared";
+import { generateUniqueId, JorElAbortError, maskAll, MaybeUndefined, omit, shallowFilterUndefined } from "../shared";
 import { JorElGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
 import { JorElModelManager, ModelEntry } from "./jorel.models";
 import { JorElProviderManager } from "./jorel.providers";
@@ -119,6 +121,7 @@ export class JorElCoreStore {
       ...configWithOverrides,
       logger: this.logger,
     });
+
     this.logger.debug(
       "Core",
       `Finished generating response in ${response.meta.durationMs}ms. ${response.meta.inputTokens} input tokens, ${response.meta.outputTokens} output tokens`,
@@ -126,6 +129,7 @@ export class JorElCoreStore {
     this.logger.silly("Core", "Generate output", {
       response,
     });
+
     return response;
   }
 
@@ -139,7 +143,12 @@ export class JorElCoreStore {
     messages: LlmMessage[],
     config: JorElGenerationConfigWithTools = {},
     autoApprove = false,
-  ): Promise<{ output: JorElGenerationOutput; messages: LlmMessage[]; stopReason: LLmGenerationStopReason }> {
+  ): Promise<{
+    output: JorElGenerationOutput;
+    messages: LlmMessage[];
+    stopReason: LLmGenerationStopReason;
+    error?: { message: string; type: LlmErrorType };
+  }> {
     const _messages = [...messages];
 
     const maxToolCalls = config.maxToolCalls || 5;
@@ -182,6 +191,7 @@ export class JorElCoreStore {
         break;
       } else {
         generation = autoApprove ? config.tools.utilities.message.approveToolCalls(generation) : generation;
+
         this.logger.debug("Core", `Starting to process tool calls`);
         this.logger.silly("Core", `Tool call inputs`, {
           generation,
@@ -189,20 +199,27 @@ export class JorElCoreStore {
           context: config.context,
           secureContext: config.secureContext ? maskAll(config.secureContext) : undefined,
         });
+
         generation = await config.tools.processCalls(generation, {
           context: config.context,
           secureContext: config.secureContext,
           maxErrors: Math.max(0, maxToolCallErrors - toolCallErrors),
           maxCalls: Math.max(0, maxToolCalls - toolCalls),
+          abortSignal: config.abortSignal,
         });
+
         toolCalls += generation.toolCalls.length;
         toolCallErrors += generation.toolCalls.filter((t) => t.executionState === "error").length;
+
         this.logger.debug("Core", `Finished processing tool calls`);
         this.logger.silly("Core", `Tool call outputs`, {
           generation,
         });
+
         _messages.push(generateAssistantMessage(generation.content, generation.reasoningContent, generation.toolCalls));
+
         const classification = config.tools.classifyToolCalls(generation.toolCalls);
+
         if (classification === "approvalPending") {
           this.logger.debug("Core", "Tool calls require approval - stopping processing");
 
@@ -229,7 +246,12 @@ export class JorElCoreStore {
       }
     }
 
+    // If no generation was produced
     if (!generation) {
+      if (config.abortSignal?.aborted) {
+        throw new JorElAbortError("Request was aborted before generation could complete");
+      }
+      // This shouldn't happen in normal operation - indicates a bug
       throw new Error("Unable to generate a response");
     }
 
@@ -341,7 +363,10 @@ export class JorElCoreStore {
     let totalDurationMs = 0;
 
     let response: MaybeUndefined<LlmStreamResponse | LlmStreamResponseWithToolCalls> = undefined;
+    let finalStopReason: LLmGenerationStopReason = "completed";
+    let finalError: LlmError | undefined;
     let messageId: string = generateUniqueId();
+
     for (let i = 0; i < maxAttempts; i++) {
       yield { type: "messageStart", messageId };
       const stream = this.generateContentStream(messages, config);
@@ -370,10 +395,58 @@ export class JorElCoreStore {
           totalInputTokens += chunk.meta.inputTokens || 0;
           totalOutputTokens += chunk.meta.outputTokens || 0;
           totalDurationMs += chunk.meta.durationMs;
+
+          // Capture the stop reason and error from the provider
+          if (chunk.stopReason) {
+            finalStopReason = chunk.stopReason;
+          }
+          if (chunk.error) {
+            finalError = chunk.error;
+          }
         }
       }
 
       if (!response) throw new Error("Unable to generate a response");
+
+      // If cancelled or errored, don't process tool calls - emit final events and return
+      if (finalStopReason === "userCancelled" || finalStopReason === "generationError") {
+        // Update meta with cumulative token usage if there were multiple generations
+        if (generations.length > 1) {
+          response = {
+            ...response,
+            meta: {
+              ...response.meta,
+              inputTokens: totalInputTokens || undefined,
+              outputTokens: totalOutputTokens || undefined,
+              durationMs: totalDurationMs,
+              generations,
+            },
+          };
+        }
+
+        const message = generateAssistantMessage(
+          response.content,
+          response.reasoningContent,
+          response.role === "assistant_with_tools" ? response.toolCalls : undefined,
+          messageId,
+        );
+
+        yield { type: "messageEnd", messageId, message };
+
+        messages.push(message);
+
+        yield response;
+
+        yield {
+          type: "messages",
+          messages,
+          stopReason: finalStopReason,
+          error: finalError,
+        };
+
+        return; // Stop processing
+      }
+
       if (response.role === "assistant" || !config.tools) break;
 
       response = autoApprove ? config.tools.utilities.message.approveToolCalls(response) : response;
@@ -405,8 +478,11 @@ export class JorElCoreStore {
           response.toolCalls,
           messageId,
         );
+
         yield { type: "messageEnd", messageId, message };
+
         messages.push(message);
+
         messageId = generateUniqueId();
 
         // Update meta with cumulative token usage
@@ -523,7 +599,8 @@ export class JorElCoreStore {
     yield {
       type: "messages",
       messages,
-      stopReason: config.abortSignal?.aborted ? "userCancelled" : "completed",
+      stopReason: finalStopReason,
+      error: finalError,
     };
   }
 

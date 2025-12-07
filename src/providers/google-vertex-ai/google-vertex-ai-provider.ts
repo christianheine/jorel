@@ -16,6 +16,7 @@ import { ZodObject } from "zod";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
+  LlmError,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -239,6 +240,8 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
   ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown> {
     const start = Date.now();
 
+    const provider = this.name;
+
     const { chatMessages, systemMessage } = await convertLlmMessagesToVertexAiMessages(messages);
 
     const generativeModel = this.client.getGenerativeModel({
@@ -251,7 +254,22 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
     // Note: Google Vertex AI SDK doesn't support AbortSignal directly
     // Check for cancellation before making the request
     if (config.abortSignal?.aborted) {
-      throw new JorElAbortError("Request was aborted");
+      yield {
+        type: "response",
+        role: "assistant",
+        content: "",
+        reasoningContent: null,
+        meta: {
+          model,
+          provider,
+          temperature,
+          durationMs: 0,
+          inputTokens: undefined,
+          outputTokens: undefined,
+        },
+        stopReason: "userCancelled",
+      };
+      return;
     }
 
     let response: StreamGenerateContentResult;
@@ -285,69 +303,117 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
         safetySettings: this.safetySettings,
       });
     } catch (error: unknown) {
-      if (error instanceof JorElAbortError) {
-        throw error;
+      const isAbort =
+        error instanceof Error &&
+        (error.message.toLowerCase().includes("aborted") ||
+          error.name === "AbortError" ||
+          error instanceof JorElAbortError);
+
+      const stopReason = isAbort ? "userCancelled" : "generationError";
+
+      yield {
+        type: "response",
+        role: "assistant",
+        content: "",
+        reasoningContent: null,
+        meta: {
+          model,
+          provider,
+          temperature,
+          durationMs: 0,
+          inputTokens: undefined,
+          outputTokens: undefined,
+        },
+        stopReason,
+        error:
+          stopReason === "generationError"
+            ? {
+                message: error instanceof Error ? error.message : String(error),
+                type: "unknown",
+              }
+            : undefined,
+      };
+      return;
+    }
+
+    const _toolCalls: ToolCall[] = [];
+    let streamedContent = "";
+
+    let error: LlmError | undefined;
+    let aborted = false;
+
+    try {
+      for await (const res of response.stream) {
+        // Check for cancellation during streaming
+        if (config.abortSignal?.aborted) {
+          aborted = true;
+          break;
+        }
+
+        const content: Content =
+          res.candidates && res.candidates.length > 0
+            ? res.candidates[0].content
+            : { role: "model", parts: [{ text: "" }] };
+
+        if (content && content.parts && content.parts.length > 0) {
+          // Handle function calls in the stream
+          const functionCalls = content.parts.filter((p) => p.functionCall);
+          for (const part of functionCalls) {
+            if (part.functionCall) {
+              _toolCalls.push({
+                function: {
+                  name: part.functionCall.name,
+                  arguments: part.functionCall.args,
+                },
+              });
+            }
+          }
+
+          // Handle text content
+          const textContent = content.parts.map((part) => ("text" in part ? part.text : "")).join("");
+          if (textContent.length > 0) {
+            streamedContent += textContent;
+            const chunkId = generateUniqueId();
+            yield { type: "chunk", content: textContent, chunkId };
+          }
+        }
       }
-      if (error instanceof ClientError) {
-        throw new Error(`[GoogleVertexAiProvider] Error generating content stream: ${error.message}`);
-      }
-      if (error instanceof GoogleApiError) {
-        throw new Error(
-          `[GoogleVertexAiProvider] Error generating content stream: ${error.message}, code: ${error.code}, status: ${error.status}, details: ${error.errorDetails}`,
-        );
-      }
-      throw error;
+    } catch (e: unknown) {
+      error = {
+        message: e instanceof Error ? e.message : String(e),
+        type: "unknown",
+      };
     }
 
     const durationMs = Date.now() - start;
 
-    const _toolCalls: ToolCall[] = [];
+    // Determine stop reason and error message
+    const stopReason = config.abortSignal?.aborted ? "userCancelled" : error ? "generationError" : "completed";
 
-    for await (const res of response.stream) {
-      // Check for cancellation during streaming
-      if (config.abortSignal?.aborted) {
-        throw new JorElAbortError("Request was aborted");
-      }
+    // Log non-abort errors
+    if (error && stopReason === "generationError") {
+      config.logger?.error("GoogleVertexAiProvider", `Stream error: ${error.message}`);
+    }
 
-      const content: Content =
-        res.candidates && res.candidates.length > 0
-          ? res.candidates[0].content
-          : { role: "model", parts: [{ text: "" }] };
+    // Try to get final response for token counts, but use streamed content as fallback
+    let finalContent = streamedContent;
+    let inputTokens: number | undefined;
+    let outputTokens: number | undefined;
 
-      if (content && content.parts && content.parts.length > 0) {
-        // Handle function calls in the stream
-        const functionCalls = content.parts.filter((p) => p.functionCall);
-        for (const part of functionCalls) {
-          if (part.functionCall) {
-            _toolCalls.push({
-              function: {
-                name: part.functionCall.name,
-                arguments: part.functionCall.args,
-              },
-            });
-          }
-        }
-
-        // Handle text content
-        const textContent = content.parts.map((part) => ("text" in part ? part.text : "")).join("");
-        if (textContent.length > 0) {
-          const chunkId = generateUniqueId();
-          yield { type: "chunk", content: textContent, chunkId };
-        }
+    if (!error && !aborted && !config.abortSignal?.aborted) {
+      try {
+        const r = await response.response;
+        const rawContent: Content =
+          r.candidates && r.candidates.length > 0 ? r.candidates[0].content : { role: "model", parts: [{ text: "" }] };
+        finalContent = rawContent.parts.map((p) => p.text).join("");
+        inputTokens = r.usageMetadata?.promptTokenCount;
+        outputTokens = r.usageMetadata?.candidatesTokenCount;
+      } catch {
+        // Use streamed content if final response fails
       }
     }
 
-    const r = await response.response;
-    const rawContent: Content =
-      r.candidates && r.candidates.length > 0 ? r.candidates[0].content : { role: "model", parts: [{ text: "" }] };
-
-    const inputTokens = r.usageMetadata?.promptTokenCount;
-    const outputTokens = r.usageMetadata?.candidatesTokenCount;
-
-    const content = rawContent.parts.map((p) => p.text).join("");
     const reasoningContent = null;
-
-    const provider = this.name;
 
     const toolCalls: MaybeUndefined<LlmToolCall[]> = _toolCalls.map((call) => {
       return {
@@ -381,18 +447,22 @@ export class GoogleVertexAiProvider implements LlmCoreProvider {
       yield {
         type: "response",
         role: "assistant_with_tools",
-        content,
+        content: finalContent,
         reasoningContent,
         toolCalls,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     } else {
       yield {
         type: "response",
         role: "assistant",
-        content,
+        content: finalContent,
         reasoningContent,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     }
   }

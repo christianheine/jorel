@@ -1,9 +1,25 @@
-import { AzureOpenAI, OpenAI, OpenAIError } from "openai";
+import {
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  APIError,
+  AuthenticationError,
+  AzureOpenAI,
+  BadRequestError,
+  InternalServerError,
+  NotFoundError,
+  OpenAI,
+  OpenAIError,
+  PermissionDeniedError,
+  RateLimitError,
+  UnprocessableEntityError,
+} from "openai";
 import { Stream } from "openai/core/streaming";
 import {
   generateAssistantMessage,
   LlmAssistantMessageMeta,
   LlmCoreProvider,
+  LlmError,
+  LlmErrorType,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -140,6 +156,7 @@ export class OpenAIProvider implements LlmCoreProvider {
     config: LlmGenerationConfig = {},
   ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown> {
     const start = Date.now();
+    const provider = this.name;
 
     const temperature = config.temperature ?? undefined;
 
@@ -171,10 +188,36 @@ export class OpenAIProvider implements LlmCoreProvider {
         },
       );
     } catch (error: unknown) {
-      if (error instanceof OpenAIError && error.message.toLowerCase().includes("aborted")) {
-        throw new JorElAbortError("Request was aborted");
-      }
-      throw error;
+      const isAbort =
+        (error instanceof OpenAIError && error.message.toLowerCase().includes("aborted")) ||
+        (error instanceof Error && error.name === "AbortError");
+
+      const stopReason = isAbort ? "userCancelled" : "generationError";
+
+      yield {
+        type: "response",
+        role: "assistant",
+        content: "",
+        reasoningContent: null,
+        meta: {
+          model,
+          provider,
+          temperature,
+          durationMs: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          reasoningTokens: 0,
+        },
+        stopReason,
+        error:
+          stopReason === "generationError"
+            ? {
+                message: error instanceof Error ? error.message : String(error),
+                type: "unknown",
+              }
+            : undefined,
+      };
+      return;
     }
 
     let inputTokens: MaybeUndefined<number>;
@@ -186,36 +229,78 @@ export class OpenAIProvider implements LlmCoreProvider {
     let content = "";
     const reasoningContent = "";
 
-    for await (const chunk of response) {
-      const delta = firstEntry(chunk.choices)?.delta;
-      if (delta?.content) {
-        content += delta.content;
-        const chunkId = generateUniqueId();
-        yield { type: "chunk", content: delta.content, chunkId };
-      }
+    let error: LlmError | undefined;
 
-      if (delta?.tool_calls) {
-        for (const toolCall of delta.tool_calls) {
-          const _toolCall = _toolCalls[toolCall.index] || { id: "", function: { name: "", arguments: "" } };
-          if (toolCall.id) _toolCall.id += toolCall.id;
-          if (toolCall.function) {
-            if (toolCall.function.name) _toolCall.function.name += toolCall.function.name;
-            if (toolCall.function.arguments) _toolCall.function.arguments += toolCall.function.arguments;
+    try {
+      for await (const chunk of response) {
+        const delta = firstEntry(chunk.choices)?.delta;
+
+        if (delta?.content) {
+          content += delta.content;
+          const chunkId = generateUniqueId();
+          yield { type: "chunk", content: delta.content, chunkId };
+        }
+
+        if (delta?.tool_calls) {
+          for (const toolCall of delta.tool_calls) {
+            const _toolCall = _toolCalls[toolCall.index] || { id: "", function: { name: "", arguments: "" } };
+            if (toolCall.id) _toolCall.id += toolCall.id;
+            if (toolCall.function) {
+              if (toolCall.function.name) _toolCall.function.name += toolCall.function.name;
+              if (toolCall.function.arguments) _toolCall.function.arguments += toolCall.function.arguments;
+            }
+            _toolCalls[toolCall.index] = _toolCall;
           }
-          _toolCalls[toolCall.index] = _toolCall;
+        }
+
+        if (chunk.usage) {
+          inputTokens = (inputTokens || 0) + (chunk.usage?.prompt_tokens ?? 0);
+          outputTokens = (outputTokens || 0) + (chunk.usage?.completion_tokens ?? 0);
+          reasoningTokens = (reasoningTokens || 0) + (chunk.usage?.completion_tokens_details?.reasoning_tokens ?? 0);
         }
       }
+    } catch (e: unknown) {
+      // Map OpenAI SDK errors to our error types
+      // https://platform.openai.com/docs/guides/error-codes
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      const status = e instanceof APIError ? e.status : undefined;
 
-      if (chunk.usage) {
-        inputTokens = (inputTokens || 0) + (chunk.usage?.prompt_tokens ?? 0);
-        outputTokens = (outputTokens || 0) + (chunk.usage?.completion_tokens ?? 0);
-        reasoningTokens = (reasoningTokens || 0) + (chunk.usage?.completion_tokens_details?.reasoning_tokens ?? 0);
+      let type: LlmErrorType = "unknown";
+
+      if (e instanceof BadRequestError || status === 400) {
+        type = "invalid_request";
+      } else if (e instanceof AuthenticationError || status === 401) {
+        type = "authentication_error";
+      } else if (e instanceof PermissionDeniedError || status === 403) {
+        type = "authentication_error";
+      } else if (e instanceof NotFoundError || status === 404) {
+        type = "invalid_request";
+      } else if (e instanceof UnprocessableEntityError || status === 422) {
+        type = "invalid_request";
+      } else if (e instanceof RateLimitError || status === 429) {
+        // 429 can mean either rate limit or quota exceeded
+        const lowerMessage = errorMessage.toLowerCase();
+        if (lowerMessage.includes("quota") || lowerMessage.includes("exceeded your current quota")) {
+          type = "quota_exceeded";
+        } else {
+          type = "rate_limit";
+        }
+      } else if (e instanceof InternalServerError || (status && status >= 500)) {
+        type = "server_error";
+      } else if (e instanceof APIConnectionTimeoutError) {
+        type = "timeout";
+      } else if (e instanceof APIConnectionError) {
+        type = "network_error";
+      } else {
+        type = "unknown";
       }
+      error = {
+        message: errorMessage,
+        type,
+      };
     }
 
     const durationMs = Date.now() - start;
-
-    const provider = this.name;
 
     const toolCalls: LlmToolCall[] = _toolCalls.map((call) => {
       let parsedArgs: unknown = null;
@@ -265,6 +350,14 @@ export class OpenAIProvider implements LlmCoreProvider {
       };
     });
 
+    // Determine stop reason and error message
+    const stopReason = config.abortSignal?.aborted ? "userCancelled" : error ? "generationError" : "completed";
+
+    // Log non-abort errors
+    if (error && stopReason === "generationError") {
+      config.logger?.error("OpenAIProvider", `Stream error: ${error.message}`);
+    }
+
     const meta: LlmAssistantMessageMeta = {
       model,
       provider,
@@ -283,6 +376,8 @@ export class OpenAIProvider implements LlmCoreProvider {
         reasoningContent: reasoningContent || null,
         toolCalls,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     } else {
       yield {
@@ -291,6 +386,8 @@ export class OpenAIProvider implements LlmCoreProvider {
         content,
         reasoningContent: reasoningContent || null,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     }
   }

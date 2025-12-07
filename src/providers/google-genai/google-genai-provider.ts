@@ -1,4 +1,5 @@
 import {
+  ApiError,
   EmbedContentResponse,
   FunctionCallingConfigMode,
   GenerateContentConfig,
@@ -14,6 +15,8 @@ import {
   generateAssistantMessage,
   initialGoogleGenAiModels,
   LlmCoreProvider,
+  LlmError,
+  LlmErrorType,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -164,39 +167,65 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
   ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown> {
     const start = Date.now();
 
+    const { contents, systemInstruction } = convertLlmMessagesToGoogleGenerativeAiMessages(messages);
+    const requestConfig = this.prepareGenerationConfig(config);
+
+    // Add system instruction to config if present
+    if (systemInstruction) {
+      requestConfig.systemInstruction = systemInstruction;
+    }
+
+    // Add abort signal to config if present
+    if (config.abortSignal) {
+      requestConfig.abortSignal = config.abortSignal;
+    }
+
+    let streamResult: AsyncGenerator<GenerateContentResponse, void, unknown>;
+
     try {
-      const { contents, systemInstruction } = convertLlmMessagesToGoogleGenerativeAiMessages(messages);
-      const requestConfig = this.prepareGenerationConfig(config);
+      streamResult = await this.client.models.generateContentStream({
+        model,
+        contents,
+        config: requestConfig,
+      });
+    } catch (error: unknown) {
+      const isAbort =
+        error instanceof Error && (error.message.toLowerCase().includes("aborted") || error.name === "AbortError");
 
-      // Add system instruction to config if present
-      if (systemInstruction) {
-        requestConfig.systemInstruction = systemInstruction;
-      }
+      const stopReason = isAbort ? "userCancelled" : "generationError";
 
-      // Add abort signal to config if present
-      if (config.abortSignal) {
-        requestConfig.abortSignal = config.abortSignal;
-      }
-
-      let streamResult: AsyncGenerator<GenerateContentResponse, void, unknown>;
-
-      try {
-        streamResult = await this.client.models.generateContentStream({
+      yield {
+        type: "response",
+        role: "assistant",
+        content: "",
+        reasoningContent: null,
+        meta: {
           model,
-          contents,
-          config: requestConfig,
-        });
-      } catch (error: unknown) {
-        if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
-          throw new JorElAbortError("Request was aborted");
-        }
-        throw new Error(`[GoogleGenerativeAIProvider] Error generating content stream: ${error}`);
-      }
+          provider: this.name,
+          temperature: config.temperature ?? undefined,
+          durationMs: 0,
+          inputTokens: undefined,
+          outputTokens: undefined,
+        },
+        stopReason,
+        error:
+          stopReason === "generationError"
+            ? {
+                message: error instanceof Error ? error.message : String(error),
+                type: "unknown",
+              }
+            : undefined,
+      };
+      return;
+    }
 
-      let fullContent = "";
-      let fullReasoningContent = "";
-      const toolCalls: LlmToolCall[] = [];
+    let fullContent = "";
+    let fullReasoningContent = "";
+    const toolCalls: LlmToolCall[] = [];
 
+    let error: LlmError | undefined;
+
+    try {
       for await (const chunk of streamResult) {
         const candidate = chunk.candidates?.[0];
         const parts = candidate?.content?.parts || [];
@@ -253,41 +282,82 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
           yield { type: "reasoningChunk", content: chunkReasoning, chunkId: generateUniqueId() };
         }
       }
+    } catch (e: unknown) {
+      // Map Google GenAI SDK errors to our error types
+      // https://github.com/googleapis/js-genai/blob/main/src/errors.ts
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      const status = e instanceof ApiError ? e.status : undefined;
+      let type: LlmErrorType = "unknown";
 
-      const durationMs = Date.now() - start;
-      const meta = {
-        model,
-        provider: this.name,
-        temperature: config.temperature ?? undefined,
-        durationMs,
-        inputTokens: undefined,
-        outputTokens: undefined,
-      };
-
-      // If we have tool calls, yield a response with tools
-      if (toolCalls.length > 0) {
-        yield {
-          type: "response",
-          role: "assistant_with_tools",
-          content: fullContent,
-          reasoningContent: fullReasoningContent || null,
-          toolCalls,
-          meta,
-        };
+      if (status === 400) {
+        type = "invalid_request";
+      } else if (status === 401) {
+        type = "authentication_error";
+      } else if (status === 403) {
+        // 403 can mean quota exceeded or permission denied
+        const lowerMessage = errorMessage.toLowerCase();
+        if (lowerMessage.includes("quota") || lowerMessage.includes("resource exhausted")) {
+          type = "quota_exceeded";
+        } else {
+          type = "authentication_error";
+        }
+      } else if (status === 404) {
+        type = "invalid_request";
+      } else if (status === 429) {
+        type = "rate_limit";
+      } else if (status && status >= 500) {
+        type = "server_error";
       } else {
-        yield {
-          type: "response",
-          role: "assistant",
-          content: fullContent,
-          reasoningContent: fullReasoningContent || null,
-          meta,
-        };
+        type = "unknown";
       }
-    } catch (error: unknown) {
-      if (error instanceof JorElAbortError) {
-        throw error;
-      }
-      throw error;
+
+      error = {
+        message: errorMessage,
+        type,
+      };
+    }
+
+    const durationMs = Date.now() - start;
+
+    // Determine stop reason and error message
+    const stopReason = config.abortSignal?.aborted ? "userCancelled" : error ? "generationError" : "completed";
+
+    // Log non-abort errors
+    if (error && stopReason === "generationError") {
+      config.logger?.error("GoogleGenerativeAIProvider", `Stream error: ${error.message}`);
+    }
+
+    const meta = {
+      model,
+      provider: this.name,
+      temperature: config.temperature ?? undefined,
+      durationMs,
+      inputTokens: undefined,
+      outputTokens: undefined,
+    };
+
+    // If we have tool calls, yield a response with tools
+    if (toolCalls.length > 0) {
+      yield {
+        type: "response",
+        role: "assistant_with_tools",
+        content: fullContent,
+        reasoningContent: fullReasoningContent || null,
+        toolCalls,
+        meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
+      };
+    } else {
+      yield {
+        type: "response",
+        role: "assistant",
+        content: fullContent,
+        reasoningContent: fullReasoningContent || null,
+        meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
+      };
     }
   }
 

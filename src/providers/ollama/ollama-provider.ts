@@ -3,6 +3,7 @@ import ollama, { AbortableAsyncIterator, ChatResponse, EmbeddingsResponse, Ollam
 import {
   generateAssistantMessage,
   LlmCoreProvider,
+  LlmError,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -110,6 +111,7 @@ export class OllamaProvider implements LlmCoreProvider {
     config: LlmGenerationConfig = {},
   ): AsyncGenerator<LlmStreamProviderResponseChunkEvent | LlmStreamResponseEvent, void, unknown> {
     const start = Date.now();
+    const provider = this.name;
 
     const temperature = config.temperature ?? undefined;
 
@@ -132,10 +134,35 @@ export class OllamaProvider implements LlmCoreProvider {
         },
       });
     } catch (error: any) {
-      if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
-        throw new JorElAbortError("Request was aborted");
-      }
-      throw error;
+      const isAbort =
+        error?.name === "AbortError" ||
+        (error?.message && typeof error.message === "string" && error.message.toLowerCase().includes("aborted"));
+
+      const stopReason = isAbort ? "userCancelled" : "generationError";
+
+      yield {
+        type: "response",
+        role: "assistant",
+        content: "",
+        reasoningContent: null,
+        meta: {
+          model,
+          provider,
+          temperature,
+          durationMs: 0,
+          inputTokens: undefined,
+          outputTokens: undefined,
+        },
+        stopReason,
+        error:
+          stopReason === "generationError"
+            ? {
+                message: error instanceof Error ? error.message : String(error),
+                type: "unknown",
+              }
+            : undefined,
+      };
+      return;
     }
 
     // Set up cancellation listener for Ollama's native abort support
@@ -154,6 +181,8 @@ export class OllamaProvider implements LlmCoreProvider {
 
     let content = "";
     let reasoningContent = "";
+
+    let error: LlmError | undefined;
 
     try {
       for await (const chunk of stream) {
@@ -186,6 +215,11 @@ export class OllamaProvider implements LlmCoreProvider {
           outputTokens = (outputTokens ?? 0) + chunk.eval_count;
         }
       }
+    } catch (e: unknown) {
+      error = {
+        message: e instanceof Error ? e.message : String(e),
+        type: "unknown",
+      };
     } finally {
       // Clean up the abort listener
       if (config.abortSignal) {
@@ -195,7 +229,13 @@ export class OllamaProvider implements LlmCoreProvider {
 
     const durationMs = Date.now() - start;
 
-    const provider = this.name;
+    // Determine stop reason and error message
+    const stopReason = config.abortSignal?.aborted ? "userCancelled" : error ? "generationError" : "completed";
+
+    // Log non-abort errors
+    if (error && stopReason === "generationError") {
+      config.logger?.error("OllamaProvider", `Stream error: ${error.message}`);
+    }
 
     const meta = {
       model,
@@ -231,6 +271,8 @@ export class OllamaProvider implements LlmCoreProvider {
         reasoningContent: reasoningContent || null,
         toolCalls: toolCalls,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     } else {
       yield {
@@ -239,6 +281,8 @@ export class OllamaProvider implements LlmCoreProvider {
         content,
         reasoningContent: reasoningContent || null,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     }
   }

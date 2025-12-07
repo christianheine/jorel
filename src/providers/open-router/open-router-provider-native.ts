@@ -6,6 +6,8 @@ import {
   generateAssistantMessage,
   LlmAssistantMessageMeta,
   LlmCoreProvider,
+  LlmError,
+  LlmErrorType,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -172,10 +174,35 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
         },
       );
     } catch (error: unknown) {
-      if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
-        throw new JorElAbortError("Request was aborted");
-      }
-      throw error;
+      const isAbort =
+        error instanceof Error && (error.message.toLowerCase().includes("aborted") || error.name === "AbortError");
+
+      const stopReason = isAbort ? "userCancelled" : "generationError";
+
+      yield {
+        type: "response",
+        role: "assistant",
+        content: "",
+        reasoningContent: "",
+        meta: {
+          model,
+          provider: this.name,
+          temperature,
+          durationMs: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          reasoningTokens: 0,
+        },
+        stopReason,
+        error:
+          stopReason === "generationError"
+            ? {
+                message: error instanceof Error ? error.message : String(error),
+                type: "unknown",
+              }
+            : undefined,
+      };
+      return;
     }
 
     let inputTokens: MaybeUndefined<number>;
@@ -187,43 +214,111 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
     let content = "";
     let reasoningContent = "";
 
-    for await (const chunk of stream) {
-      const delta = firstEntry(chunk.choices)?.delta;
+    let error: LlmError | undefined;
 
-      if (delta?.content) {
-        content += delta.content;
-        const chunkId = generateUniqueId();
-        yield { type: "chunk", content: delta.content, chunkId };
-      }
+    const provider = this.name;
 
-      if (delta?.reasoning) {
-        reasoningContent += delta.reasoning;
-        const chunkId = generateUniqueId();
-        yield { type: "reasoningChunk", content: delta.reasoning, chunkId };
-      }
+    try {
+      for await (const chunk of stream) {
+        // Handle mid-stream errors from OpenRouter
+        // https://openrouter.ai/docs/api/reference/errors-and-debugging.md
+        if (chunk.error) {
+          const errorCode =
+            typeof chunk.error.code === "number" ? chunk.error.code : parseInt(String(chunk.error.code), 10);
+          let type: LlmErrorType = "unknown";
 
-      if (delta?.toolCalls) {
-        for (const toolCall of delta.toolCalls) {
-          const _toolCall = _toolCalls[toolCall.index] || { id: "", function: { name: "", arguments: "" } };
-          if (toolCall.id) _toolCall.id += toolCall.id;
-          if (toolCall.function) {
-            if (toolCall.function.name) _toolCall.function.name += toolCall.function.name;
-            if (toolCall.function.arguments) _toolCall.function.arguments += toolCall.function.arguments;
+          // Map HTTP status codes to error types
+          if (errorCode === 400) {
+            type = "invalid_request";
+          } else if (errorCode === 401) {
+            type = "authentication_error";
+          } else if (errorCode === 402) {
+            type = "quota_exceeded";
+          } else if (errorCode === 403) {
+            type = "moderation_error";
+          } else if (errorCode === 408) {
+            type = "timeout";
+          } else if (errorCode === 429) {
+            type = "rate_limit";
+          } else if (errorCode === 500 || errorCode === 502) {
+            type = "server_error";
+          } else if (errorCode === 503) {
+            type = "no_available_model";
           }
-          _toolCalls[toolCall.index] = _toolCall;
+
+          error = {
+            message: chunk.error.message || "Unknown error from OpenRouter",
+            type,
+          };
+        }
+
+        const delta = firstEntry(chunk.choices)?.delta;
+
+        if (delta?.content) {
+          content += delta.content;
+          const chunkId = generateUniqueId();
+          yield { type: "chunk", content: delta.content, chunkId };
+        }
+
+        if (delta?.reasoning) {
+          reasoningContent += delta.reasoning;
+          const chunkId = generateUniqueId();
+          yield { type: "reasoningChunk", content: delta.reasoning, chunkId };
+        }
+
+        if (delta?.toolCalls) {
+          for (const toolCall of delta.toolCalls) {
+            const _toolCall = _toolCalls[toolCall.index] || { id: "", function: { name: "", arguments: "" } };
+            if (toolCall.id) _toolCall.id += toolCall.id;
+            if (toolCall.function) {
+              if (toolCall.function.name) _toolCall.function.name += toolCall.function.name;
+              if (toolCall.function.arguments) _toolCall.function.arguments += toolCall.function.arguments;
+            }
+            _toolCalls[toolCall.index] = _toolCall;
+          }
+        }
+
+        if (chunk.usage) {
+          inputTokens = (inputTokens || 0) + (chunk.usage?.promptTokens ?? 0);
+          outputTokens = (outputTokens || 0) + (chunk.usage?.completionTokens ?? 0);
+          reasoningTokens = (reasoningTokens || 0) + (chunk.usage?.completionTokensDetails?.reasoningTokens ?? 0);
         }
       }
+    } catch (e: unknown) {
+      // Only set error if one wasn't already set by chunk.error
+      // This handles unexpected errors during streaming (e.g., network issues, parsing errors)
+      if (!error) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        let type: LlmErrorType = "unknown";
 
-      if (chunk.usage) {
-        inputTokens = (inputTokens || 0) + (chunk.usage?.promptTokens ?? 0);
-        outputTokens = (outputTokens || 0) + (chunk.usage?.completionTokens ?? 0);
-        reasoningTokens = (reasoningTokens || 0) + (chunk.usage?.completionTokensDetails?.reasoningTokens ?? 0);
+        // Try to infer error type from the error message
+        const lowerMessage = errorMessage.toLowerCase();
+        if (
+          lowerMessage.includes("network") ||
+          lowerMessage.includes("fetch failed") ||
+          lowerMessage.includes("econnrefused")
+        ) {
+          type = "network_error";
+        } else if (lowerMessage.includes("timeout")) {
+          type = "network_error";
+        }
+
+        error = {
+          message: errorMessage,
+          type,
+        };
       }
     }
 
     const durationMs = Date.now() - start;
 
-    const provider = this.name;
+    // Determine stop reason and error message
+    const stopReason = config.abortSignal?.aborted ? "userCancelled" : error ? "generationError" : "completed";
+
+    // Log non-abort errors
+    if (error && stopReason === "generationError") {
+      config.logger?.error("OpenRouterProviderNative", `Stream error: ${error.message}`);
+    }
 
     const toolCalls: LlmToolCall[] = _toolCalls.map((call) => {
       let parsedArgs: unknown = null;
@@ -291,6 +386,8 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
         reasoningContent,
         toolCalls,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     } else {
       yield {
@@ -299,6 +396,8 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
         content,
         reasoningContent,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     }
   }

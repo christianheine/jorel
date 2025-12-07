@@ -48,7 +48,7 @@ import {
   StreamBufferConfig,
   Verbosity,
 } from "../providers";
-import { generateUniqueId, Nullable } from "../shared";
+import { Nullable } from "../shared";
 import { LlmTool, LlmToolConfiguration, LLmToolContextSegment, LlmToolKit } from "../tools";
 import { JorElCoreStore } from "./jorel.core";
 import { ModelSpecificDefaults } from "./jorel.models";
@@ -665,47 +665,8 @@ export class JorEl {
           : new LlmToolKit(config.tools)
         : undefined,
     };
-    if (config.tools) {
-      yield* this._core.generateStreamAndProcessTools(messages, _config);
-    } else {
-      const stream = this._core.generateContentStream(messages, _config);
-      const messageId: string = generateUniqueId();
-      yield { type: "messageStart", messageId };
-      for await (const chunk of stream) {
-        if (chunk.type === "chunk") {
-          yield { ...chunk, messageId };
-        } else if (chunk.type === "reasoningChunk") {
-          yield { ...chunk, messageId };
-        }
-        if (chunk.type === "response") {
-          if (chunk.role === "assistant") {
-            const message: LlmAssistantMessage = {
-              id: messageId,
-              role: "assistant",
-              content: chunk.content,
-              reasoningContent: chunk.reasoningContent,
-              createdAt: Date.now(),
-            };
-            yield { type: "messageEnd", messageId, message };
-            messages.push(message);
-          } else {
-            const message: LlmAssistantMessageWithToolCalls = {
-              id: messageId,
-              role: "assistant_with_tools",
-              content: chunk.content,
-              toolCalls: chunk.toolCalls,
-              reasoningContent: chunk.reasoningContent,
-              meta: chunk.meta,
-              createdAt: Date.now(),
-            };
-            yield { type: "messageEnd", messageId, message };
-            messages.push(message);
-          }
-          yield chunk;
-          yield { type: "messages", messages, stopReason: config.abortSignal?.aborted ? "userCancelled" : "completed" };
-        }
-      }
-    }
+
+    yield* this._core.generateStreamAndProcessTools(messages, _config);
   }
 
   /**

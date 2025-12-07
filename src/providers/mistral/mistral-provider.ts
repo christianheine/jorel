@@ -2,6 +2,7 @@ import { Mistral } from "@mistralai/mistralai";
 import {
   generateAssistantMessage,
   LlmCoreProvider,
+  LlmError,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -183,10 +184,35 @@ export class MistralProvider implements LlmCoreProvider {
         config.abortSignal ? { fetchOptions: { signal: config.abortSignal } } : undefined,
       );
     } catch (error: any) {
-      if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
-        throw new JorElAbortError("Request was aborted");
-      }
-      throw error;
+      const isAbort =
+        error?.name === "AbortError" ||
+        (error?.message && typeof error.message === "string" && error.message.toLowerCase().includes("aborted"));
+
+      const stopReason = isAbort ? "userCancelled" : "generationError";
+
+      yield {
+        type: "response",
+        role: "assistant",
+        content: "",
+        reasoningContent: "",
+        meta: {
+          model,
+          provider: this.name,
+          temperature,
+          durationMs: 0,
+          inputTokens: undefined,
+          outputTokens: undefined,
+        },
+        stopReason,
+        error:
+          stopReason === "generationError"
+            ? {
+                message: error instanceof Error ? error.message : String(error),
+                type: "unknown",
+              }
+            : undefined,
+      };
+      return;
     }
 
     let inputTokens: MaybeUndefined<number>;
@@ -197,59 +223,76 @@ export class MistralProvider implements LlmCoreProvider {
     let content = "";
     let reasoningContent = "";
 
-    for await (const chunk of response) {
-      const delta = firstEntry(chunk.data.choices)?.delta;
-      if (delta?.content) {
-        const contentChunk = Array.isArray(delta.content)
-          ? delta.content.map((c) => (c.type === "text" ? c.text : "")).join("")
-          : delta.content;
-        const reasoningChunk = Array.isArray(delta.content)
-          ? delta.content.map((c) => (c.type === "thinking" ? c.thinking : "")).join("")
-          : null;
+    let error: LlmError | undefined;
 
-        if (contentChunk) {
-          content += contentChunk;
-          const chunkId = generateUniqueId();
-          yield {
-            type: "chunk",
-            content: contentChunk,
-            chunkId,
-          };
-        }
-        if (reasoningChunk) {
-          reasoningContent += reasoningChunk;
-          const chunkId = generateUniqueId();
-          yield {
-            type: "reasoningChunk",
-            content: reasoningChunk,
-            chunkId,
-          };
-        }
-      }
+    const provider = this.name;
 
-      if (delta?.toolCalls) {
-        for (const toolCall of delta.toolCalls) {
-          if (toolCall.index !== undefined) {
-            const _toolCall = _toolCalls[toolCall.index] || { id: "", function: { name: "", arguments: "" } };
-            if (toolCall.id) _toolCall.id += toolCall.id;
-            if (toolCall.function) {
-              if (toolCall.function.name) _toolCall.function.name += toolCall.function.name;
-              if (toolCall.function.arguments) _toolCall.function.arguments += toolCall.function.arguments;
-            }
-            _toolCalls[toolCall.index] = _toolCall;
+    try {
+      for await (const chunk of response) {
+        const delta = firstEntry(chunk.data.choices)?.delta;
+        if (delta?.content) {
+          const contentChunk = Array.isArray(delta.content)
+            ? delta.content.map((c) => (c.type === "text" ? c.text : "")).join("")
+            : delta.content;
+          const reasoningChunk = Array.isArray(delta.content)
+            ? delta.content.map((c) => (c.type === "thinking" ? c.thinking : "")).join("")
+            : null;
+
+          if (contentChunk) {
+            content += contentChunk;
+            const chunkId = generateUniqueId();
+            yield {
+              type: "chunk",
+              content: contentChunk,
+              chunkId,
+            };
+          }
+          if (reasoningChunk) {
+            reasoningContent += reasoningChunk;
+            const chunkId = generateUniqueId();
+            yield {
+              type: "reasoningChunk",
+              content: reasoningChunk,
+              chunkId,
+            };
           }
         }
-      }
 
-      if (chunk.data.usage) {
-        inputTokens = chunk.data.usage?.promptTokens;
-        outputTokens = chunk.data.usage?.completionTokens;
+        if (delta?.toolCalls) {
+          for (const toolCall of delta.toolCalls) {
+            if (toolCall.index !== undefined) {
+              const _toolCall = _toolCalls[toolCall.index] || { id: "", function: { name: "", arguments: "" } };
+              if (toolCall.id) _toolCall.id += toolCall.id;
+              if (toolCall.function) {
+                if (toolCall.function.name) _toolCall.function.name += toolCall.function.name;
+                if (toolCall.function.arguments) _toolCall.function.arguments += toolCall.function.arguments;
+              }
+              _toolCalls[toolCall.index] = _toolCall;
+            }
+          }
+        }
+
+        if (chunk.data.usage) {
+          inputTokens = chunk.data.usage?.promptTokens;
+          outputTokens = chunk.data.usage?.completionTokens;
+        }
       }
+    } catch (e: unknown) {
+      error = {
+        message: e instanceof Error ? e.message : String(e),
+        type: "unknown",
+      };
     }
 
     const durationMs = Date.now() - start;
 
-    const provider = this.name;
+    // Determine stop reason and error message
+    const stopReason = config.abortSignal?.aborted ? "userCancelled" : error ? "generationError" : "completed";
+
+    // Log non-abort errors
+    if (error && stopReason === "generationError") {
+      config.logger?.error("MistralProvider", `Stream error: ${error.message}`);
+    }
 
     const toolCalls: LlmToolCall[] = _toolCalls.map((call) => {
       let parsedArgs: any = null;
@@ -316,6 +359,8 @@ export class MistralProvider implements LlmCoreProvider {
         reasoningContent,
         toolCalls,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     } else {
       yield {
@@ -324,6 +369,8 @@ export class MistralProvider implements LlmCoreProvider {
         content,
         reasoningContent,
         meta,
+        stopReason,
+        error: stopReason === "generationError" ? error : undefined,
       };
     }
   }

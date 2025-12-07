@@ -10,7 +10,25 @@ export type ReasoningSummaryVerbosity = "auto" | "concise" | "detailed" | null;
 
 export type JsonSpecification = ZodObject<any> | Record<string, unknown>;
 
-export type LLmGenerationStopReason = "toolCallsRequireApproval" | "completed" | "userCancelled";
+export type LLmGenerationStopReason = "toolCallsRequireApproval" | "completed" | "userCancelled" | "generationError";
+
+export type LlmErrorType =
+  | "moderation_error"
+  | "timeout"
+  | "rate_limit"
+  | "server_error"
+  | "invalid_request"
+  | "authentication_error"
+  | "quota_exceeded"
+  | "no_available_model"
+  | "network_error"
+  | "context_length_exceeded"
+  | "unknown";
+
+export interface LlmError {
+  message: string;
+  type: LlmErrorType;
+}
 
 /**
  * Classification types for tool calls
@@ -319,6 +337,9 @@ export interface LlmStreamResponse {
   content: string;
   reasoningContent: Nullable<string>;
   meta: LlmAssistantMessageMeta;
+  stopReason: LLmGenerationStopReason;
+  /** Error message if stopReason is "generationError" */
+  error?: LlmError;
 }
 
 export interface LlmStreamResponseWithToolCalls {
@@ -328,12 +349,17 @@ export interface LlmStreamResponseWithToolCalls {
   reasoningContent: Nullable<string>;
   toolCalls: LlmToolCall[];
   meta: LlmAssistantMessageMeta;
+  stopReason: LLmGenerationStopReason;
+  /** Error message if stopReason is "generationError" */
+  error?: LlmError;
 }
 
 export interface LlmStreamResponseMessages {
   type: "messages";
   messages: LlmMessage[];
   stopReason: LLmGenerationStopReason;
+  /** Error message if stopReason is "generationError" */
+  error?: LlmError;
 }
 
 export interface LlmStreamToolCallStarted {

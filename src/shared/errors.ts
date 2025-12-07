@@ -21,6 +21,8 @@ export class JorElAbortError extends Error {
 export function isAbortError(error: unknown): error is JorElAbortError {
   return (
     error instanceof JorElAbortError ||
-    (error instanceof Error && "isAbortError" in error && (error as any).isAbortError === true)
+    (error instanceof Error && "isAbortError" in error && (error as any).isAbortError === true) ||
+    (error instanceof Error && error.name === "AbortError") ||
+    (error instanceof Error && error.message.includes("aborted"))
   );
 }
