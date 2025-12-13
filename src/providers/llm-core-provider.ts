@@ -1,7 +1,9 @@
 import { ZodObject } from "zod";
 import { LoggerOption, LogLevel, LogService } from "../logger";
-import { Nullable } from "../shared";
+import { MessageIdGenerator, MessageIdGeneratorFunction, Nullable } from "../shared";
 import { LLmToolContextSegment, LlmToolKit } from "../tools";
+
+export type { MessageIdGenerator, MessageIdGeneratorFunction };
 
 export type LlmToolChoice = "none" | "auto" | "required" | string;
 export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | null;
@@ -72,14 +74,17 @@ export interface LlmGenerationConfig extends CoreLlmGenerationConfig {
 
 export interface InitLlmGenerationConfig extends CoreLlmGenerationConfig {
   logger?: LoggerOption | LogService;
+  /** ID generator for messages (defaults to uuidv7) */
+  messageIdGenerator?: MessageIdGenerator;
 }
 
 /**
  * Minimal interface for messages in an array - only requires the fields we actually need
  */
 export interface LlmMessageBase {
-  id?: string;
+  id: string;
   role: "assistant" | "assistant_with_tools" | "system" | "user";
+  createdAt: number;
 }
 
 /**
@@ -90,11 +95,9 @@ export interface WithToolCalls {
   toolCalls: LlmToolCall[];
 }
 
-export interface LlmSystemMessage {
-  id?: string;
+export interface LlmSystemMessage extends LlmMessageBase {
   role: "system";
   content: string;
-  createdAt?: number;
 }
 
 export interface LLmMessageTextContent {
@@ -118,11 +121,9 @@ export interface LLmMessageImageDataUrlContent {
 
 export type LlmUserMessageContent = LLmMessageTextContent | LLmMessageImageUrlContent | LLmMessageImageDataUrlContent;
 
-export interface LlmUserMessage {
-  id?: string;
+export interface LlmUserMessage extends LlmMessageBase {
   role: "user";
   content: LlmUserMessageContent[];
-  createdAt?: number;
 }
 
 export type LlmFunctionParameter = "string" | "number" | "integer" | "boolean" | "array" | "object";
@@ -228,23 +229,19 @@ export type LlmToolCall =
   | LlmToolCall__Error
   | LlmToolCall__Cancelled;
 
-export interface LlmAssistantMessage {
-  id: string;
+export interface LlmAssistantMessage extends LlmMessageBase {
   role: "assistant";
   content: string;
   reasoningContent?: Nullable<string>;
   meta?: LlmAssistantMessageMeta;
-  createdAt?: number;
 }
 
-export interface LlmAssistantMessageWithToolCalls {
-  id: string;
+export interface LlmAssistantMessageWithToolCalls extends LlmMessageBase {
   role: "assistant_with_tools";
   content: Nullable<string>;
   reasoningContent?: Nullable<string>;
   toolCalls: LlmToolCall[];
   meta?: LlmAssistantMessageMeta;
-  createdAt?: number;
 }
 
 export interface LlmGenerationAttempt {

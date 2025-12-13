@@ -291,17 +291,20 @@ export class JorElAgentManager {
     if (task.activeThread.agent.availableDelegateAgents.length > 0) allowedToolNames.push(this.delegateToAgentToolName);
     if (task.activeThread.agent.availableTransferAgents.length > 0) allowedToolNames.push(this.transferToAgentToolName);
 
-    const response = await this._core.generate(
-      [generateSystemMessage(task.activeThread.agent.systemMessage), ...task.activeThread.messages],
-      {
-        tools: this.tools.withAllowedToolsOnly(allowedToolNames),
-        model: task.activeThread.agent.model ?? undefined,
-        context: env?.context,
-        secureContext: env?.secureContext,
-        temperature: task.activeThread.agent.temperature ?? undefined,
-        json: task.activeThread.agent.responseType === "json",
-      },
+    const systemMessage = generateSystemMessage(
+      task.activeThread.agent.systemMessage,
+      undefined,
+      undefined,
+      this._core.messageIdGenerator,
     );
+    const response = await this._core.generate([systemMessage, ...task.activeThread.messages], {
+      tools: this.tools.withAllowedToolsOnly(allowedToolNames),
+      model: task.activeThread.agent.model ?? undefined,
+      context: env?.context,
+      secureContext: env?.secureContext,
+      temperature: task.activeThread.agent.temperature ?? undefined,
+      json: task.activeThread.agent.responseType === "json",
+    });
 
     task.activeThread.addEvent({
       eventType: "generation",
@@ -595,7 +598,7 @@ export class JorElAgentManager {
           {
             id: subThreadId,
             agentId: delegate.name,
-            messages: [await generateUserMessage(taskDescription)],
+            messages: [await generateUserMessage(taskDescription, this._core.messageIdGenerator)],
             parentThreadId: task.activeThread.id,
             parentToolCallId: toolCall.id,
             events: [],

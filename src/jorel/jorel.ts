@@ -23,6 +23,7 @@ import {
   LlmStreamEvent,
   LlmTextResponseWithMeta,
   LlmToolChoice,
+  MessageIdGenerator,
   MistralConfig,
   MistralProvider,
   OllamaConfig,
@@ -59,6 +60,8 @@ interface InitialConfig {
   temperature?: Nullable<number>;
   logger?: LoggerOption | LogService;
   logLevel?: LogLevel;
+  /** ID generator for messages. Options: "ulid", "uuidv4", "uuidv7" (default), or custom function */
+  messageIdGenerator?: MessageIdGenerator;
 }
 
 export interface JorElCoreGenerationConfig {
@@ -314,6 +317,7 @@ export class JorEl {
       temperature: config.temperature === undefined ? 0 : config.temperature,
       logger: config.logger,
       logLevel: config.logLevel,
+      messageIdGenerator: config.messageIdGenerator,
     });
     this.team = new JorElAgentManager(this._core);
     if (config.anthropic) this.providers.registerAnthropic(config.anthropic === true ? undefined : config.anthropic);
@@ -388,6 +392,20 @@ export class JorEl {
    */
   public set logLevel(logLevel: LogLevel) {
     this._core.logger.logLevel = logLevel;
+  }
+
+  /**
+   * Message ID generator
+   */
+  public get messageIdGenerator(): MessageIdGenerator {
+    return this._core.messageIdGenerator;
+  }
+
+  /**
+   * Set the message ID generator
+   */
+  public set messageIdGenerator(generator: MessageIdGenerator) {
+    this._core.messageIdGenerator = generator;
   }
 
   /**
@@ -705,6 +723,7 @@ export class JorEl {
       systemMessage || this.systemMessage,
       documentSystemMessage || this._documentSystemMessage,
       _documents,
+      this.messageIdGenerator,
     );
   }
 
@@ -714,7 +733,7 @@ export class JorEl {
    * @param content - The content to include in the user message.
    */
   generateUserMessage(content: JorElTaskInput) {
-    return generateUserMessage(content);
+    return generateUserMessage(content, this.messageIdGenerator);
   }
 
   /**

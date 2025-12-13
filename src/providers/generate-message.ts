@@ -1,6 +1,6 @@
 import { LlmDocumentCollection } from "../documents";
 import { JorElTaskInput } from "../jorel";
-import { generateUniqueId, Nullable } from "../shared";
+import { generateMessageId, MessageIdGenerator, Nullable } from "../shared";
 import {
   LlmAssistantMessage,
   LlmAssistantMessageWithToolCalls,
@@ -10,11 +10,30 @@ import {
   LlmUserMessageContent,
 } from "./llm-core-provider";
 
-export const generateUserMessage = async (taskInput: JorElTaskInput): Promise<LlmUserMessage> => {
+export interface MessageIdOption {
+  messageId: string;
+}
+
+type IdGeneratorOption = MessageIdGenerator | MessageIdOption;
+
+const resolveMessageId = (option: IdGeneratorOption | undefined, timestamp?: number): string => {
+  if (option && typeof option === "object" && "messageId" in option) {
+    return option.messageId;
+  }
+  return generateMessageId(option as MessageIdGenerator | undefined, timestamp);
+};
+
+export const generateUserMessage = async (
+  taskInput: JorElTaskInput,
+  idOption?: IdGeneratorOption,
+): Promise<LlmUserMessage> => {
+  const id = resolveMessageId(idOption);
+  const createdAt = Date.now();
+
   const baseMessage: Omit<LlmUserMessage, "content"> = {
-    id: generateUniqueId(),
+    id,
     role: "user",
-    createdAt: Date.now(),
+    createdAt,
   };
 
   if (typeof taskInput === "string") {
@@ -32,10 +51,8 @@ export const generateUserMessage = async (taskInput: JorElTaskInput): Promise<Ll
   }
 
   return {
-    id: generateUniqueId(),
-    role: "user",
+    ...baseMessage,
     content,
-    createdAt: Date.now(),
   };
 };
 
@@ -43,8 +60,9 @@ export const generateSystemMessage = (
   systemMessage: string,
   documentSystemMessage?: string,
   documents?: LlmDocumentCollection,
+  idOption?: IdGeneratorOption,
 ): LlmSystemMessage => {
-  const id = generateUniqueId();
+  const id = resolveMessageId(idOption);
   const createdAt = Date.now();
   if (documents && documents.length > 0) {
     if (!documentSystemMessage)
@@ -67,9 +85,9 @@ export const generateAssistantMessage = (
   content: Nullable<string>,
   reasoningContent: Nullable<string> = null,
   toolCalls?: LlmToolCall[],
-  messageId?: string,
+  idOption?: IdGeneratorOption,
 ): LlmAssistantMessage | LlmAssistantMessageWithToolCalls => {
-  const id = messageId ?? generateUniqueId();
+  const id = resolveMessageId(idOption);
   const createdAt = Date.now();
   if (!toolCalls || toolCalls.length === 0) {
     return { id, role: "assistant", content: content || "", reasoningContent, createdAt };

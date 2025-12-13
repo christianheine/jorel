@@ -19,11 +19,20 @@ import {
   LlmStreamToolCallEvent,
   LlmStreamToolCallStarted,
   LlmToolCall,
+  MessageIdGenerator,
   StreamBufferConfig,
 } from "../providers";
 import { getModelOverrides } from "../providers/get-overrides";
 import { modelParameterOverrides } from "../providers/model-parameter-overrides";
-import { generateUniqueId, JorElAbortError, maskAll, MaybeUndefined, omit, shallowFilterUndefined } from "../shared";
+import {
+  generateMessageId,
+  generateUniqueId,
+  JorElAbortError,
+  maskAll,
+  MaybeUndefined,
+  omit,
+  shallowFilterUndefined,
+} from "../shared";
 import { JorElGenerationConfigWithTools, JorElGenerationOutput } from "./jorel";
 import { JorElModelManager, ModelEntry } from "./jorel.models";
 import { JorElProviderManager } from "./jorel.providers";
@@ -31,12 +40,16 @@ import { JorElProviderManager } from "./jorel.providers";
 export class JorElCoreStore {
   defaultConfig: InitLlmGenerationConfig = {};
   logger: LogService;
+  messageIdGenerator: MessageIdGenerator = "uuidv7";
 
   providerManager: JorElProviderManager;
   modelManager: JorElModelManager;
 
   constructor(config: InitLlmGenerationConfig = {}) {
     this.defaultConfig = config;
+    if (config.messageIdGenerator) {
+      this.messageIdGenerator = config.messageIdGenerator;
+    }
     if (config.logger instanceof LogService) {
       this.logger = config.logger;
       if (config.logLevel) {
@@ -269,7 +282,9 @@ export class JorElCoreStore {
       };
     }
 
-    _messages.push(generateAssistantMessage(generation.content, generation.reasoningContent));
+    _messages.push(
+      generateAssistantMessage(generation.content, generation.reasoningContent, undefined, this.messageIdGenerator),
+    );
 
     return {
       output: generation,
@@ -365,7 +380,7 @@ export class JorElCoreStore {
     let response: MaybeUndefined<LlmStreamResponse | LlmStreamResponseWithToolCalls> = undefined;
     let finalStopReason: LLmGenerationStopReason = "completed";
     let finalError: LlmError | undefined;
-    let messageId: string = generateUniqueId();
+    let messageId: string = generateMessageId(this.messageIdGenerator, Date.now());
 
     for (let i = 0; i < maxAttempts; i++) {
       yield { type: "messageStart", messageId };
@@ -428,7 +443,7 @@ export class JorElCoreStore {
           response.content,
           response.reasoningContent,
           response.role === "assistant_with_tools" ? response.toolCalls : undefined,
-          messageId,
+          { messageId },
         );
 
         yield { type: "messageEnd", messageId, message };
@@ -472,18 +487,15 @@ export class JorElCoreStore {
 
       if (hasToolCallsRequiringApproval) {
         // Stop processing and return messages with approval required reason
-        const message = generateAssistantMessage(
-          response.content,
-          response.reasoningContent,
-          response.toolCalls,
+        const message = generateAssistantMessage(response.content, response.reasoningContent, response.toolCalls, {
           messageId,
-        );
+        });
 
         yield { type: "messageEnd", messageId, message };
 
         messages.push(message);
 
-        messageId = generateUniqueId();
+        messageId = generateMessageId(this.messageIdGenerator, Date.now());
 
         // Update meta with cumulative token usage
         if (generations.length > 1) {
@@ -563,15 +575,12 @@ export class JorElCoreStore {
 
       this.logger.debug("Core", "Finished processing tool calls");
 
-      const message = generateAssistantMessage(
-        response.content,
-        response.reasoningContent,
-        response.toolCalls,
+      const message = generateAssistantMessage(response.content, response.reasoningContent, response.toolCalls, {
         messageId,
-      );
+      });
       yield { type: "messageEnd", messageId, message };
       messages.push(message);
-      messageId = generateUniqueId();
+      messageId = generateMessageId(this.messageIdGenerator, Date.now());
     }
 
     if (response) {
@@ -589,7 +598,7 @@ export class JorElCoreStore {
         };
       }
 
-      const message = generateAssistantMessage(response.content, response.reasoningContent, undefined, messageId);
+      const message = generateAssistantMessage(response.content, response.reasoningContent, undefined, { messageId });
       yield { type: "messageEnd", messageId, message };
       messages.push(message);
 
