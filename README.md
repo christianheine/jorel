@@ -63,18 +63,17 @@ To run the example, use:
 npm run start
 ```
 
-## What's New in v1.2.0
+## What's New in v2.0.0-alpha.0
 
-* **🤖 Gemini 3 Pro Support**: Full support for Gemini 3 Pro, including `thought_signature` handling for reliable tool use
-* **🧠 Google GenAI Thinking**: Access reasoning traces from Google's thinking models
-* **🛠️ Improved Stability**: Fixes for mixed content handling in Google GenAI responses
+* **🎯 Deliberate Model Registration**: Providers no longer register models by default - you now explicitly add the models you need via `provider.addModel()`. This gives you full control and avoids outdated model lists.
+* **🆔 Message ID & Timestamps**: Every message now includes `id` and `createdAt` fields (UUID v7 by default)
+* **⚙️ Configurable ID Generation**: Choose your preferred ID format (ULID, UUID v4, UUID v7, or custom generator)
+* **🌊 Graceful Stream Errors**: Streaming errors are now returned as part of the stream instead of throwing - streams always complete
 
-## What's New in v1.1.0
+### Breaking Changes
 
-* **🧠 Reasoning Content Support**: Access reasoning/thinking processes from supported models (Anthropic, Mistral, Ollama, Groq, OpenRouter)
-* **📊 Stream Message Tracking**: Track message boundaries and IDs in real-time with `messageStart`,  `messageEnd` events
-* **🔌 Native OpenRouter SDK**: Optional native `@openrouter/sdk` integration with full streaming and reasoning support
-* **🔒 JSON Parsing Modes**: Strict/loose parsing options for better error handling
+* You must now register at least one model before generating responses (see Quick Start)
+* Streaming no longer throws on errors - check for error events in the stream instead
 
 See the [full changelog](CHANGELOG.md) for complete details.
 
@@ -86,13 +85,13 @@ import { JorEl } from "jorel";
 // Create a new JorEl instance with the providers you want to use
 const jorel = new JorEl({ openAI: { apiKey: "your-openai-api-key" } });
 
-// Optionally, set a default model
-jorel.models.setDefault("gpt-4o-mini");
+// Register at least one model - the first one becomes the default for this provider
+jorel.providers.openAi.addModel("gpt-4o-mini");
 
 // Generate a response for a text prompt, using the default model
 const response = await jorel.text("What is the capital of Australia, in one word?");
 
-console.log(response); // "Sydney"
+console.log(response); // "Canberra"
 ```
 
 ### Basic Usage
@@ -103,6 +102,8 @@ This is the most basic usage of JorEl. It will use the default model and provide
 
 ```typescript
 const jorEl = new JorEl({ openAI: true }); // Uses OPENAI_API_KEY env variable
+jorEl.providers.openAi.addModel("gpt-4o-mini"); // Register a model first
+
 const response = await jorEl.text("What is the capital of France?");
 // Paris
 ```
@@ -112,6 +113,7 @@ const response = await jorEl.text("What is the capital of France?");
 Works similar to the simple response generation, but returns a JSON object.
 
 ```typescript
+// Assumes jorEl is already initialized with a registered model (see above)
 const response = await jorEl.json("Format this as JSON: Name = John, Age = 30");
 // { name: "John", age: 30 }
 ```
@@ -121,6 +123,7 @@ const response = await jorEl.json("Format this as JSON: Name = John, Age = 30");
 Will stream the response as it is generated.
 
 ```typescript
+// Assumes jorEl is already initialized with a registered model (see above)
 const stream = jorEl.stream("Generate a story");
 for await (const chunk of stream) {
     process.stdout.write(chunk);
@@ -406,14 +409,17 @@ const jorElNative = new JorEl({
   }
 });
 
-// Register a model from Anthropic via OpenRouter
+// Register a model - required before generating responses
 jorEl.providers.openRouter.addModel("anthropic/claude-3-7-sonnet");
 
-// Use the model
-const response = await jorEl.text("What is the capital of France?", {
+// Use the model (first registered model becomes the default)
+const response = await jorEl.text("What is the capital of France?");
+// Paris
+
+// Or specify the model explicitly
+const response2 = await jorEl.text("What is the capital of Germany?", {
   model: "anthropic/claude-3-7-sonnet",
 });
-// Paris
 ```
 
 The native SDK provides additional features like reasoning content support and improved streaming performance.
@@ -457,8 +463,9 @@ console.log(meta.reasoningTokens);
 JorEl provides a powerful agent system for complex task processing:
 
 ```typescript
-// Create a JorEl instance
+// Create a JorEl instance and register a model
 const jorel = new JorEl({ openAI: { apiKey: "your-openai-api-key" } });
+jorel.providers.openAi.addModel("gpt-4o");
 
 // Register tools that agents can use
 jorel.team.addTools([{
@@ -537,6 +544,11 @@ const jorEl = new JorEl({
 
 // Or after initialization
 jorEl.providers.registerGroq({ apiKey: "..." });
+
+// Register models for each provider you want to use
+jorEl.providers.openAi.addModel("gpt-4o");
+jorEl.providers.anthropic.addModel("claude-sonnet-4-20250514");
+jorEl.providers.groq.addModel("llama-3.3-70b-versatile");
 ```
 
 Some providers expose additional parameters, e.g. around retries and timeouts.

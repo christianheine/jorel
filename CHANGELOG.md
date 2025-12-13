@@ -1,8 +1,13 @@
 # Changelog
 
-## 1.3.0-alpha.0 (2025-12-07)
+## 2.0.0-alpha.0 (2025-12-xx)
 
-* Handle errors during streaming more gracefully 
+* Allow configuring the message id generator (ULID, UUID v4, UUID v7, custom)
+* Enforce `id` and `createdAt` for each message (UUID v7 by default)
+
+Breaking changes:
+* Handle errors during streaming more gracefully: Return error details inside stream instead of throwing (streams always complete and return messages)
+* Providers don't register models by default anymore - allowing for cleaner, more deliberate model management
 
 ## 1.2.3 (2025-12-06)
 
