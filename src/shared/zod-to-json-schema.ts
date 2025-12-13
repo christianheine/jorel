@@ -1,13 +1,16 @@
-import { ZodSchema } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { toJSONSchema, ZodType } from "zod";
 import { omit } from "./object-utils";
 
-export const zodSchemaToJsonSchema = (zod: ZodSchema<any>, target: "jsonSchema7" | "openAi" = "jsonSchema7") => {
+export const zodSchemaToJsonSchema = (schema: ZodType, target: "jsonSchema7" | "openAi" = "jsonSchema7") => {
+  const jsonSchema = toJSONSchema(schema, {
+    target: "draft-7",
+    reused: "inline",
+    // cycles: "ref",
+    unrepresentable: "any",
+  });
+
   return deepClean(
-    zodToJsonSchema(zod, {
-      $refStrategy: "none",
-      target,
-    }),
+    jsonSchema as Record<string, any>,
     target === "openAi" ? ["$schema"] : ["$schema", "additionalProperties"],
   );
 };

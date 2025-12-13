@@ -55,7 +55,7 @@ describe("zodSchemaToJsonSchema", () => {
     const jsonSchema = zodSchemaToJsonSchema(unionSchema);
 
     expect(jsonSchema).toEqual({
-      type: ["string", "number"],
+      anyOf: [{ type: "string" }, { type: "number" }],
     });
   });
 
@@ -63,12 +63,12 @@ describe("zodSchemaToJsonSchema", () => {
     const constrainedSchema = z.string().min(3).max(10).email();
     const jsonSchema = zodSchemaToJsonSchema(constrainedSchema);
 
-    expect(jsonSchema).toEqual({
-      type: "string",
-      minLength: 3,
-      maxLength: 10,
-      format: "email",
-    });
+    expect(jsonSchema.type).toBe("string");
+    expect(jsonSchema.minLength).toBe(3);
+    expect(jsonSchema.maxLength).toBe(10);
+    expect(jsonSchema.format).toBe("email");
+    // Zod's native converter also includes pattern for email validation
+    expect(jsonSchema.pattern).toBeDefined();
   });
 
   it("should remove $schema property for jsonSchema7 target", () => {
@@ -169,7 +169,7 @@ describe("zodSchemaToJsonSchema", () => {
         role: z.enum(["admin", "user", "guest"]),
       }),
       tags: z.array(z.string()),
-      createdAt: z.date(),
+      createdAt: z.string().datetime(),
     });
 
     const jsonSchema = zodSchemaToJsonSchema(complexSchema, "openAi");
@@ -183,5 +183,6 @@ describe("zodSchemaToJsonSchema", () => {
     expect(jsonSchema.properties.id.format).toBe("uuid");
     expect(jsonSchema.properties.tags.type).toBe("array");
     expect(jsonSchema.properties.user.properties.role.enum).toEqual(["admin", "user", "guest"]);
+    expect(jsonSchema.properties.createdAt.format).toBe("date-time");
   });
 });
