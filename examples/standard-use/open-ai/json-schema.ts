@@ -10,6 +10,8 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Optional: Set system message
   jorEl.systemMessage = "The location is 'Sydney'. The current date is '2/17/2025, 8:56:22 AM'";
 

@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ mistral: true });
 
+  // Register a model
+  jorEl.providers.mistral.addModel("mistral-medium-latest");
+
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snake_case for attributes!";
 
   // Will return a JSON object

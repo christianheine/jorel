@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ grok: true });
 
+  // Register a model
+  jorEl.providers.grok.addModel("grok-2-1212");
+
   // Will return a string
   const response = await jorEl.text("What is the capital of France?");
 

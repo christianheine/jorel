@@ -13,7 +13,8 @@ const main = async () => {
   // Optional: Set system message
   jorEl.systemMessage = "The city is 'Sydney'. The current date is '2/17/2025, 8:56:22 AM'";
 
-  jorEl.models.setDefault("gemini-3-pro-preview");
+  // Register a model
+  jorEl.providers.googleGenAi.addModel("gemini-2.5-flash");
 
   // Will return a JSON object
   const response = await jorEl.json("Return the current date, time and location as JSON.", {

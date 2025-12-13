@@ -10,6 +10,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ vertexAi: true });
 
+  // Register a model
+  jorEl.providers.vertexAi.addModel("gemini-2.5-flash");
+
   // Optional: Set system message
   jorEl.systemMessage = "The location is 'Sydney'. The current date is '2/17/2025, 8:56:22 AM'";
 

@@ -60,6 +60,9 @@ async function main() {
     openAI: true,
   });
 
+  // Register a model
+  jorel.providers.openAi.addModel("gpt-5-nano");
+
   const tools = new LlmToolKit([weatherTool, stockTool]);
 
   console.log();

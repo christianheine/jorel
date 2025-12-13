@@ -11,6 +11,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Will return a stream of chunks, and a response and messages object
   const stream = jorEl.streamWithMeta("What is the weather in Sydney?", {
     tools: [

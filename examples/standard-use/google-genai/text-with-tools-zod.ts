@@ -11,7 +11,8 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ googleGenAi: true });
 
-  jorEl.models.setDefault("gemini-3-pro-preview");
+  // Register a model
+  jorEl.providers.googleGenAi.addModel("gemini-2.5-flash");
 
   // Generate a response with tools
   const { response, meta, messages } = await jorEl.text(

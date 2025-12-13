@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ googleGenAi: true });
 
+  // Register a model
+  jorEl.providers.googleGenAi.addModel("gemini-2.5-flash");
+
   // Will return a string
   const response = await jorEl.text("What is the capital of France?");
 

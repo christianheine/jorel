@@ -11,6 +11,9 @@ const main = async () => {
   // Create a JorEl instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model (initial model will automatically be registered as the default for that provider)
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Create a toolkit with our getWeather tool
   const tools = new LlmToolKit([
     {

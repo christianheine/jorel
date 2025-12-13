@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Will return a stream of strings
   let stream = jorEl.streamWithMeta("Where is the Eiffel Tower located?");
 

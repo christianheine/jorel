@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ anthropic: true });
 
+  // Register a model
+  jorEl.providers.anthropic.addModel("claude-haiku-4-5");
+
   // Will return a string
   const response = await jorEl.text("What is the capital of France?");
 

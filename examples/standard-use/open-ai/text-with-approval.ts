@@ -64,6 +64,9 @@ const tools = new LlmToolKit([
 const main = async () => {
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Generate initial response with tools that require approval
   const initialGeneration = await jorEl.text(
     "Read config.txt, delete temp.log, and send an email to admin@company.com about the cleanup",

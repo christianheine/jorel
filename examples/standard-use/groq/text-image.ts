@@ -13,7 +13,7 @@ const main = async () => {
   });
 
   // Change to vision-capable model
-  jorEl.models.setDefault("llama-3.2-11b-vision-preview");
+  jorEl.providers.groq.addModel("llama-3.2-11b-vision-preview");
 
   // Load image
   const localImage = await ImageContent.fromFile("../image.png");

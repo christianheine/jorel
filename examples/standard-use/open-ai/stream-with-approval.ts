@@ -34,6 +34,9 @@ const sendEmailExecutor = async (args: { to: string; subject: string; body: stri
 const main = async () => {
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   console.log("🧪 Testing streaming with tool approval\n");
   console.log("=".repeat(60));
 

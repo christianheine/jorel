@@ -12,6 +12,9 @@ const main = async () => {
     systemMessage: "Answer in as few words as possible",
   });
 
+  // Register a model
+  jorEl.providers.mistral.addModel("mistral-medium-latest");
+
   const response = await jorEl.text("What is the capital of France?");
 
   console.log(response);

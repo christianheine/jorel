@@ -9,6 +9,8 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ groq: true });
 
+  jorEl.providers.groq.addModel("llama-3.1-8b-instant");
+
   // Will return a string
   const response = await jorEl.text("What is the capital of France?", {
     model: "llama-3.1-8b-instant",

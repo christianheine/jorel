@@ -9,8 +9,8 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ groq: true });
 
-  // Optional: Set default model
-  jorEl.models.setDefault("llama-3.1-8b-instant");
+  // Register a model
+  jorEl.providers.groq.addModel("llama-3.1-8b-instant");
 
   // Optional: Set system message
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snake_case for attributes!";

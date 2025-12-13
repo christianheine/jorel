@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Will return a stream of strings
   const stream = jorEl.stream("Generate a merry Christmas song. 5 lines max.");
 

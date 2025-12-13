@@ -11,6 +11,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ anthropic: true });
 
+  // Register a model
+  jorEl.providers.anthropic.addModel("claude-haiku-4-5");
+
   // Will return a stream of strings
   const stream = jorEl.stream("What is the weather in Sydney?", {
     tools: [

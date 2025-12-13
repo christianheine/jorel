@@ -15,6 +15,9 @@ async function main() {
     openAI: true,
   });
 
+  // Register a model
+  jorel.providers.openAi.addModel("gpt-5-nano");
+
   const task =
     "Write a detailed explanation of how machine learning works, including neural networks, training processes, and real-world applications. Use around 200 words.";
 
@@ -24,7 +27,7 @@ async function main() {
   let startTime = Date.now();
 
   for await (const chunk of jorel.stream(task, {
-    model: "gpt-4o-mini",
+    model: "gpt-5-nano",
     streamBuffer: { disabled: true }, // Explicitly disable buffering
   })) {
     chunkCount++;
@@ -39,7 +42,7 @@ async function main() {
   chunkCount = 0;
   startTime = Date.now();
   for await (const chunk of jorel.streamWithMeta(task, {
-    model: "gpt-4o-mini",
+    model: "gpt-5-nano",
     streamBuffer: { bufferTimeMs: 200 },
   })) {
     if (chunk.type === "chunk") {

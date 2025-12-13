@@ -7,6 +7,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Create an abort controller
   const controller = new AbortController();
 
@@ -16,7 +19,7 @@ const main = async () => {
   }, 2000);
 
   const response = await jorEl.text("Write a very long story about space exploration.", {
-    model: "gpt-4.1-mini",
+    model: "gpt-5-nano",
     abortSignal: controller.signal, // Pass the abort signal
   });
 

@@ -14,6 +14,10 @@ export const getWeather = async ({ city }: { city: string }) => {
 const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
+
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Create an abort controller
   const controller = new AbortController();
 

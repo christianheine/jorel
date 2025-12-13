@@ -9,8 +9,8 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ grok: true });
 
-  // Change to vision-capable model
-  jorEl.models.setDefault("grok-2-vision-1212");
+  // Register a model
+  jorEl.providers.grok.addModel("grok-2-vision-1212");
 
   // Load image
   const localImage = await ImageContent.fromFile("../image.png");

@@ -13,7 +13,6 @@ import {
 import { ZodObject } from "zod";
 import {
   generateAssistantMessage,
-  initialGoogleGenAiModels,
   LlmCoreProvider,
   LlmError,
   LlmErrorType,
@@ -362,7 +361,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    return initialGoogleGenAiModels;
+    return [];
   }
 
   async createEmbedding(model: string, text: string, abortSignal?: AbortSignal): Promise<number[]> {

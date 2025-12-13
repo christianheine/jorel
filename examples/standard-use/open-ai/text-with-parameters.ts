@@ -8,8 +8,11 @@ config({ path: "../../../.env", quiet: true });
 const main = async () => {
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   const response = await jorEl.text("What is the capital of France?", {
-    model: "gpt-4o-mini",
+    model: "gpt-5-nano",
     systemMessage: "You are a helpful assistant",
     temperature: 0.5,
   });

@@ -14,6 +14,9 @@ const main = async () => {
     },
   });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Get the underlying OpenAI client
   const openAiClient = jorEl.providers.openAi.getClient();
 

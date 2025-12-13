@@ -10,6 +10,9 @@ config({ path: "../../../.env", quiet: true });
 const main = async () => {
   const jorEl = new JorEl({ openAI: true, logger: "console", logLevel: "silly" });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Defining a toolkit is optional in this scenario, but useful for organizing and reusing tools
   const tools = new LlmToolKit([
     {

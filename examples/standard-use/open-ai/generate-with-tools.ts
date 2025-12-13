@@ -10,6 +10,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   const tools = new LlmToolKit([
     {
       name: "get_weather",

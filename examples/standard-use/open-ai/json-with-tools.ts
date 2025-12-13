@@ -15,6 +15,9 @@ const main = async () => {
       "You are an expert in finance & stocks. Return stock price and " + "volume for a given ticker symbol as JSON",
   });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   const response = await jorEl.json("What is the current stock price for Apple?", {
     tools: [
       {

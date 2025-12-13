@@ -11,6 +11,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ anthropic: true });
 
+  // Register a model
+  jorEl.providers.anthropic.addModel("claude-haiku-4-5");
+
   // Generate a response with tools
   const { response, meta, messages } = await jorEl.text(
     "What is the current stock price for Apple?",

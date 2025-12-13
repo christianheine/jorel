@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   jorEl.models.setModelSpecificDefaults("gpt-5-nano", {
     reasoningEffort: "high",
     verbosity: "low",

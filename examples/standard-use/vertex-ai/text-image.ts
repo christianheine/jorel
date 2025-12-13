@@ -9,8 +9,8 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ vertexAi: true });
 
-  // Change to vision-capable model
-  jorEl.models.setDefault("gemini-2.0-flash-001");
+  // Register a model
+  jorEl.providers.vertexAi.addModel("gemini-2.5-flash");
 
   // Load image
   const localImage = await ImageContent.fromFile("../image.png");

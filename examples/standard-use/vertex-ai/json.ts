@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ vertexAi: true });
 
+  // Register a model
+  jorEl.providers.vertexAi.addModel("gemini-2.5-flash");
+
   // Optional: Set system message
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snake_case for attributes!";
 

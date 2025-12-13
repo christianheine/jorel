@@ -11,7 +11,8 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ groq: true });
 
-  jorEl.models.setDefault("qwen-2.5-32b");
+  // Register a model
+  jorEl.providers.groq.addModel("qwen-2.5-32b");
 
   // Will return a stream of strings
   const stream = jorEl.stream("What is the weather in Sydney?", {

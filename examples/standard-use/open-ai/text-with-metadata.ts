@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // When requesting metadata, the JorEl will return additional information
   const { response, meta, messages } = await jorEl.text(
     "What are the capitals of France and Germany?",

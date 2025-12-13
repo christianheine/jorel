@@ -1,10 +1,10 @@
-import { generateUserMessage, LlmToolCall } from "../providers";
+import { JorElTaskInput } from "../jorel";
 import { JorElAgentManager } from "../jorel/jorel.team";
+import { generateUserMessage, LlmToolCall } from "../providers";
+import { generateUniqueId, Nullable } from "../shared";
+import { LLmToolContextSegment } from "../tools";
 import { TaskExecutionThread, TaskExecutionThreadDefinition } from "./task-execution-thread";
 import { TaskExecutionThreadEvent } from "./task-execution-thread-event";
-import { LLmToolContextSegment } from "../tools";
-import { generateUniqueId, Nullable } from "../shared";
-import { JorElTaskInput } from "../jorel";
 
 /** Thrown when a task creation fails */
 export class TaskCreationError extends Error {

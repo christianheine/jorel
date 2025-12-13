@@ -11,6 +11,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Generate a response with tools
   const { response, meta, messages } = await jorEl.text(
     "What is the current stock price for Apple?",

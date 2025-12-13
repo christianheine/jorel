@@ -20,7 +20,8 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ googleGenAi: true });
 
-  jorEl.models.setDefault("gemini-3-pro-preview");
+  // Register a model
+  jorEl.providers.googleGenAi.addModel("gemini-3-pro-preview");
 
   // Will return a stream of chunks, and a response and messages object
   const stream = jorEl.streamWithMeta("What is the current weather andpopulation of Sydney?", {

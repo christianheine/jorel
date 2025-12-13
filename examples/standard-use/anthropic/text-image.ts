@@ -9,8 +9,11 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ anthropic: true });
 
+  // Register a model
+  jorEl.providers.anthropic.addModel("claude-haiku-4-5");
+
   // Change to vision-capable model
-  jorEl.models.setDefault("claude-3-5-sonnet-20241022");
+  jorEl.models.setDefault("claude-haiku-4-5");
 
   // Load image
   const localImage = await ImageContent.fromFile("../image.png");

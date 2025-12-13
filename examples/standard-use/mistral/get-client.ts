@@ -22,6 +22,9 @@ const main = async () => {
     },
   });
 
+  // Register a model
+  jorEl.providers.mistral.addModel("mistral-medium-latest");
+
   // Get the underlying Mistral client
   const mistralClient = jorEl.providers.mistral.getClient();
 

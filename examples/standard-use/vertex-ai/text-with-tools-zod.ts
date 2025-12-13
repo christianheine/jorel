@@ -11,6 +11,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ vertexAi: true });
 
+  // Register a model
+  jorEl.providers.vertexAi.addModel("gemini-2.5-flash");
+
   // Generate a response with tools
   const { response, meta, messages } = await jorEl.text(
     "What is the current stock price for Apple (AAPL)?",

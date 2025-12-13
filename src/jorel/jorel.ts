@@ -13,17 +13,6 @@ import {
   GrokProvider,
   GroqConfig,
   GroqProvider,
-  initialAnthropicBedrockModels,
-  initialAnthropicModels,
-  initialGoogleGenAiModels,
-  initialGrokModels,
-  initialGroqModels,
-  initialMistralAiEmbeddingModels,
-  initialMistralAiModels,
-  initialOpenAiEmbeddingModels,
-  initialOpenAiModels,
-  initialOpenRouterModels,
-  initialVertexAiModels,
   JsonSpecification,
   LlmAssistantMessage,
   LlmAssistantMessageMeta,
@@ -208,92 +197,45 @@ export class JorEl {
     list: () => this._core.providerManager.listProviders(),
     registerCustom: (provider: string, coreProvider: LlmCoreProvider) =>
       this._core.providerManager.registerProvider(provider, coreProvider),
-    registerAnthropic: (config?: AnthropicConfig, withoutInitialModels?: boolean) => {
+    registerAnthropic: (config?: AnthropicConfig) => {
       const provider = new AnthropicProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
-      if (!withoutInitialModels) {
-        const defaultModels = config?.bedrock ? initialAnthropicBedrockModels : initialAnthropicModels;
-        for (const model of defaultModels) {
-          this.models.register({ model, provider: provider.name });
-        }
-      }
     },
-    registerGoogleGenAi: (config?: GoogleGenerativeAIConfig, withoutInitialModels?: boolean) => {
+    registerGoogleGenAi: (config?: GoogleGenerativeAIConfig) => {
       const provider = new GoogleGenerativeAIProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
-      if (!withoutInitialModels) {
-        for (const model of initialGoogleGenAiModels) {
-          this.models.register({ model, provider: provider.name });
-        }
-      }
     },
-    registerGrok: (config?: OpenAIConfig, withoutInitialModels?: boolean) => {
+    registerGrok: (config?: OpenAIConfig) => {
       const provider = new GrokProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
-      if (!withoutInitialModels) {
-        for (const model of initialGrokModels) {
-          this.models.register({ model, provider: provider.name });
-        }
-      }
     },
-    registerGroq: (config?: GroqConfig, withoutInitialModels?: boolean) => {
+    registerGroq: (config?: GroqConfig) => {
       const provider = new GroqProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
-      if (!withoutInitialModels) {
-        for (const model of initialGroqModels) {
-          this.models.register({ model, provider: provider.name });
-        }
-      }
     },
-    registerMistral: (config?: MistralConfig, withoutInitialModels?: boolean) => {
+    registerMistral: (config?: MistralConfig) => {
       const provider = new MistralProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
-      if (!withoutInitialModels) {
-        for (const model of initialMistralAiModels) {
-          this.models.register({ model, provider: provider.name });
-        }
-        for (const { model, dimensions } of initialMistralAiEmbeddingModels) {
-          this.models.embeddings.register({ model, dimensions, provider: provider.name });
-        }
-      }
     },
     registerOllama: (config?: OllamaConfig) => {
       const provider = new OllamaProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
     },
-    registerOpenAi: (config?: OpenAIConfig, withoutInitialModels?: boolean) => {
+    registerOpenAi: (config?: OpenAIConfig) => {
       const provider = new OpenAIProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
-      if (!withoutInitialModels) {
-        for (const model of initialOpenAiModels) {
-          this.models.register({ model, provider: provider.name });
-        }
-        for (const { model, dimensions } of initialOpenAiEmbeddingModels) {
-          this.models.embeddings.register({ model, dimensions, provider: provider.name });
-        }
-      }
     },
     registerOpenAiAzure: (config?: Omit<OpenAiAzureConfig, "azure">) => {
       const provider = new OpenAIProvider({ ...config, azure: true });
       this._core.providerManager.registerProvider(provider.name, provider);
     },
-    registerOpenRouter: (config?: OpenRouterConfig, withoutInitialModels?: boolean) => {
+    registerOpenRouter: (config?: OpenRouterConfig) => {
       const provider = config?.useNativeSDK ? new OpenRouterProviderNative(config) : new OpenRouterProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
-      if (!withoutInitialModels) {
-        for (const model of initialOpenRouterModels) {
-          this.models.register({ model, provider: provider.name });
-        }
-      }
     },
-    registerGoogleVertexAi: (config?: GoogleVertexAiConfig, withoutInitialModels?: boolean) => {
+    registerGoogleVertexAi: (config?: GoogleVertexAiConfig) => {
       const provider = new GoogleVertexAiProvider(config);
       this._core.providerManager.registerProvider(provider.name, provider);
-      if (!withoutInitialModels) {
-        for (const model of initialVertexAiModels) {
-          this.models.register({ model, provider: provider.name });
-        }
-      }
     },
     anthropic: {
       addModel: (model: string, setAsDefault?: boolean, defaults?: ModelSpecificDefaults) =>

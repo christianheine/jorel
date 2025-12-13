@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   // Load document from local documentation files
   const jorElIntro = await LlmDocument.fromFile("../../../docs/docs/intro.md");
   const jorElQuickStart = await LlmDocument.fromFile("../../../docs/docs/quick-start.md");

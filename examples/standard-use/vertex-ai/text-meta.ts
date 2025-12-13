@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ vertexAi: true });
 
+  // Register a model
+  jorEl.providers.vertexAi.addModel("gemini-2.5-flash");
+
   // Will return a string
   const { response, meta } = await jorEl.text(
     "What is the capital of France?",

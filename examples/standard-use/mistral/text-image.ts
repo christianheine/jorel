@@ -9,7 +9,10 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ mistral: true });
 
-  jorEl.models.setDefault("pixtral-large-latest");
+  // Register a model
+  jorEl.providers.mistral.addModel("mistral-medium-latest");
+
+  jorEl.models.setDefault("mistral-medium-latest");
 
   // Load image
   const localImage = await ImageContent.fromFile("../image.png");

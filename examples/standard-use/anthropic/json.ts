@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ anthropic: true });
 
+  // Register a model
+  jorEl.providers.anthropic.addModel("claude-haiku-4-5");
+
   // Optional: Set system message
   jorEl.systemMessage = "Format everything you see as a JSON object. Make sure to use snake_case for attributes!";
 

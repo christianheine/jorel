@@ -95,7 +95,11 @@ const tools = new LlmToolKit([
 
 const main = async () => {
   const jorEl = new JorEl({ openAI: true });
-  jorEl.models.setDefault("gpt-4o-mini");
+
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
+  jorEl.models.setDefault("gpt-5-nano");
 
   const prompt =
     "Please read the contents of config.txt, delete the temporary file temp.log, and send an email to admin@company.com with the subject 'System Cleanup Complete' and a brief message about the cleanup.";

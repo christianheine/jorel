@@ -9,6 +9,9 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ anthropic: true });
 
+  // Register a model
+  jorEl.providers.anthropic.addModel("claude-haiku-4-5");
+
   jorEl.systemMessage = "You are a master song writer. When asked for a song, return only the song lyrics.";
 
   // Will return a stream of strings

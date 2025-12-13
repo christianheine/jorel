@@ -9,12 +9,15 @@ const main = async () => {
   // Create instance
   const jorEl = new JorEl({ openAI: true, logLevel: "debug" });
 
-  jorEl.models.setModelSpecificDefaults("gpt-5-mini", {
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
+  jorEl.models.setModelSpecificDefaults("gpt-5-nano", {
     reasoningEffort: "high",
     verbosity: "low",
   });
 
-  jorEl.models.setDefault("gpt-5-mini");
+  jorEl.models.setDefault("gpt-5-nano");
 
   // Will return a string
   const response = await jorEl.text("How many r's are in `strawberry`?");

@@ -12,6 +12,9 @@ const main = async () => {
     systemMessage: "Answer as few words as possible",
   });
 
+  // Register a model
+  jorEl.providers.openAi.addModel("gpt-5-nano");
+
   const response = await jorEl.text("What is the capital of France");
 
   console.log(response);
