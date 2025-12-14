@@ -1,9 +1,9 @@
 #!/usr/bin/env ts-node
 
 import { config } from "dotenv";
+import { z } from "zod";
 import { JorEl } from "../../src";
 import { getWeather } from "../_utilities/get-weather";
-import { z } from "zod";
 
 config({ path: "../../.env" });
 
@@ -13,6 +13,8 @@ const main = async () => {
     logger: "console",
     logLevel: "debug",
   });
+
+  jorEl.providers.openAi.addModel("gpt-5-nano");
 
   jorEl.team.addTools([
     {
