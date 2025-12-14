@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0-alpha.0 (2025-12-xx)
+## 2.0.0-alpha.1 (2025-12-14)
 
 * Allow configuring the message id generator (ULID, UUID v4, UUID v7, custom)
 * Enforce `id` and `createdAt` for each message (UUID v7 by default)
