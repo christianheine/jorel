@@ -16,6 +16,25 @@ export class JorElAbortError extends Error {
 }
 
 /**
+ * Error thrown when an LLM provider encounters an error
+ */
+export class JorElLlmError extends Error {
+  readonly name = "LlmError";
+  readonly code = "LLM_ERROR";
+
+  constructor(
+    message: string,
+    public readonly type: string,
+  ) {
+    super(message);
+    // Maintains proper stack trace in V8
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, JorElLlmError);
+    }
+  }
+}
+
+/**
  * Type guard to check if an error is an AbortError
  */
 export function isAbortError(error: unknown): error is JorElAbortError {
@@ -25,4 +44,11 @@ export function isAbortError(error: unknown): error is JorElAbortError {
     (error instanceof Error && error.name === "AbortError") ||
     (error instanceof Error && error.message.includes("aborted"))
   );
+}
+
+/**
+ * Type guard to check if an error is an LlmError
+ */
+export function isLlmError(error: unknown): error is JorElLlmError {
+  return error instanceof JorElLlmError;
 }

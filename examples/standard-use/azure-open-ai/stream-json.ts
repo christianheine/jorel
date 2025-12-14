@@ -8,13 +8,9 @@ config({ path: "../../../.env", quiet: true });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    openAiAzure: {
-      apiKey: process.env.AZURE_OPENAI_API_KEY,
-      apiUrl: process.env.AZURE_OPENAI_ENDPOINT,
-    },
-  });
+  const jorEl = new JorEl({ openAiAzure: true });
 
+  // Register a model
   jorEl.providers.openAiAzure.addModel("gpt-5-mini", true, {
     reasoningEffort: "minimal",
   });

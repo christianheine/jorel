@@ -27,7 +27,7 @@ import {
   LlmStreamResponseEvent,
   LlmToolCall,
 } from "../../providers";
-import { firstEntry, generateUniqueId, JorElAbortError, MaybeUndefined } from "../../shared";
+import { firstEntry, generateUniqueId, JorElAbortError, JorElLlmError, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
 import { jsonResponseToOpenAi, toolChoiceToOpenAi } from "./convert-inputs";
 import { convertLlmMessagesToOpenAiMessages } from "./convert-llm-message";
@@ -62,6 +62,51 @@ export class OpenAIProvider implements LlmCoreProvider {
       });
       this.isAzure = false;
     }
+  }
+
+  // Helper method for parsing OpenAI API errors
+  private parseOpenAiError(error: unknown): { message: string; type: LlmErrorType } {
+    let errorMessage: string;
+    let errorType: LlmErrorType = "unknown";
+
+    const status = error instanceof APIError ? error.status : undefined;
+    errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Clean up error messages that start with HTTP status codes
+    // e.g., "404 The model `gpt-5-mini-1` does not exist..." -> "The model `gpt-5-mini-1` does not exist..."
+    const statusCodeMatch = errorMessage.match(/^(\d{3})\s+(.+)$/);
+    if (statusCodeMatch) {
+      errorMessage = statusCodeMatch[2];
+    }
+
+    // Map error types based on OpenAI error classes and status codes
+    if (error instanceof BadRequestError || status === 400) {
+      errorType = "invalid_request";
+    } else if (error instanceof AuthenticationError || status === 401) {
+      errorType = "authentication_error";
+    } else if (error instanceof PermissionDeniedError || status === 403) {
+      errorType = "authentication_error";
+    } else if (error instanceof NotFoundError || status === 404) {
+      errorType = "invalid_request";
+    } else if (error instanceof UnprocessableEntityError || status === 422) {
+      errorType = "invalid_request";
+    } else if (error instanceof RateLimitError || status === 429) {
+      // 429 can mean either rate limit or quota exceeded
+      const lowerMessage = errorMessage.toLowerCase();
+      if (lowerMessage.includes("quota") || lowerMessage.includes("exceeded your current quota")) {
+        errorType = "quota_exceeded";
+      } else {
+        errorType = "rate_limit";
+      }
+    } else if (error instanceof InternalServerError || (status && status >= 500)) {
+      errorType = "server_error";
+    } else if (error instanceof APIConnectionTimeoutError) {
+      errorType = "timeout";
+    } else if (error instanceof APIConnectionError) {
+      errorType = "network_error";
+    }
+
+    return { message: errorMessage, type: errorType };
   }
 
   async generateResponse(
@@ -100,7 +145,9 @@ export class OpenAIProvider implements LlmCoreProvider {
       if (error instanceof OpenAIError && error.message.toLowerCase().includes("aborted")) {
         throw new JorElAbortError("Request was aborted");
       }
-      throw error;
+
+      const { message, type } = this.parseOpenAiError(error);
+      throw new JorElLlmError(`[OpenAIProvider] Error generating content: ${message}`, type);
     }
 
     const durationMs = Date.now() - start;
@@ -209,13 +256,7 @@ export class OpenAIProvider implements LlmCoreProvider {
           reasoningTokens: 0,
         },
         stopReason,
-        error:
-          stopReason === "generationError"
-            ? {
-                message: error instanceof Error ? error.message : String(error),
-                type: "unknown",
-              }
-            : undefined,
+        error: stopReason === "generationError" ? this.parseOpenAiError(error) : undefined,
       };
       return;
     }
@@ -260,44 +301,7 @@ export class OpenAIProvider implements LlmCoreProvider {
         }
       }
     } catch (e: unknown) {
-      // Map OpenAI SDK errors to our error types
-      // https://platform.openai.com/docs/guides/error-codes
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      const status = e instanceof APIError ? e.status : undefined;
-
-      let type: LlmErrorType = "unknown";
-
-      if (e instanceof BadRequestError || status === 400) {
-        type = "invalid_request";
-      } else if (e instanceof AuthenticationError || status === 401) {
-        type = "authentication_error";
-      } else if (e instanceof PermissionDeniedError || status === 403) {
-        type = "authentication_error";
-      } else if (e instanceof NotFoundError || status === 404) {
-        type = "invalid_request";
-      } else if (e instanceof UnprocessableEntityError || status === 422) {
-        type = "invalid_request";
-      } else if (e instanceof RateLimitError || status === 429) {
-        // 429 can mean either rate limit or quota exceeded
-        const lowerMessage = errorMessage.toLowerCase();
-        if (lowerMessage.includes("quota") || lowerMessage.includes("exceeded your current quota")) {
-          type = "quota_exceeded";
-        } else {
-          type = "rate_limit";
-        }
-      } else if (e instanceof InternalServerError || (status && status >= 500)) {
-        type = "server_error";
-      } else if (e instanceof APIConnectionTimeoutError) {
-        type = "timeout";
-      } else if (e instanceof APIConnectionError) {
-        type = "network_error";
-      } else {
-        type = "unknown";
-      }
-      error = {
-        message: errorMessage,
-        type,
-      };
+      error = this.parseOpenAiError(e);
     }
 
     const durationMs = Date.now() - start;

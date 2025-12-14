@@ -7,12 +7,7 @@ config({ path: "../../../.env", quiet: true });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({
-    openAiAzure: {
-      apiKey: process.env.AZURE_OPENAI_API_KEY,
-      apiUrl: process.env.AZURE_OPENAI_ENDPOINT,
-    },
-  });
+  const jorEl = new JorEl({ openAiAzure: true });
 
   jorEl.models.embeddings.register({
     model: "text-embedding-3-small",

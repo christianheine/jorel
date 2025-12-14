@@ -27,6 +27,7 @@ import {
   generateRandomId,
   generateUniqueId,
   JorElAbortError,
+  JorElLlmError,
   MaybeUndefined,
   zodSchemaToJsonSchema,
 } from "../../shared";
@@ -100,7 +101,9 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
         if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
           throw new JorElAbortError("Request was aborted");
         }
-        throw new Error(`[GoogleGenerativeAIProvider] Error generating content: ${error}`);
+
+        const { message, type } = this.parseGoogleApiError(error);
+        throw new JorElLlmError(`[GoogleGenerativeAIProvider] Error generating content: ${message}`, type);
       }
 
       const candidate = result.candidates?.[0];
@@ -193,6 +196,11 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
 
       const stopReason = isAbort ? "userCancelled" : "generationError";
 
+      const { message: errorMessage, type: errorType } =
+        stopReason === "generationError"
+          ? this.parseGoogleApiError(error)
+          : { message: "", type: "unknown" as LlmErrorType };
+
       yield {
         type: "response",
         role: "assistant",
@@ -210,8 +218,8 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
         error:
           stopReason === "generationError"
             ? {
-                message: error instanceof Error ? error.message : String(error),
-                type: "unknown",
+                message: errorMessage,
+                type: errorType,
               }
             : undefined,
       };
@@ -283,32 +291,7 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
       }
     } catch (e: unknown) {
       // Map Google GenAI SDK errors to our error types
-      // https://github.com/googleapis/js-genai/blob/main/src/errors.ts
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      const status = e instanceof ApiError ? e.status : undefined;
-      let type: LlmErrorType = "unknown";
-
-      if (status === 400) {
-        type = "invalid_request";
-      } else if (status === 401) {
-        type = "authentication_error";
-      } else if (status === 403) {
-        // 403 can mean quota exceeded or permission denied
-        const lowerMessage = errorMessage.toLowerCase();
-        if (lowerMessage.includes("quota") || lowerMessage.includes("resource exhausted")) {
-          type = "quota_exceeded";
-        } else {
-          type = "authentication_error";
-        }
-      } else if (status === 404) {
-        type = "invalid_request";
-      } else if (status === 429) {
-        type = "rate_limit";
-      } else if (status && status >= 500) {
-        type = "server_error";
-      } else {
-        type = "unknown";
-      }
+      const { message: errorMessage, type } = this.parseGoogleApiError(e);
 
       error = {
         message: errorMessage,
@@ -386,6 +369,60 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
     return result.embeddings[0].values ?? [];
   }
 
+  // Helper method for parsing Google API errors
+  private parseGoogleApiError(error: unknown): { message: string; type: LlmErrorType } {
+    let errorMessage: string;
+    let errorType: LlmErrorType = "unknown";
+
+    const status = error instanceof ApiError ? error.status : undefined;
+    errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Try to parse the error message if it's a JSON string from Google API
+    if (error instanceof ApiError && errorMessage.startsWith("{")) {
+      try {
+        const parsedError = JSON.parse(errorMessage);
+        if (parsedError.error?.message) {
+          // The error message itself might be a JSON string
+          if (parsedError.error.message.startsWith("{")) {
+            try {
+              const innerError = JSON.parse(parsedError.error.message);
+              errorMessage = innerError.error?.message || parsedError.error.message;
+            } catch {
+              errorMessage = parsedError.error.message;
+            }
+          } else {
+            errorMessage = parsedError.error.message;
+          }
+        }
+      } catch {
+        // If parsing fails, use the original message
+      }
+    }
+
+    // Map status codes to error types
+    if (status === 400) {
+      errorType = "invalid_request";
+    } else if (status === 401) {
+      errorType = "authentication_error";
+    } else if (status === 403) {
+      // 403 can mean quota exceeded or permission denied
+      const lowerMessage = errorMessage.toLowerCase();
+      if (lowerMessage.includes("quota") || lowerMessage.includes("resource exhausted")) {
+        errorType = "quota_exceeded";
+      } else {
+        errorType = "authentication_error";
+      }
+    } else if (status === 404) {
+      errorType = "invalid_request";
+    } else if (status === 429) {
+      errorType = "rate_limit";
+    } else if (status && status >= 500) {
+      errorType = "server_error";
+    }
+
+    return { message: errorMessage, type: errorType };
+  }
+
   // Helper method for preparing request configuration
   private prepareGenerationConfig(config: LlmGenerationConfig): GenerateContentConfig {
     const requestConfig: GenerateContentConfig = {
@@ -397,9 +434,11 @@ export class GoogleGenerativeAIProvider implements LlmCoreProvider {
         includeThoughts: true,
         thinkingBudget: config.reasoningEffort === "minimal" ? 0 : undefined,
         thinkingLevel:
-          config.reasoningEffort === "high" || config.reasoningEffort === "medium"
-            ? ThinkingLevel.HIGH
-            : ThinkingLevel.LOW,
+          config.reasoningEffort === "minimal"
+            ? undefined
+            : config.reasoningEffort === "high" || config.reasoningEffort === "medium"
+              ? ThinkingLevel.HIGH
+              : ThinkingLevel.LOW,
       };
     }
 

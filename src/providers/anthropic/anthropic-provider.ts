@@ -1,11 +1,12 @@
 import { AnthropicBedrock } from "@anthropic-ai/bedrock-sdk";
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIError } from "@anthropic-ai/sdk";
 import { Stream } from "@anthropic-ai/sdk/streaming";
 import {
   generateAssistantMessage,
   LlmAssistantMessageMeta,
   LlmCoreProvider,
   LlmError,
+  LlmErrorType,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -13,7 +14,7 @@ import {
   LlmStreamResponseEvent,
   LlmToolCall,
 } from "../../providers";
-import { generateUniqueId, JorElAbortError, MaybeUndefined } from "../../shared";
+import { generateUniqueId, JorElAbortError, JorElLlmError, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
 import { convertLlmMessagesToAnthropicMessages } from "./convert-llm-message";
 
@@ -77,6 +78,83 @@ export class AnthropicProvider implements LlmCoreProvider {
         timeout,
       });
     }
+  }
+
+  // Helper method for parsing Anthropic API errors
+  private parseAnthropicError(error: unknown): { message: string; type: LlmErrorType } {
+    let errorMessage: string;
+    let errorType: LlmErrorType = "unknown";
+
+    // Extract error information from Anthropic SDK errors
+    if (error && typeof error === "object") {
+      const err = error as any;
+
+      // Anthropic SDK errors have status property
+      const status = err.status || (error instanceof APIError ? error.status : undefined);
+      errorMessage = err.message || (error instanceof Error ? error.message : String(error));
+
+      // Parse error messages that start with HTTP status codes followed by JSON
+      // e.g., "404 {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-haiku-4-6\"}}"
+      const statusCodeMatch = errorMessage.match(/^(\d{3})\s+(.+)$/);
+      if (statusCodeMatch) {
+        const statusCode = parseInt(statusCodeMatch[1], 10);
+        const jsonPart = statusCodeMatch[2];
+
+        // Try to parse the JSON part
+        try {
+          const parsedError = JSON.parse(jsonPart);
+          if (parsedError.error?.message) {
+            errorMessage = parsedError.error.message;
+          } else if (parsedError.message) {
+            errorMessage = parsedError.message;
+          } else {
+            errorMessage = jsonPart;
+          }
+        } catch {
+          // If JSON parsing fails, use the status code to set error type and clean message
+          errorMessage = jsonPart;
+        }
+
+        // Override status if we parsed it from the message
+        if (!status && statusCode) {
+          // Use the parsed status code
+        }
+      }
+
+      // Map status codes to error types (use parsed status or SDK status)
+      const finalStatus = status || (statusCodeMatch ? parseInt(statusCodeMatch[1], 10) : undefined);
+      if (finalStatus === 400) {
+        errorType = "invalid_request";
+      } else if (finalStatus === 401) {
+        errorType = "authentication_error";
+      } else if (finalStatus === 403) {
+        errorType = "authentication_error";
+      } else if (finalStatus === 404) {
+        errorType = "invalid_request";
+      } else if (finalStatus === 429) {
+        errorType = "rate_limit";
+      } else if (finalStatus === 500 || finalStatus === 502 || finalStatus === 503) {
+        errorType = "server_error";
+      }
+
+      // Handle network-related errors
+      if (err.message) {
+        const lowerMessage = err.message.toLowerCase();
+        if (
+          lowerMessage.includes("network") ||
+          lowerMessage.includes("fetch failed") ||
+          lowerMessage.includes("econnrefused")
+        ) {
+          errorType = "network_error";
+        } else if (lowerMessage.includes("timeout")) {
+          errorType = "timeout";
+        }
+      }
+    } else {
+      errorMessage = error instanceof Error ? error.message : String(error);
+    }
+
+    return { message: errorMessage, type: errorType };
   }
 
   async generateResponse(
@@ -143,7 +221,9 @@ export class AnthropicProvider implements LlmCoreProvider {
       if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
         throw new JorElAbortError("Request was aborted");
       }
-      throw error;
+
+      const { message, type } = this.parseAnthropicError(error);
+      throw new JorElLlmError(`[AnthropicProvider] Error generating content: ${message}`, type);
     }
 
     const durationMs = Date.now() - start;
@@ -278,13 +358,7 @@ export class AnthropicProvider implements LlmCoreProvider {
           reasoningTokens: undefined,
         },
         stopReason,
-        error:
-          stopReason === "generationError"
-            ? {
-                message: error instanceof Error ? error.message : String(error),
-                type: "unknown",
-              }
-            : undefined,
+        error: stopReason === "generationError" ? this.parseAnthropicError(error) : undefined,
       };
       return;
     }
@@ -341,10 +415,7 @@ export class AnthropicProvider implements LlmCoreProvider {
         }
       }
     } catch (e: unknown) {
-      error = {
-        message: e instanceof Error ? e.message : String(e),
-        type: "unknown",
-      };
+      error = this.parseAnthropicError(e);
     }
 
     const durationMs = Date.now() - start;

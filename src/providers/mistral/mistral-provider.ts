@@ -3,6 +3,7 @@ import {
   generateAssistantMessage,
   LlmCoreProvider,
   LlmError,
+  LlmErrorType,
   LlmGenerationConfig,
   LlmMessage,
   LlmResponse,
@@ -10,7 +11,7 @@ import {
   LlmStreamResponseEvent,
   LlmToolCall,
 } from "../../providers";
-import { firstEntry, generateUniqueId, JorElAbortError, MaybeUndefined } from "../../shared";
+import { firstEntry, generateUniqueId, JorElAbortError, JorElLlmError, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
 import { jsonResponseToMistral, toolChoiceToMistral } from "./convert-inputs";
 import { convertLlmMessagesToMistralMessages } from "./convert-llm-message";
@@ -53,6 +54,91 @@ export class MistralProvider implements LlmCoreProvider {
     });
   }
 
+  // Helper method for parsing Mistral API errors
+  private parseMistralError(error: unknown): { message: string; type: LlmErrorType } {
+    let errorMessage: string;
+    let errorType: LlmErrorType = "unknown";
+
+    // Extract error information from Mistral SDK errors
+    if (error && typeof error === "object") {
+      const err = error as any;
+
+      // Mistral SDK errors have a specific format: "API error occurred: Status XXX\nBody: {...}"
+      errorMessage = err.message || (error instanceof Error ? error.message : String(error));
+
+      // Parse Mistral-specific error format
+      const statusMatch = errorMessage.match(/API error occurred: Status (\d+)/);
+      const bodyMatch = errorMessage.match(/Body: (\{.*\})$/);
+
+      if (statusMatch && bodyMatch) {
+        const statusCode = parseInt(statusMatch[1], 10);
+        const jsonBody = bodyMatch[1];
+
+        // Try to parse the JSON body
+        try {
+          const parsedError = JSON.parse(jsonBody);
+          if (parsedError.message) {
+            errorMessage = parsedError.message;
+          }
+
+          // Map status codes to error types
+          if (statusCode === 400) {
+            errorType = "invalid_request";
+          } else if (statusCode === 401) {
+            errorType = "authentication_error";
+          } else if (statusCode === 403) {
+            errorType = "authentication_error";
+          } else if (statusCode === 404) {
+            errorType = "invalid_request";
+          } else if (statusCode === 429) {
+            // 429 can mean either rate limit or quota exceeded
+            const lowerMessage = errorMessage.toLowerCase();
+            if (lowerMessage.includes("quota") || lowerMessage.includes("capacity")) {
+              errorType = "quota_exceeded";
+            } else {
+              errorType = "rate_limit";
+            }
+          } else if (statusCode >= 500) {
+            errorType = "server_error";
+          }
+        } catch {
+          // If JSON parsing fails, use the status code to set error type
+          if (statusCode === 400) {
+            errorType = "invalid_request";
+          } else if (statusCode === 401) {
+            errorType = "authentication_error";
+          } else if (statusCode === 403) {
+            errorType = "authentication_error";
+          } else if (statusCode === 404) {
+            errorType = "invalid_request";
+          } else if (statusCode === 429) {
+            errorType = "rate_limit";
+          } else if (statusCode >= 500) {
+            errorType = "server_error";
+          }
+        }
+      }
+
+      // Handle network-related errors
+      if (err.message) {
+        const lowerMessage = err.message.toLowerCase();
+        if (
+          lowerMessage.includes("network") ||
+          lowerMessage.includes("fetch failed") ||
+          lowerMessage.includes("econnrefused")
+        ) {
+          errorType = "network_error";
+        } else if (lowerMessage.includes("timeout")) {
+          errorType = "timeout";
+        }
+      }
+    } else {
+      errorMessage = error instanceof Error ? error.message : String(error);
+    }
+
+    return { message: errorMessage, type: errorType };
+  }
+
   async generateResponse(
     model: string,
     messages: LlmMessage[],
@@ -92,7 +178,9 @@ export class MistralProvider implements LlmCoreProvider {
       if (error.name === "AbortError" || (error.message && error.message.toLowerCase().includes("aborted"))) {
         throw new JorElAbortError("Request was aborted");
       }
-      throw error;
+
+      const { message, type } = this.parseMistralError(error);
+      throw new JorElLlmError(`[MistralProvider] Error generating content: ${message}`, type);
     }
 
     const durationMs = Date.now() - start;
@@ -204,13 +292,7 @@ export class MistralProvider implements LlmCoreProvider {
           outputTokens: undefined,
         },
         stopReason,
-        error:
-          stopReason === "generationError"
-            ? {
-                message: error instanceof Error ? error.message : String(error),
-                type: "unknown",
-              }
-            : undefined,
+        error: stopReason === "generationError" ? this.parseMistralError(error) : undefined,
       };
       return;
     }
@@ -278,10 +360,7 @@ export class MistralProvider implements LlmCoreProvider {
         }
       }
     } catch (e: unknown) {
-      error = {
-        message: e instanceof Error ? e.message : String(e),
-        type: "unknown",
-      };
+      error = this.parseMistralError(e);
     }
 
     const durationMs = Date.now() - start;

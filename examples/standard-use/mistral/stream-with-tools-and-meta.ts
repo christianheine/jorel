@@ -9,12 +9,10 @@ config({ path: "../../../.env", quiet: true });
 
 const main = async () => {
   // Create instance
-  const jorEl = new JorEl({ openAiAzure: true });
+  const jorEl = new JorEl({ mistral: true });
 
   // Register a model
-  jorEl.providers.openAiAzure.addModel("gpt-5-mini", true, {
-    reasoningEffort: "minimal",
-  });
+  jorEl.providers.mistral.addModel("mistral-medium-latest");
 
   // Will return a stream of chunks, and a response and messages object
   const stream = jorEl.streamWithMeta("What is the weather in Sydney?", {
@@ -26,20 +24,15 @@ const main = async () => {
         params: z.object({ city: z.string() }),
       },
     ],
+    reasoningEffort: "medium",
+    // streamBuffer: { disabled: true },
   });
 
   // Print each chunk
   for await (const chunk of stream) {
-    if (chunk.type === "chunk") {
-      process.stdout.write(chunk.content);
-    } else {
-      process.stdout.write("\n" + chunk.type + ":\n");
-      process.stdout.write(JSON.stringify(chunk, null, 2));
-      process.stdout.write("\n");
-    }
+    process.stdout.write(JSON.stringify(chunk, null, 2));
+    process.stdout.write("\n");
   }
-
-  process.stdout.write("\n");
 };
 
 void main();

@@ -15,7 +15,7 @@ import {
   LlmStreamResponseEvent,
   LlmToolCall,
 } from "../../providers";
-import { firstEntry, generateUniqueId, JorElAbortError, MaybeUndefined } from "../../shared";
+import { firstEntry, generateUniqueId, JorElAbortError, JorElLlmError, MaybeUndefined } from "../../shared";
 import { LlmToolKit } from "../../tools";
 import { jsonResponseToOpenRouter, reasoningToOpenRouter, toolChoiceToOpenRouter } from "./convert-inputs";
 import { convertLlmMessagesToOpenRouterMessages, extractTextContent } from "./convert-llm-message";
@@ -43,6 +43,58 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
     this.client = new OpenRouter({
       apiKey: config?.apiKey || process.env.OPEN_ROUTER_API_KEY,
     });
+  }
+
+  // Helper method for parsing OpenRouter API errors
+  private parseOpenRouterError(error: unknown): { message: string; type: LlmErrorType } {
+    let errorMessage: string;
+    let errorType: LlmErrorType = "unknown";
+
+    // Extract error information from OpenRouter SDK errors
+    if (error && typeof error === "object") {
+      const err = error as any;
+
+      // OpenRouter SDK errors have statusCode and error properties
+      const statusCode = err.statusCode || err.error?.code;
+      errorMessage = err.error?.message || err.message || String(error);
+
+      // Map status codes to error types
+      if (statusCode === 400) {
+        errorType = "invalid_request";
+      } else if (statusCode === 401) {
+        errorType = "authentication_error";
+      } else if (statusCode === 402) {
+        errorType = "quota_exceeded";
+      } else if (statusCode === 403) {
+        errorType = "moderation_error";
+      } else if (statusCode === 404) {
+        errorType = "invalid_request";
+      } else if (statusCode === 408) {
+        errorType = "timeout";
+      } else if (statusCode === 429) {
+        errorType = "rate_limit";
+      } else if (statusCode >= 500) {
+        errorType = "server_error";
+      }
+
+      // Handle network-related errors
+      if (err.message) {
+        const lowerMessage = err.message.toLowerCase();
+        if (
+          lowerMessage.includes("network") ||
+          lowerMessage.includes("fetch failed") ||
+          lowerMessage.includes("econnrefused")
+        ) {
+          errorType = "network_error";
+        } else if (lowerMessage.includes("timeout")) {
+          errorType = "timeout";
+        }
+      }
+    } else {
+      errorMessage = error instanceof Error ? error.message : String(error);
+    }
+
+    return { message: errorMessage, type: errorType };
   }
 
   async generateResponse(
@@ -84,7 +136,9 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
       if (error instanceof Error && error.message.toLowerCase().includes("aborted")) {
         throw new JorElAbortError("Request was aborted");
       }
-      throw error;
+
+      const { message, type } = this.parseOpenRouterError(error);
+      throw new JorElLlmError(`[OpenRouterProvider] Error generating content: ${message}`, type);
     }
 
     const durationMs = Date.now() - start;
@@ -179,6 +233,11 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
 
       const stopReason = isAbort ? "userCancelled" : "generationError";
 
+      const { message: errorMessage, type: errorType } =
+        stopReason === "generationError"
+          ? this.parseOpenRouterError(error)
+          : { message: "", type: "unknown" as LlmErrorType };
+
       yield {
         type: "response",
         role: "assistant",
@@ -197,8 +256,8 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
         error:
           stopReason === "generationError"
             ? {
-                message: error instanceof Error ? error.message : String(error),
-                type: "unknown",
+                message: errorMessage,
+                type: errorType,
               }
             : undefined,
       };
@@ -288,25 +347,7 @@ export class OpenRouterProviderNative implements LlmCoreProvider {
       // Only set error if one wasn't already set by chunk.error
       // This handles unexpected errors during streaming (e.g., network issues, parsing errors)
       if (!error) {
-        const errorMessage = e instanceof Error ? e.message : String(e);
-        let type: LlmErrorType = "unknown";
-
-        // Try to infer error type from the error message
-        const lowerMessage = errorMessage.toLowerCase();
-        if (
-          lowerMessage.includes("network") ||
-          lowerMessage.includes("fetch failed") ||
-          lowerMessage.includes("econnrefused")
-        ) {
-          type = "network_error";
-        } else if (lowerMessage.includes("timeout")) {
-          type = "network_error";
-        }
-
-        error = {
-          message: errorMessage,
-          type,
-        };
+        error = this.parseOpenRouterError(e);
       }
     }
 

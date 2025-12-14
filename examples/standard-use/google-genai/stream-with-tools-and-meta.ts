@@ -25,7 +25,7 @@ const main = async () => {
 
   // Will return a stream of chunks, and a response and messages object
   const stream = jorEl.streamWithMeta("What is the current weather andpopulation of Sydney?", {
-    reasoningEffort: "high",
+    reasoningEffort: "medium",
     tools: [
       {
         name: "get_weather",

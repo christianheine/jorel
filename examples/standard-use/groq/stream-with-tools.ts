@@ -12,7 +12,7 @@ const main = async () => {
   const jorEl = new JorEl({ groq: true });
 
   // Register a model
-  jorEl.providers.groq.addModel("qwen-2.5-32b");
+  jorEl.providers.groq.addModel("openai/gpt-oss-120b");
 
   // Will return a stream of strings
   const stream = jorEl.stream("What is the weather in Sydney?", {
