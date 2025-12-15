@@ -23,6 +23,7 @@ const main = async () => {
       currentTime: z.string(),
       location: z.object({
         city: z.string(),
+        state: z.string().optional(),
       }),
     }),
   });

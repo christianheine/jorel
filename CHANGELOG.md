@@ -1,9 +1,10 @@
 # Changelog
 
-## 2.0.0-alpha.1 (2025-12-14)
+## 2.0.0-alpha.2 (2025-12-15)
 
 * Allow configuring the message id generator (ULID, UUID v4, UUID v7, custom)
 * Enforce `id` and `createdAt` for each message (UUID v7 by default)
+* Migrate to ZOD v4 w/o zod-to-json-schema
 
 Breaking changes:
 * Handle errors during streaming more gracefully: Return error details inside stream instead of throwing (streams always complete and return messages)

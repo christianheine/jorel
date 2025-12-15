@@ -185,4 +185,34 @@ describe("zodSchemaToJsonSchema", () => {
     expect(jsonSchema.properties.user.properties.role.enum).toEqual(["admin", "user", "guest"]);
     expect(jsonSchema.properties.createdAt.format).toBe("date-time");
   });
+
+  it("should convert optional fields to nullable+required for openAi target (strict json_schema)", () => {
+    const schema = z.object({
+      requiredField: z.string(),
+      optionalField: z.number().optional(),
+      optionalObject: z
+        .object({
+          insideOptional: z.boolean().optional(),
+        })
+        .optional(),
+    });
+
+    const jsonSchema = zodSchemaToJsonSchema(schema, "openAi");
+
+    // OpenAI strict requires all properties to be required
+    expect(jsonSchema.required).toEqual(["requiredField", "optionalField", "optionalObject"]);
+
+    // optionalField should be nullable
+    expect(jsonSchema.properties.optionalField.type).toContain("null");
+
+    // optionalObject should be nullable, and its nested object should also have required including the optional key
+    expect(jsonSchema.properties.optionalObject.type).toContain("null");
+    const optionalObjectSchema =
+      jsonSchema.properties.optionalObject.type?.includes?.("object") && jsonSchema.properties.optionalObject.properties
+        ? jsonSchema.properties.optionalObject
+        : jsonSchema.properties.optionalObject.anyOf?.find((s: any) => s?.type === "object");
+    expect(optionalObjectSchema).toBeDefined();
+    expect(optionalObjectSchema.required).toEqual(["insideOptional"]);
+    expect(optionalObjectSchema.properties.insideOptional.type).toContain("null");
+  });
 });
