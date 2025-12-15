@@ -47,6 +47,7 @@ describe("LlmTool", () => {
 
       const llmFunction = tool.asLLmFunction;
       expect(llmFunction.function.parameters).toEqual({
+        $schema: "http://json-schema.org/draft-07/schema#",
         type: "object",
         properties: {
           name: { type: "string" },

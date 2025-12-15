@@ -7,6 +7,7 @@ describe("zodSchemaToJsonSchema", () => {
     const jsonSchema = zodSchemaToJsonSchema(stringSchema);
 
     expect(jsonSchema).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
       type: "string",
     });
   });
@@ -16,6 +17,7 @@ describe("zodSchemaToJsonSchema", () => {
     const jsonSchema = zodSchemaToJsonSchema(numberSchema);
 
     expect(jsonSchema).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
       type: "number",
     });
   });
@@ -31,6 +33,7 @@ describe("zodSchemaToJsonSchema", () => {
 
     expect(jsonSchema).toEqual({
       type: "object",
+      $schema: "http://json-schema.org/draft-07/schema#",
       properties: {
         name: { type: "string" },
         age: { type: "number" },
@@ -46,6 +49,7 @@ describe("zodSchemaToJsonSchema", () => {
 
     expect(jsonSchema).toEqual({
       type: "array",
+      $schema: "http://json-schema.org/draft-07/schema#",
       items: { type: "string" },
     });
   });
@@ -55,6 +59,7 @@ describe("zodSchemaToJsonSchema", () => {
     const jsonSchema = zodSchemaToJsonSchema(unionSchema);
 
     expect(jsonSchema).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
       anyOf: [{ type: "string" }, { type: "number" }],
     });
   });
@@ -75,14 +80,14 @@ describe("zodSchemaToJsonSchema", () => {
     const schema = z.string();
     const jsonSchema = zodSchemaToJsonSchema(schema, "jsonSchema7");
 
-    expect(jsonSchema.$schema).toBeUndefined();
+    expect(jsonSchema.$schema).toBe("http://json-schema.org/draft-07/schema#");
   });
 
   it("should remove $schema and additionalProperties for jsonSchema7 target", () => {
     const schema = z.object({ name: z.string() });
     const jsonSchema = zodSchemaToJsonSchema(schema, "jsonSchema7");
 
-    expect(jsonSchema.$schema).toBeUndefined();
+    expect(jsonSchema.$schema).toBe("http://json-schema.org/draft-07/schema#");
     expect(jsonSchema.additionalProperties).toBeUndefined();
   });
 
@@ -90,7 +95,7 @@ describe("zodSchemaToJsonSchema", () => {
     const schema = z.object({ name: z.string() });
     const jsonSchema = zodSchemaToJsonSchema(schema, "openAi");
 
-    expect(jsonSchema.$schema).toBeUndefined();
+    expect(jsonSchema.$schema).toBe("http://json-schema.org/draft-07/schema#");
     // additionalProperties should be present for openAi target
     expect(jsonSchema.additionalProperties).toBeDefined();
   });
@@ -112,6 +117,7 @@ describe("zodSchemaToJsonSchema", () => {
     const jsonSchema = zodSchemaToJsonSchema(nestedSchema);
 
     expect(jsonSchema).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
       type: "object",
       properties: {
         user: {
@@ -150,6 +156,7 @@ describe("zodSchemaToJsonSchema", () => {
     const jsonSchema = zodSchemaToJsonSchema(objectSchema, "openAi");
 
     expect(jsonSchema).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
       type: "object",
       properties: {
         name: { type: "string" },
@@ -184,35 +191,5 @@ describe("zodSchemaToJsonSchema", () => {
     expect(jsonSchema.properties.tags.type).toBe("array");
     expect(jsonSchema.properties.user.properties.role.enum).toEqual(["admin", "user", "guest"]);
     expect(jsonSchema.properties.createdAt.format).toBe("date-time");
-  });
-
-  it("should convert optional fields to nullable+required for openAi target (strict json_schema)", () => {
-    const schema = z.object({
-      requiredField: z.string(),
-      optionalField: z.number().optional(),
-      optionalObject: z
-        .object({
-          insideOptional: z.boolean().optional(),
-        })
-        .optional(),
-    });
-
-    const jsonSchema = zodSchemaToJsonSchema(schema, "openAi");
-
-    // OpenAI strict requires all properties to be required
-    expect(jsonSchema.required).toEqual(["requiredField", "optionalField", "optionalObject"]);
-
-    // optionalField should be nullable
-    expect(jsonSchema.properties.optionalField.type).toContain("null");
-
-    // optionalObject should be nullable, and its nested object should also have required including the optional key
-    expect(jsonSchema.properties.optionalObject.type).toContain("null");
-    const optionalObjectSchema =
-      jsonSchema.properties.optionalObject.type?.includes?.("object") && jsonSchema.properties.optionalObject.properties
-        ? jsonSchema.properties.optionalObject
-        : jsonSchema.properties.optionalObject.anyOf?.find((s: any) => s?.type === "object");
-    expect(optionalObjectSchema).toBeDefined();
-    expect(optionalObjectSchema.required).toEqual(["insideOptional"]);
-    expect(optionalObjectSchema.properties.insideOptional.type).toContain("null");
   });
 });

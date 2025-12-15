@@ -1,4 +1,5 @@
 import { ZodObject } from "zod";
+import { ZodObject as ZodObjectV3 } from "zod/v3";
 import {
   LlmFunction,
   LlmFunctionParameters,
@@ -20,7 +21,7 @@ export interface LlmToolConfiguration {
   description: string;
   requiresConfirmation?: boolean;
   executor?: LlmToolExecutor | "transfer" | "subTask";
-  params?: Partial<LlmFunctionParameters> | ZodObject<any>;
+  params?: Partial<LlmFunctionParameters> | ZodObject<any> | ZodObjectV3<any>;
 }
 
 /**
@@ -44,7 +45,7 @@ export class LlmTool {
     this.executor = config.executor;
     this.params = !config.params
       ? undefined
-      : config.params instanceof ZodObject
+      : config.params instanceof ZodObject || config.params instanceof ZodObjectV3
         ? zodSchemaToJsonSchema(config.params)
         : this.validateParams(config.params);
   }

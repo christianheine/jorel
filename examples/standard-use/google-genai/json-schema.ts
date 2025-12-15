@@ -23,7 +23,7 @@ const main = async () => {
       currentTime: z.string(),
       location: z.object({
         city: z.string(),
-        state: z.string().optional(),
+        state: z.string().optional().nullable(),
       }),
     }),
   });
@@ -32,7 +32,7 @@ const main = async () => {
   // {
   //   currentDate: '2/17/2025',
   //   currentTime: '8:56:22 AM',
-  //   location: { city: 'Sydney' }
+  //   location: { city: 'Sydney', state: null }
   // }
 };
 
