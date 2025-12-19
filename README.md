@@ -63,7 +63,7 @@ To run the example, use:
 npm run start
 ```
 
-## What's New in v2.0.0-alpha.0
+## What's New in v2.0.0
 
 * **🎯 Deliberate Model Registration**: Providers no longer register models by default - you now explicitly add the models you need via `provider.addModel()`. This gives you full control and avoids outdated model lists.
 * **🆔 Message ID & Timestamps**: Every message now includes `id` and `createdAt` fields (UUID v7 by default)
